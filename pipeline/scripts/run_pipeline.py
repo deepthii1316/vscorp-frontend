@@ -31,15 +31,6 @@ from urllib3.exceptions import InsecureRequestWarning
 # so the verify=False is safe here. Silence the warning.
 warnings.simplefilter("ignore", InsecureRequestWarning)
 
-# Force IPv4 — GitHub Actions runners default to IPv6 and Supabase only
-# accepts IPv4 connections. Without this, psycopg2 tries IPv6 first and
-# fails with "Network is unreachable".
-import socket
-_orig_getaddrinfo = socket.getaddrinfo
-def _ipv4_getaddrinfo(host, port, *args, **kwargs):
-    return [r for r in _orig_getaddrinfo(host, port, *args, **kwargs) if r[0] == socket.AF_INET]
-socket.getaddrinfo = _ipv4_getaddrinfo
-
 # ── Environment loading ──────────────────────────────────────────────────────────
 
 script_dir = Path(__file__).resolve().parent
@@ -80,8 +71,38 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 # ── DB helpers ───────────────────────────────────────────────────────────────────
 
 def get_pg_conn():
-    """Direct Postgres connection via psycopg2 — no httpx, no SSL cert issues."""
-    return psycopg2.connect(DB_URL, connect_timeout=30)
+    """Direct Postgres connection via psycopg2 — no httpx, no SSL cert issues.
+
+    Forces IPv4 by pre-resolving the hostname to an A (IPv4) record and
+    passing it as `hostaddr` to libpq. GitHub Actions runners default to
+    IPv6, but Supabase's DB host only accepts IPv4 connections.
+    """
+    import socket
+    from urllib.parse import urlparse
+    parsed = urlparse(DB_URL)
+    hostname = parsed.hostname
+    port = parsed.port or 5432
+
+    # Resolve to IPv4 only — skip AAAA records
+    addrinfo = socket.getaddrinfo(hostname, port, socket.AF_INET, socket.SOCK_STREAM)
+    if not addrinfo:
+        raise RuntimeError(f"No IPv4 address found for {hostname}")
+    ipv4 = addrinfo[0][4][0]
+
+    # Reconstruct the DSN with hostaddr=ipv4, keeping everything else
+    user = parsed.username
+    password = parsed.password
+    dbname = parsed.path.lstrip("/")
+
+    return psycopg2.connect(
+        host=hostname,
+        hostaddr=ipv4,
+        port=port,
+        user=user,
+        password=password,
+        dbname=dbname,
+        connect_timeout=30,
+    )
 
 
 def pg_select(conn, query, params=None):
