@@ -31,6 +31,15 @@ from urllib3.exceptions import InsecureRequestWarning
 # so the verify=False is safe here. Silence the warning.
 warnings.simplefilter("ignore", InsecureRequestWarning)
 
+# Force IPv4 — GitHub Actions runners default to IPv6 and Supabase only
+# accepts IPv4 connections. Without this, psycopg2 tries IPv6 first and
+# fails with "Network is unreachable".
+import socket
+_orig_getaddrinfo = socket.getaddrinfo
+def _ipv4_getaddrinfo(host, port, *args, **kwargs):
+    return [r for r in _orig_getaddrinfo(host, port, *args, **kwargs) if r[0] == socket.AF_INET]
+socket.getaddrinfo = _ipv4_getaddrinfo
+
 # ── Environment loading ──────────────────────────────────────────────────────────
 
 script_dir = Path(__file__).resolve().parent
