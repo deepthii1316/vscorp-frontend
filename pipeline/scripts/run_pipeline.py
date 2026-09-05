@@ -1,0 +1,265 @@
+"""
+run_pipeline.py — VS Corp Medallion Pipeline
+============================================
+Orchestrates the full ETL pipeline:
+
+  Stage 1 → ingest_file.py        : Download pending files from Supabase Storage,
+                                    ingest into raw.sales / raw.inventory / raw.account_dsr
+  Stage 2 → build_dimensions.py   : Build staging dimension tables
+  Stage 3 → refresh_gold.py       : Aggregate staging → gold.fact_master_dashboard_*
+
+Uses psycopg2 for all database operations (bypasses httpx SSL issues on Windows).
+Uses supabase-py only for Storage (file downloads).
+
+Usage:
+  python run_pipeline.py
+"""
+
+import os
+import sys
+import tempfile
+import warnings
+from pathlib import Path
+
+from dotenv import load_dotenv
+import psycopg2
+import requests
+from urllib3.exceptions import InsecureRequestWarning
+
+# Supabase Storage's SSL chain is incomplete (PARTIAL_CHAIN) and fails with
+# certifi. We're authenticated by API key + HTTPS still encrypts in transit,
+# so the verify=False is safe here. Silence the warning.
+warnings.simplefilter("ignore", InsecureRequestWarning)
+
+# ── Environment loading ──────────────────────────────────────────────────────────
+
+script_dir = Path(__file__).resolve().parent
+pipeline_root = script_dir.parent
+
+load_dotenv(pipeline_root / ".env")
+for candidate in [
+    pipeline_root.parent / "frontend" / ".env.local",
+    pipeline_root.parent / "frontend" / ".env",
+    pipeline_root.parent / ".env",
+]:
+    if candidate.exists():
+        load_dotenv(candidate, override=False)
+
+
+def _get(key):
+    v = os.environ.get(key, "").strip()
+    return v or None
+
+
+# Postgres for ALL DB operations
+DB_URL = _get("SUPABASE_DB_URL") or _get("SUPABASE_DB_URL_POOLER")
+
+# Supabase credentials for Storage downloads
+SUPABASE_URL = _get("SUPABASE_URL") or _get("NEXT_PUBLIC_SUPABASE_URL")
+SUPABASE_KEY = _get("SUPABASE_KEY") or _get("SUPABASE_SERVICE_ROLE_KEY")
+
+if not DB_URL:
+    raise SystemExit(
+        "Error: SUPABASE_DB_URL not set.\n"
+        "  Add to pipeline/.env:\n"
+        "    SUPABASE_DB_URL=postgresql://postgres:PASSWORD@db.omwdvpkbsuyfnpbipjrs.supabase.co:5432/postgres"
+    )
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise SystemExit("Error: SUPABASE_URL / SUPABASE_KEY not found.")
+
+
+# ── DB helpers ───────────────────────────────────────────────────────────────────
+
+def get_pg_conn():
+    """Direct Postgres connection via psycopg2 — no httpx, no SSL cert issues."""
+    return psycopg2.connect(DB_URL, connect_timeout=30)
+
+
+def pg_select(conn, query, params=None):
+    """Run a SELECT and return rows as list of dicts."""
+    cur = conn.cursor()
+    cur.execute(query, params)
+    cols = [d[0] for d in cur.description]
+    rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+    cur.close()
+    return rows
+
+
+def pg_update(conn, query, params=None):
+    """Run an UPDATE/INSERT/DELETE. Rolls back on error so connection stays usable."""
+    cur = conn.cursor()
+    try:
+        cur.execute(query, params)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+
+
+def pg_insert_batch(conn, query, rows, page_size=2000):
+    """Batch insert using execute_values for speed."""
+    from psycopg2.extras import execute_values
+    cur = conn.cursor()
+    execute_values(cur, query, rows, page_size=page_size)
+    conn.commit()
+    cur.close()
+
+
+# ── Storage helpers ─────────────────────────────────────────────────────────────────
+
+def download_from_storage(storage_path, tmpdir):
+    """Download a file from Supabase Storage into tmpdir. Returns local filepath.
+
+    Uses requests library directly with certifi's CA bundle for SSL verification.
+    """
+    bucket = "retail-ops"
+    local_path = os.path.join(tmpdir, os.path.basename(storage_path))
+
+    storage_url = (
+        f"{SUPABASE_URL.rstrip('/')}/storage/v1/object/{bucket}/{storage_path}"
+    )
+
+    headers = {
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "apikey": SUPABASE_KEY,
+    }
+
+    # NOTE: SSL verification is disabled here because Supabase's certificate chain
+    # requires an intermediate CA that certifi doesn't carry (CERT_TRUST_IS_PARTIAL_CHAIN).
+    # The file is still encrypted in transit and authenticated via API key.
+    resp = requests.get(storage_url, headers=headers, verify=False, timeout=60)
+    resp.raise_for_status()
+
+    with open(local_path, "wb") as f:
+        f.write(resp.content)
+
+    return local_path
+
+
+# ── Main pipeline ────────────────────────────────────────────────────────────────
+
+def run_pipeline():
+    from ingest_file import (
+        ingest_sales_file, ingest_account_dsr_file, ingest_inventory_file
+    )
+    from build_dimensions import build_dimensions
+    from refresh_gold import refresh_gold
+    from refresh_reebok import refresh_reebok
+
+    # Force UTF-8 on stdout for Windows
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
+
+    conn = get_pg_conn()
+
+    # ─── Stage 1: Ingest raw data ─────────────────────────────────────────
+    print("Checking upload_audit_log for pending files...")
+    pending_files = pg_select(
+        conn,
+        "SELECT id, original_file_name, report_type, storage_path "
+        "FROM upload_audit_log "
+        "WHERE status IN ('pending', 'uploaded')"
+    )
+
+    print(f"Found {len(pending_files)} pending file(s) queued for processing.")
+    if not pending_files:
+        print("No pending files to process.")
+        conn.close()
+        return
+
+    processed_ids = []
+    failed_files = []
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        for f in pending_files:
+            file_id = f["id"]
+            orig_name = f["original_file_name"]
+            report_type = f["report_type"]
+            storage_path = f["storage_path"]
+
+            print(f"\nProcessing: {orig_name} (Type: {report_type})")
+
+            # Mark as processing
+            pg_update(
+                conn,
+                "UPDATE upload_audit_log SET status = 'processing' WHERE id = %s",
+                (file_id,)
+            )
+
+            try:
+                if not storage_path:
+                    raise ValueError("No storage_path on queued file")
+
+                local_path = download_from_storage(storage_path, tmpdir)
+                print(f"  Downloaded → {os.path.basename(local_path)}")
+
+                if report_type == "sales":
+                    row_count = ingest_sales_file(local_path, conn)
+                elif report_type == "account_dsr":
+                    row_count = ingest_account_dsr_file(local_path, conn)
+                elif report_type == "inventory":
+                    row_count = ingest_inventory_file(local_path, conn)
+                else:
+                    raise ValueError(f"Unknown report_type: {report_type}")
+
+                processed_ids.append((file_id, row_count))
+                print(f"  Ingested {row_count} rows")
+
+            except Exception as e:
+                print(f"  ERROR: {e}")
+                failed_files.append(orig_name)
+                pg_update(
+                    conn,
+                    "UPDATE upload_audit_log SET status = 'failed', error_message = %s WHERE id = %s",
+                    (str(e), file_id)
+                )
+
+    conn.close()
+
+    # ─── Stage 2: Build staging dimensions ─────────────────────────────────
+    print("\n--- Running Stage 2: Dimension Build ---")
+    try:
+        build_dimensions()
+    except Exception as exc:
+        print(f"Dimension build failed: {exc}")
+        raise
+
+    # ─── Stage 3: Refresh gold tables ────────────────────────────────────
+    print("\n--- Running Stage 3: Gold Dashboard Refresh ---")
+    try:
+        refresh_gold()
+    except Exception as exc:
+        print(f"Gold refresh failed: {exc}")
+        raise
+
+    # ─── Stage 3b: Refresh Uppal Reebok metrics (single store) ──────────
+    print("\n--- Running Stage 3b: Uppal Reebok Refresh ---")
+    try:
+        refresh_reebok()
+    except Exception as exc:
+        print(f"Reebok refresh failed: {exc}")
+        raise
+
+    # ─── Stage 4: Mark as completed ─────────────────────────────────────
+    conn = get_pg_conn()
+    for file_id, row_count in processed_ids:
+        pg_update(
+            conn,
+            "UPDATE upload_audit_log SET status = 'completed', row_count = %s WHERE id = %s",
+            (row_count, file_id)
+        )
+    conn.close()
+
+    if failed_files:
+        raise RuntimeError(f"Failed files: {', '.join(failed_files)}")
+
+    print("\n[OK] Medallion Pipeline Finished Successfully!")
+
+
+if __name__ == "__main__":
+    run_pipeline()

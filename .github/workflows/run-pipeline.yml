@@ -1,0 +1,39 @@
+name: Run Medallion Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      report_type:
+        description: 'Report type to process (leave blank for all pending)'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  pipeline:
+    name: Run ETL Pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pandas openpyxl supabase python-dotenv holidays requests psycopg2-binary
+
+      - name: Run pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          cd pipeline && python run_pipeline.py
