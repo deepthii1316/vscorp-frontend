@@ -1,6 +1,7 @@
 'use client';
 
-import { usePathname, useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   LayoutDashboard,
@@ -50,8 +51,13 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const report = searchParams.get('report');
+  const [report, setReport] = useState(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    setReport(params.get('report'));
+  }, [pathname]);
 
   if (pathname === '/login') return null;
 
