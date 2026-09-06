@@ -77,8 +77,8 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 def get_pg_conn():
     """Direct Postgres connection via psycopg2 — no httpx, no SSL cert issues.
 
-    Tries IPv4 pre-resolution first (avoids GitHub Actions IPv6 issues),
-    falls back to direct connection string on DNS failure.
+    Forces IPv4 only. GitHub Actions runners default to IPv6 which
+    Supabase doesn't support. socket.gethostbyname() always returns IPv4.
     """
     import socket
     from urllib.parse import urlparse
@@ -86,20 +86,15 @@ def get_pg_conn():
     hostname = parsed.hostname
     port = parsed.port or 5432
 
-    # Try IPv4 pre-resolution first
-    ipv4 = None
+    # gethostbyname is IPv4-only (no AAAA, no AAAA fallback)
     try:
-        addrinfo = socket.getaddrinfo(hostname, port, socket.AF_INET, socket.SOCK_STREAM)
-        if addrinfo:
-            ipv4 = addrinfo[0][4][0]
-    except (socket.gaierror, OSError) as e:
-        print(f"[WARN] IPv4 resolution failed ({e}), using direct connection")
+        ipv4 = socket.gethostbyname(hostname)
+    except socket.gaierror as e:
+        raise RuntimeError(
+            f"DNS resolution for {hostname} failed: {e}. "
+            "Check SUPABASE_DB_URL / SUPABASE_DB_URL_POOLER."
+        ) from e
 
-    # Fall back to direct connection string if IPv4 resolution failed
-    if not ipv4:
-        return psycopg2.connect(DB_URL, connect_timeout=30)
-
-    # Reconstruct the DSN with hostaddr=ipv4
     return psycopg2.connect(
         host=hostname,
         hostaddr=ipv4,
