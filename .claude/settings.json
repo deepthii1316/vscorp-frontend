@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s --max-time 5 \"http://localhost:3000/api/reports/reebok-export?date=2026-08-07\" -v)",
+      "Bash(findstr \"LISTENING\")",
+      "Bash(findstr \"45356\")",
+      "PowerShell(Stop-Process -Id 45356 -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(netstat -ano)",
+      "PowerShell(head -5)",
+      "PowerShell(Start-Process powershell -ArgumentList \"-NoExit\", \"cd e:/1drive/vs-corp/frontend; npm run dev\" -WindowStyle Normal)",
+      "Bash(curl -s --max-time 30 -o /tmp/reebok_export.xlsx -w \"HTTP %{http_code} | Size: %{size_download} bytes\\\\n\" \"http://localhost:3000/api/reports/reebok-export?date=2026-08-07\")",
+      "Bash(unzip -l reebok_export.xlsx)",
+      "Bash(unzip -p /tmp/reebok_export.xlsx xl/workbook.xml)",
+      "Bash(python3 -c \"import sys; import xml.dom.minidom; print\\(xml.dom.minidom.parseString\\(sys.stdin.read\\(\\)\\).toprettyxml\\(indent=' '\\)\\)\")",
+      "Bash(unzip -p reebok_export.xlsx xl/workbook.xml)",
+      "Bash(unzip -p /tmp/reebok_export.xlsx xl/worksheets/sheet2.xml)"
+    ]
+  }
+}

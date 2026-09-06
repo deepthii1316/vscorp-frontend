@@ -1,0 +1,45 @@
+name: Reebok Medallion Data Pipeline Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_refresh:
+        description: 'Force refresh dimensional and gold models'
+        required: false
+        type: boolean
+        default: false
+  schedule:
+    - cron: '0 */4 * * *' # Run automatically every 4 hours
+  push:
+    paths:
+      - 'pipeline/data/**'
+
+jobs:
+  run-pipeline:
+    name: Execute Data Ingestion & Transformation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'pipeline/requirements.txt'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r pipeline/requirements.txt
+
+      - name: Execute Medallion Pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_DB_URL_POOLER: ${{ secrets.SUPABASE_DB_URL_POOLER }}
+        working-directory: pipeline
+        run: python run_pipeline.py
