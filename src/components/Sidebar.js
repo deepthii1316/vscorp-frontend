@@ -66,10 +66,10 @@ export default function Sidebar() {
       {/* Brand */}
       <div className="sidebar-brand">
         <div className="sidebar-logo">
-          <img src="/logo.png" alt="VS Corp" className="sidebar-logo-img" />
+          <img src="/logo.png" alt="Virata Retail" className="sidebar-logo-img" />
         </div>
         <div className="sidebar-brand-text">
-          <span className="sidebar-brand-name">VS Corp</span>
+          <span className="sidebar-brand-name">Virata Retail</span>
           <span className="sidebar-brand-sub">Retail Operations</span>
         </div>
       </div>

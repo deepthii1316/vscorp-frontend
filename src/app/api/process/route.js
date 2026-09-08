@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST() {
   try {
-    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+    const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.MEDALLION_GITHUB_TOKEN;
     const REPO_OWNER = process.env.GITHUB_REPO_OWNER || 'deepthii1316';
     const REPO_NAME  = process.env.GITHUB_REPO_NAME  || 'vscorp-frontend';
     const WORKFLOW_ID = 'run-pipeline.yml';
@@ -11,9 +11,9 @@ export async function POST() {
       return NextResponse.json(
         {
           success: false,
-          error: 'GITHUB_TOKEN secret not configured. Add it to Vercel environment variables.',
+          error: 'Pipeline is not configured: GITHUB_TOKEN is missing from the deployed environment.',
         },
-        { status: 500 }
+        { status: 503 }
       );
     }
 
@@ -35,15 +35,21 @@ export async function POST() {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
+      const errorText = await response.text();
+      let error = {};
+      try {
+        error = errorText ? JSON.parse(errorText) : {};
+      } catch {
+        error = { message: errorText };
+      }
       console.error('GitHub API error:', error);
       return NextResponse.json(
         {
           success: false,
           error: `GitHub API error: ${response.status} ${response.statusText}`,
-          details: error.message || '',
+          details: error.message || error.documentation_url || 'Workflow dispatch was rejected. Check token Actions: write permission and repository name.',
         },
-        { status: 500 }
+        { status: 502 }
       );
     }
 
@@ -57,8 +63,9 @@ export async function POST() {
       {
         success: false,
         error: error.message || 'Failed to trigger pipeline',
+        details: 'Check the deployed Supabase and GitHub Actions environment variables.',
       },
-      { status: 500 }
+      { status: 503 }
     );
   }
 }

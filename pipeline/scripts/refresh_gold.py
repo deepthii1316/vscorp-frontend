@@ -108,7 +108,7 @@ def refresh_gold():
             nsv = parse_num(row.get("Taxable Amount"))
             qty = parse_num(row.get("Qty"))
             mrp_unit = parse_num(row.get("MRP"))
-            mrp_total = mrp_unit * abs(qty) if mrp_unit > 0 else rsv
+            mrp_total = mrp_unit * abs(qty) if mrp_unit > 0 else 0.0
 
             row_records.append({
                 "full_date": f_date,

@@ -1,5 +1,5 @@
 """
-run_pipeline.py — VS Corp Medallion Pipeline
+run_pipeline.py — Virata Retail Medallion Pipeline
 ============================================
 Orchestrates the full ETL pipeline:
 
@@ -177,6 +177,7 @@ def run_pipeline():
     from build_dimensions import build_dimensions
     from refresh_gold import refresh_gold
     from refresh_reebok import refresh_reebok
+    from refresh_stock import refresh_stock
 
     # Force UTF-8 on stdout for Windows
     if hasattr(sys.stdout, "reconfigure"):
@@ -189,6 +190,14 @@ def run_pipeline():
 
     # ─── Stage 1: Ingest raw data ─────────────────────────────────────────
     print("Checking upload_audit_log for pending files...")
+    # Recover files left mid-run by a stopped or timed-out previous runner.
+    pg_update(
+        conn,
+        "UPDATE upload_audit_log "
+        "SET status = 'pending', error_message = NULL "
+        "WHERE status IN ('failed', 'processing')"
+    )
+
     pending_files = pg_select(
         conn,
         "SELECT id, original_file_name, report_type, storage_path "
@@ -257,6 +266,14 @@ def run_pipeline():
         build_dimensions()
     except Exception as exc:
         print(f"Dimension build failed: {exc}")
+        raise
+
+    # ─── Stage 2b: Refresh inventory stock facts ─────────────────────────
+    print("\n--- Running Stage 2b: Stock Fact Refresh ---")
+    try:
+        refresh_stock()
+    except Exception as exc:
+        print(f"Stock refresh failed: {exc}")
         raise
 
     # ─── Stage 3: Refresh gold tables ────────────────────────────────────

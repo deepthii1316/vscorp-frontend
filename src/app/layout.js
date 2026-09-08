@@ -3,8 +3,8 @@ import Sidebar from '@/components/Sidebar';
 import AppShell from '@/components/AppShell';
 
 export const metadata = {
-  title: 'VS Corp — Retail Operations',
-  description: 'Upload and manage retail data reports for VS Corp Reebok store.',
+  title: 'Virata Retail — Retail Operations',
+  description: 'Upload and manage retail data reports for Virata Retail Reebok store.',
 };
 
 export default function RootLayout({ children }) {

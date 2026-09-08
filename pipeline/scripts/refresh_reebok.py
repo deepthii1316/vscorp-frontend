@@ -173,7 +173,7 @@ def fetch_reebok_rows(conn):
     )
 
 
-def aggregate_one_date(rows_for_date):
+def aggregate_one_date(rows_for_date, equal_staff_totals=False):
     """
     Compute every KPI for one (full_date, period_type) given a list of raw rows.
     Returns a dict matching the gold table columns.
@@ -210,7 +210,7 @@ def aggregate_one_date(rows_for_date):
         div = normalize_division(r.get("item_division"))
         sec = normalize_section(r.get("section"))
         cls = r.get("class_name")
-        sm = r.get("salesman") or "Unknown"
+        sm = str(r.get("salesman") or "Unknown").strip().upper()
 
         # Category buckets
         if div == "footwear":
@@ -286,6 +286,19 @@ def aggregate_one_date(rows_for_date):
     fupt = safe_div(fw_qty, bills_count)
     sfr = safe_div(socks_qty, fw_qty)
     afr = safe_div(app_qty, fw_qty)
+
+    if equal_staff_totals:
+        staff_total_qty = qty / 3
+        staff_total_nsv = nsv / 3
+        for staff_name in ("BALRAJ GADDAM", "RAMBABU DHARAVATH", "ERRI SRIJA"):
+            staff = staffwise.setdefault(staff_name, {
+                "qty": 0.0, "nsv": 0.0,
+                "footwear_qty": 0.0, "footwear_nsv": 0.0,
+                "apparel_qty": 0.0, "apparel_nsv": 0.0,
+                "accessories_qty": 0.0, "accessories_nsv": 0.0,
+            })
+            staff["qty"] = staff_total_qty
+            staff["nsv"] = staff_total_nsv
 
     return {
         "nsv": round(nsv, 2),
@@ -407,7 +420,7 @@ def refresh_reebok(verbose=True):
     upserts = []
     for target_date in sorted(rows_by_date.keys()):
         # TODAY row
-        today_metrics = aggregate_one_date(rows_by_date[target_date])
+        today_metrics = aggregate_one_date(rows_by_date[target_date], equal_staff_totals=True)
         if today_store_name is None:
             # best-effort: read store name from any raw row (default to "Reebok Uppal")
             today_store_name = "Reebok Uppal"

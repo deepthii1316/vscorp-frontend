@@ -12,7 +12,7 @@ function TopBar() {
   return (
     <div className="top-bar">
       <div className="top-bar-left">
-        <h2>VS Corp</h2>
+        <h2>Virata Retail</h2>
         <span style={{ color: 'var(--border-strong)', margin: '0 4px' }}>·</span>
         <p>Retail Operations</p>
       </div>

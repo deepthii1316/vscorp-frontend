@@ -13,6 +13,8 @@ export default function FileDropZone({
   isDuplicate,
   duplicateInfo,
   renamedFileName,
+  onRetryProcessing,
+  isProcessingPipeline,
 }) {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
@@ -134,6 +136,17 @@ export default function FileDropZone({
               })}{' '}
               as &quot;{duplicateInfo.renamed_file_name}&quot;.
               Same content cannot be uploaded twice.
+              {(duplicateInfo.status === 'pending' || duplicateInfo.status === 'uploaded' || duplicateInfo.status === 'processing' || duplicateInfo.status === 'failed') && (
+                <button
+                  type="button"
+                  className="logs-toggle-btn"
+                  onClick={onRetryProcessing}
+                  disabled={isProcessingPipeline}
+                  style={{ marginTop: 'var(--space-3)' }}
+                >
+                  {isProcessingPipeline ? 'Processing…' : 'Retry processing'}
+                </button>
+              )}
             </div>
           </div>
         )}

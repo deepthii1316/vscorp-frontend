@@ -50,9 +50,9 @@ function UploadPageContent() {
     loadRecentUploads();
   }, []);
 
-  const loadRecentUploads = async () => {
+  const loadRecentUploads = async (showLoading = true) => {
     try {
-      setUploadsLoading(true);
+      if (showLoading) setUploadsLoading(true);
       const supabase = createBrowserClient();
       const { data, error } = await supabase
         .from('upload_audit_log')
@@ -157,7 +157,7 @@ function UploadPageContent() {
       setUploadProgress(100);
       setUploadStep('Complete!');
       setUploadResult({ success: true, message: `Uploaded as "${result.renamedFileName}".` });
-      await loadRecentUploads();
+      await loadRecentUploads(false);
 
       setTimeout(() => handleFileRemove(), 3000);
     } catch {
@@ -174,29 +174,29 @@ function UploadPageContent() {
     setPipelineResult(null);
     setPipelineStep('raw');
 
-    const t1 = setTimeout(() => setPipelineStep('dimensions'), 1200);
-    const t2 = setTimeout(() => setPipelineStep('facts'), 2500);
-    const t3 = setTimeout(() => setPipelineStep('gold'), 3800);
-
     try {
       const res = await fetch('/api/process', { method: 'POST' });
       const json = await res.json();
       if (json.success) {
-        setPipelineStep('complete');
+        setPipelineStep('triggered');
         setPipelineResult({
           success: true,
-          message: 'Batch Medallion Pipeline executed successfully.',
+          message: 'Pipeline triggered successfully. GitHub Actions is processing the queued files.',
           output: json.output,
           runTime: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
         });
       } else {
-        setPipelineResult({ success: false, message: json.error || 'Pipeline execution failed.' });
+        setPipelineStep('failed');
+        setPipelineResult({
+          success: false,
+          message: [json.error, json.details].filter(Boolean).join(' — ') || 'Pipeline execution failed.',
+        });
       }
-      await loadRecentUploads();
+      await loadRecentUploads(false);
     } catch {
+      setPipelineStep('failed');
       setPipelineResult({ success: false, message: 'Failed to trigger batch processing pipeline.' });
     } finally {
-      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
       setIsProcessingPipeline(false);
     }
   };
@@ -295,6 +295,8 @@ function UploadPageContent() {
                 isDuplicate={isDuplicate}
                 duplicateInfo={duplicateInfo}
                 renamedFileName={renamedFileName}
+                onRetryProcessing={handleRunProcessing}
+                isProcessingPipeline={isProcessingPipeline}
               />
             </div>
 
@@ -355,7 +357,7 @@ function UploadPageContent() {
                 <span className="metric-label">Status</span>
                 <span className={`status-pill ${isProcessingPipeline ? 'processing' : pipelineResult?.success ? 'success' : 'ready'}`}>
                   <span className="status-dot-inline" />
-                  {isProcessingPipeline ? 'Processing' : pipelineResult?.success ? 'Success' : 'Ready'}
+                  {isProcessingPipeline ? 'Triggering' : pipelineResult?.success ? 'Triggered' : pipelineResult ? 'Failed' : 'Ready'}
                 </span>
               </div>
               <div className="metric-item">
@@ -402,11 +404,7 @@ function UploadPageContent() {
 
             <div className="pipeline-progress-bar-container">
               <div className="pipeline-progress-bar-fill" style={{
-                width: pipelineStep === 'raw' ? '25%'
-                  : pipelineStep === 'dimensions' ? '50%'
-                  : pipelineStep === 'facts' ? '75%'
-                  : (pipelineStep === 'gold' || pipelineStep === 'complete' || pipelineResult?.success) ? '100%'
-                  : '0%',
+                width: pipelineStep === 'raw' || pipelineStep === 'triggered' ? '25%' : '0%',
               }} />
             </div>
 
@@ -417,8 +415,7 @@ function UploadPageContent() {
                 { step: 'facts', name: 'Facts', desc: '— Fact Sales & Fact Stock in Staging' },
                 { step: 'gold', name: 'Gold tables', desc: '— Store x Day Summary & granular aggregates' },
               ].map(({ step, name, desc }) => {
-                const done = pipelineStep === 'dimensions' || pipelineStep === 'facts'
-                  || pipelineStep === 'gold' || pipelineStep === 'complete' || pipelineResult?.success;
+                const done = false;
                 const current = pipelineStep === step;
                 return (
                   <div className="pipeline-step-item" key={step}>

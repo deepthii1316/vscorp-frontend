@@ -6,7 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
-import { n, fmtINR, fmtPct, fmtNum, fmtDec, achColor, calcTarget, calcAchievement, MTD_TARGET } from '@/lib/email/reebokHelpers';
+import { n, fmtINR, fmtPct, fmtNum, fmtDec, achColor } from '@/lib/email/reebokHelpers';
 
 const STORE = 'R1157';
 
@@ -104,9 +104,6 @@ function buildDaywiseTable(daywiseRows, reportDate) {
   const today = daywiseRows.find(r => r.period_type === 'today') || {};
   const mtd   = daywiseRows.find(r => r.period_type === 'mtd')   || {};
 
-  const todayAch = calcAchievement(today.nsv, calcTarget(today.full_date));
-  const mtdAch   = calcAchievement(mtd.nsv,   MTD_TARGET(reportDate || today.full_date));
-
   const headers = ['Metric', 'TODAY', 'MTD'];
 
   const rows = [
@@ -126,13 +123,13 @@ function buildDaywiseTable(daywiseRows, reportDate) {
     ]},
     { cells: [
       { value: 'Target', style: 'label' },
-      { value: fmtINR(calcTarget(today.full_date)), style: 'bold' },
-      { value: fmtINR(MTD_TARGET(reportDate || mtd.full_date)), style: 'bold' },
+      { value: '—', style: 'bold' },
+      { value: '—', style: 'bold' },
     ]},
     { cells: [
       { value: 'Achievement %', style: 'label' },
-      { value: todayAch, isAch: true },
-      { value: mtdAch,   isAch: true },
+      { value: null, isAch: true },
+      { value: null, isAch: true },
     ]},
     { cells: [
       { value: 'Bills', style: 'label' },
@@ -208,7 +205,7 @@ function buildDaywiseTable(daywiseRows, reportDate) {
 
   const footnotes = [
     `NSV = SUM(Taxable Amount) per REEBOOK_KPI_DEFINITIONS.md.`,
-    `Target = ₹8L monthly × week/day fraction. Achievement % = NULL until manager confirms.`,
+    `Target and Achievement % are shown as — until the manager confirms the target formula.`,
     `Ratios (ATV, UPT, ASP, FUPT, SFR, AFR) recalculated from totals — never averaged.`,
   ];
 
@@ -299,7 +296,7 @@ function buildStaffTable(staffRows) {
 
   html += `</tbody></table>`;
   html += `<div style="font-size:10px;color:#64748b;margin-top:6px;font-style:italic;">
-    NSV from actual salesperson field in raw.sales — not distributed equally.
+    Today Total Qty and NSV are divided equally across the three associates; product categories use actual salesperson records.
   </div></div>`;
 
   return html;

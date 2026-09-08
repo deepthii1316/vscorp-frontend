@@ -173,7 +173,7 @@ function addCoverSheet(wb, today, mtd, reportDate) {
     { key: 'mtd',    width: 20 },
   ];
 
-  writeTitle(ws, 1, `VS Corp  ·  ${STORE_NM} (${STORE})`);
+  writeTitle(ws, 1, `Virata Retail  ·  ${STORE_NM} (${STORE})`);
   writeSubtitle(ws, 2, `Report Date: ${reportDate}  ·  Generated: ${new Date().toLocaleString('en-IN')}`);
 
   writeHeader(ws, 3, ['METRIC', 'TODAY', 'MTD']);
@@ -517,7 +517,7 @@ export async function GET(req) {
     // Build workbook via ExcelJS (the styled xlsx library)
     const ExcelJS = (await import('exceljs')).default;
     const wb = new ExcelJS.Workbook();
-    wb.creator  = 'VS Corp';
+    wb.creator  = 'Virata Retail';
     wb.created  = new Date();
     wb.modified = new Date();
 
