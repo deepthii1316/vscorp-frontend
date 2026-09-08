@@ -9,8 +9,10 @@ Run by run_pipeline.py after raw ingestion completes.
 
 import os
 import sys
+import socket
 import pandas as pd
 from pathlib import Path
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 from psycopg2.extras import execute_values
 
@@ -19,14 +21,33 @@ pipeline_root = script_dir.parent
 
 load_dotenv(pipeline_root / ".env")
 
-DB_URL = os.environ.get("SUPABASE_DB_URL")
+# Prefer pooler for GitHub Actions IPv4 compatibility
+DB_URL = os.environ.get("SUPABASE_DB_URL_POOLER") or os.environ.get("SUPABASE_DB_URL")
 if not DB_URL:
-    raise SystemExit("Error: SUPABASE_DB_URL not set in environment")
+    raise SystemExit("Error: SUPABASE_DB_URL_POOLER / SUPABASE_DB_URL not set in environment")
 
 
 def get_pg_conn():
+    """Connect with IPv4-only DNS to bypass GitHub Actions IPv6 issues."""
     import psycopg2
-    return psycopg2.connect(DB_URL, connect_timeout=30)
+    parsed = urlparse(DB_URL)
+    hostname = parsed.hostname
+    port = parsed.port or 5432
+
+    try:
+        ipv4 = socket.gethostbyname(hostname)
+    except socket.gaierror as e:
+        raise RuntimeError(f"DNS resolution failed for {hostname}: {e}") from e
+
+    return psycopg2.connect(
+        host=hostname,
+        hostaddr=ipv4,
+        port=port,
+        user=parsed.username,
+        password=parsed.password,
+        dbname=parsed.path.lstrip("/"),
+        connect_timeout=30,
+    )
 
 
 def pg_fetch_all(conn, query, params=None):
