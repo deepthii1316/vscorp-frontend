@@ -32,8 +32,10 @@ not averaged across rows.
 
 import os
 import sys
+import socket
 import json
 from pathlib import Path
+from urllib.parse import urlparse
 from datetime import datetime
 from dotenv import load_dotenv
 import psycopg2
@@ -51,9 +53,10 @@ pipeline_root = script_dir.parent
 
 load_dotenv(pipeline_root / ".env")
 
-DB_URL = os.environ.get("SUPABASE_DB_URL")
+# Prefer pooler for GitHub Actions IPv4 compatibility
+DB_URL = os.environ.get("SUPABASE_DB_URL_POOLER") or os.environ.get("SUPABASE_DB_URL")
 if not DB_URL:
-    raise SystemExit("Error: SUPABASE_DB_URL not set in environment")
+    raise SystemExit("Error: SUPABASE_DB_URL_POOLER / SUPABASE_DB_URL not set in environment")
 
 # The single store this report is for.
 UPPAL_STORE = "R1157"
@@ -62,7 +65,25 @@ UPPAL_STORE = "R1157"
 # ── DB helpers ────────────────────────────────────────────────────────────────
 
 def get_pg_conn():
-    return psycopg2.connect(DB_URL, connect_timeout=30)
+    """Connect with IPv4-only DNS to bypass GitHub Actions IPv6 issues."""
+    parsed = urlparse(DB_URL)
+    hostname = parsed.hostname
+    port = parsed.port or 5432
+
+    try:
+        ipv4 = socket.gethostbyname(hostname)
+    except socket.gaierror as e:
+        raise RuntimeError(f"DNS resolution failed for {hostname}: {e}") from e
+
+    return psycopg2.connect(
+        host=hostname,
+        hostaddr=ipv4,
+        port=port,
+        user=parsed.username,
+        password=parsed.password,
+        dbname=parsed.path.lstrip("/"),
+        connect_timeout=30,
+    )
 
 
 def pg_fetch_all(conn, query, params=None):

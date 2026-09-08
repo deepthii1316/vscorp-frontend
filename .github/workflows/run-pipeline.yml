@@ -33,5 +33,6 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_DB_URL_POOLER: ${{ secrets.SUPABASE_DB_URL_POOLER }}
         run: |
           cd pipeline && python run_pipeline.py

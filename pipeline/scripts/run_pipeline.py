@@ -52,7 +52,10 @@ def _get(key):
 
 
 # Postgres for ALL DB operations
-DB_URL = _get("SUPABASE_DB_URL") or _get("SUPABASE_DB_URL_POOLER")
+# Prefer the pooler (pgbouncer) connection — port 6543 — which works reliably
+# from GitHub Actions runners where the direct 5432 connection is sometimes
+# blocked. Fall back to the direct connection string.
+DB_URL = _get("SUPABASE_DB_URL_POOLER") or _get("SUPABASE_DB_URL")
 
 # Supabase credentials for Storage downloads
 SUPABASE_URL = _get("SUPABASE_URL") or _get("NEXT_PUBLIC_SUPABASE_URL")
@@ -60,9 +63,10 @@ SUPABASE_KEY = _get("SUPABASE_KEY") or _get("SUPABASE_SERVICE_ROLE_KEY")
 
 if not DB_URL:
     raise SystemExit(
-        "Error: SUPABASE_DB_URL not set.\n"
+        "Error: SUPABASE_DB_URL / SUPABASE_DB_URL_POOLER not set.\n"
         "  Add to pipeline/.env:\n"
-        "    SUPABASE_DB_URL=postgresql://postgres:PASSWORD@db.omwdvpkbsuyfnpbipjrs.supabase.co:5432/postgres"
+        "    SUPABASE_DB_URL=postgresql://postgres:PASSWORD@db.omwdvpkbsuyfnpbipjrs.supabase.co:5432/postgres\n"
+        "    SUPABASE_DB_URL_POOLER=postgresql://postgres:PASSWORD@db.omwdvpkbsuyfnpbipjrs.supabase.co:6543/postgres"
     )
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise SystemExit("Error: SUPABASE_URL / SUPABASE_KEY not found.")
@@ -73,9 +77,8 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 def get_pg_conn():
     """Direct Postgres connection via psycopg2 — no httpx, no SSL cert issues.
 
-    Forces IPv4 by pre-resolving the hostname to an A (IPv4) record and
-    passing it as `hostaddr` to libpq. GitHub Actions runners default to
-    IPv6, but Supabase's DB host only accepts IPv4 connections.
+    Forces IPv4 only. GitHub Actions runners default to IPv6 which
+    Supabase doesn't support. socket.gethostbyname() always returns IPv4.
     """
     import socket
     from urllib.parse import urlparse
@@ -83,24 +86,22 @@ def get_pg_conn():
     hostname = parsed.hostname
     port = parsed.port or 5432
 
-    # Resolve to IPv4 only — skip AAAA records
-    addrinfo = socket.getaddrinfo(hostname, port, socket.AF_INET, socket.SOCK_STREAM)
-    if not addrinfo:
-        raise RuntimeError(f"No IPv4 address found for {hostname}")
-    ipv4 = addrinfo[0][4][0]
-
-    # Reconstruct the DSN with hostaddr=ipv4, keeping everything else
-    user = parsed.username
-    password = parsed.password
-    dbname = parsed.path.lstrip("/")
+    # gethostbyname is IPv4-only (no AAAA, no AAAA fallback)
+    try:
+        ipv4 = socket.gethostbyname(hostname)
+    except socket.gaierror as e:
+        raise RuntimeError(
+            f"DNS resolution for {hostname} failed: {e}. "
+            "Check SUPABASE_DB_URL / SUPABASE_DB_URL_POOLER."
+        ) from e
 
     return psycopg2.connect(
         host=hostname,
         hostaddr=ipv4,
         port=port,
-        user=user,
-        password=password,
-        dbname=dbname,
+        user=parsed.username,
+        password=parsed.password,
+        dbname=parsed.path.lstrip("/"),
         connect_timeout=30,
     )
 
