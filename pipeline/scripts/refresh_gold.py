@@ -14,6 +14,10 @@ from pathlib import Path
 from urllib.parse import urlparse
 from dotenv import load_dotenv
 from psycopg2.extras import execute_values
+try:
+    from scripts.sales_snapshot import select_authoritative_sales_rows
+except ModuleNotFoundError:
+    from sales_snapshot import select_authoritative_sales_rows
 
 script_dir = Path(__file__).resolve().parent
 pipeline_root = script_dir.parent
@@ -107,11 +111,11 @@ def refresh_gold():
 
     # ─── 1. Fetch raw.sales ─────────────────────────────────────────────
     print("Fetching raw.sales...")
-    sales_rows = pg_fetch_all(
+    sales_rows = select_authoritative_sales_rows(pg_fetch_all(
         conn,
         'SELECT * FROM raw.sales '
         'WHERE "Store Number" IS NOT NULL AND "Store Number" NOT IN (\'Total\', \'Grand Total\')'
-    )
+    ))
     print(f"  Found {len(sales_rows)} sales rows.")
 
     if sales_rows:

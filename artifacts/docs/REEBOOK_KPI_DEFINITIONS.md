@@ -194,19 +194,11 @@ There are exactly three Sales Associates:
 2. Rambabu Dharavath
 3. Erri Srija
 
-### Today — sales allocation
+### Staffwise actual sales
 
-For the KPI report, today's sales are divided equally among the three Sales Associates:
-
-```text
-Each Associate's Today Sales = Total Today Sales / 3
-```
-
-### Staffwise actual product sales
-
-For staffwise product movement, do **not** blindly divide product sales by 3.
-
-Use the salesperson attached to the actual sales record.
+For both Today and MTD, use the salesperson attached to each actual sales record.
+Do not divide quantity, NSV, or any staff total equally among associates. Sales targets
+are calculated separately and are not staff sales values.
 
 For each Sales Associate calculate:
 

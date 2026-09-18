@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { LayoutDashboard, Store, Package, Tag, CreditCard, Award, Send, Mail } from 'lucide-react';
+import html2canvas from 'html2canvas';
 import { formatINR, formatNumber, formatPercent } from '@/lib/masterDashboardShared';
 import RequireAuth from '@/components/RequireAuth';
 
@@ -13,6 +15,10 @@ function MasterDashboardPage() {
 
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
+  const [emailState, setEmailState] = useState({ sending: false, status: null, message: null });
+  const [emailMode, setEmailMode] = useState('test');
+  const [emailDate, setEmailDate] = useState(yesterdayIST());
+  const dashboardRef = useRef(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -60,6 +66,62 @@ function MasterDashboardPage() {
     }
   };
 
+  function yesterdayIST() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  }
+
+  async function handleSendEmail() {
+    setEmailState({ sending: true, status: 'loading', message: 'Generating report screenshot…' });
+    try {
+      const params = new URLSearchParams({
+        date: emailDate,
+        force: 'true',
+      });
+      const res = await fetch(`/api/reports/kpi-dashboard?${params.toString()}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const json = await res.json();
+      if (!res.ok || json.noData) {
+        setEmailState({ sending: false, status: 'error', message: json.error || 'No report data available.' });
+        return;
+      }
+
+      setEmailState({ sending: true, status: 'screenshot', message: 'Capturing screenshot…' });
+      const canvas = await html2canvas(dashboardRef.current, {
+        scale: 1.5,
+        useCORS: true,
+        logging: false,
+      });
+      const imageBase64 = canvas.toDataURL('image/png');
+
+      const formData = new FormData();
+      formData.append('images', new Blob([await (await fetch(imageBase64)).arrayBuffer()], { type: 'image/png' }), 'report.png');
+      formData.append('subject', `VS Corp KPI Dashboard — ${emailDate}`);
+      formData.append('displayDate', emailDate);
+      formData.append('mode', emailMode);
+
+      const sendRes = await fetch('/api/reports/kpi-dashboard/send', { method: 'POST', body: formData });
+      const sendJson = await sendRes.json();
+      if (!sendRes.ok) {
+        setEmailState({ sending: false, status: 'error', message: sendJson.error || 'Failed to send email.' });
+        return;
+      }
+
+      setEmailState({ sending: false, status: 'success', message: `Email sent to ${sendJson.recipients} recipient(s).` });
+    } catch (err) {
+      setEmailState({ sending: false, status: 'error', message: err.message || 'Failed to send email.' });
+    }
+  }
+
+  function yesterdayIST() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  }
+
   const kpis = dashboardData?.summary?.kpis || {
     rsv: 0,
     avgPerDay: 0,
@@ -89,7 +151,9 @@ function MasterDashboardPage() {
     <div style={{ padding: '32px' }}>
       {/* Header */}
       <div className="page-header">
-        <div className="page-header-icon">📊</div>
+        <div className="page-header-icon">
+          <LayoutDashboard style={{ width: 20, height: 20 }} />
+        </div>
         <div className="page-header-text">
           <h1>Master Dashboard</h1>
           <p>Virata Retail Operations — Reebok Store (Uppal) Sales & Payment Performance</p>
@@ -193,10 +257,10 @@ function MasterDashboardPage() {
       {/* Styled Dashboard Tabs */}
       <div style={{ display: 'flex', gap: '24px', borderBottom: '1px solid var(--surface-border)', marginBottom: '24px' }}>
         {[
-          { id: 'overview', label: '📊 Overview' },
-          { id: 'retail-metrics', label: '🏬 Retail Metrics (Store Board)' },
-          { id: 'category-drilldown', label: '📂 Category Drill-down' },
-          { id: 'discount-vs-fresh', label: '🏷️ Discount vs Fresh' },
+          { id: 'overview', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><LayoutDashboard style={{ width: 14, height: 14 }} />Overview</span> },
+          { id: 'retail-metrics', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Store style={{ width: 14, height: 14 }} />Retail Metrics (Store Board)</span> },
+          { id: 'category-drilldown', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Package style={{ width: 14, height: 14 }} />Category Drill-down</span> },
+          { id: 'discount-vs-fresh', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Tag style={{ width: 14, height: 14 }} />Discount vs Fresh</span> },
         ].map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -337,7 +401,9 @@ function MasterDashboardPage() {
           {/* Top Stores Overview */}
           <div className="card">
             <div className="card-header">
-              <span className="card-header-icon">🏆</span>
+              <span className="card-header-icon">
+                <Award style={{ width: 18, height: 18 }} />
+              </span>
               <h3>Top Stores by RSV</h3>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

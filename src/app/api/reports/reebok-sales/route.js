@@ -26,6 +26,21 @@ const TD = 'font-size:12px;padding:6px 10px;border:1px solid #e2e8f0;background:
 const TD_R = TD.replace('text-align:left', 'text-align:right');
 const TOTAL = TD.replace('background:#fff', 'background:#f8fafc;font-weight:700;border-top:2px solid #cbd5e1;');
 const TOTAL_R = TOTAL.replace('text-align:left', 'text-align:right');
+const PERIOD_TONES = {
+  today: { background: '#FFF7ED', border: '#FED7AA', text: '#9A3412' },
+  mtd: { background: '#EFF6FF', border: '#BFDBFE', text: '#1E40AF' },
+};
+
+function renderPeriodPanel(period, title, headers, rows) {
+  const tone = PERIOD_TONES[period];
+  return `<details open style="margin:10px 0;border:1px solid ${tone.border};border-radius:8px;background:${tone.background};overflow:hidden;">
+    <summary style="padding:10px 14px;cursor:pointer;color:${tone.text};font-weight:800;">${title}</summary>
+    <div style="overflow-x:auto;padding:0 10px 10px;"><table style="border-collapse:collapse;width:100%;min-width:620px;">
+      <thead><tr>${headers.map((header, index) => `<th style="${index ? TH_R : TH}">${header}</th>`).join('')}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+  </details>`;
+}
 
 function achBadge(pct) {
   if (pct == null || isNaN(Number(pct))) return `<span class="ach-cell" style="background:#f1f5f9;color:#64748b;">—</span>`;
@@ -209,45 +224,21 @@ function buildDaywiseTable(daywiseRows, reportDate) {
     `Ratios (ATV, UPT, ASP, FUPT, SFR, AFR) recalculated from totals — never averaged.`,
   ];
 
-  // Render the table rows
-  let html = `<div class="report-section" style="font-family:Arial,sans-serif;margin-bottom:24px;">`;
-  html += `<div style="background:linear-gradient(135deg,#1e40af,#3730a3);color:#fff;font-size:14px;font-weight:800;padding:10px 14px;border-radius:8px 8px 0 0;">
-    Uppal Reebok — Daywise + MTD
-  </div>`;
-  html += `<table style="border-collapse:collapse;width:100%;max-width:960px;border-radius:0 0 8px 8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">`;
-  html += `<thead><tr>`;
-  for (const h of headers) {
-    const isRight = h !== 'Metric';
-    html += `<th style="${isRight ? TH_R : TH}">${h}</th>`;
-  }
-  html += `</tr></thead><tbody>`;
+  const renderRows = (period) => tableRows.map((tr) => {
+    const cells = tr.cells.map((cell, index) => {
+      const baseStyle = index > 0 ? TD_R : TD;
+      if (cell.isAch) return `<td style="${baseStyle}">${achBadge(cell.value)}</td>`;
+      if (cell.isNsv) return `<td style="${baseStyle}"><span class="nsv-cell">${cell.value}</span></td>`;
+      if (cell.style === 'bold') return `<td style="${baseStyle};font-weight:700;">${cell.value}</td>`;
+      return `<td style="${baseStyle}">${cell.value}</td>`;
+    });
+    return `<tr>${cells[0]}${cells[period === 'today' ? 1 : 2]}</tr>`;
+  }).join('');
 
-  for (const tr of tableRows) {
-    const isBoldRow = tr.cells[1]?.style === 'bold' || tr.cells[1]?.isNsv || tr.cells[1]?.isAch;
-    html += `<tr>`;
-    for (let ci = 0; ci < tr.cells.length; ci++) {
-      const cell = tr.cells[ci];
-      const isRight = ci > 0;
-      if (cell.isAch) {
-        const v = cell.value;
-        const isRightAlign = isRight;
-        const baseStyle = isRightAlign ? TD_R : TD;
-        html += `<td style="${baseStyle}">${achBadge(v)}</td>`;
-      } else if (cell.isNsv) {
-        const baseStyle = isRight ? TD_R : TD;
-        html += `<td style="${baseStyle}"><span class="nsv-cell">${cell.value}</span></td>`;
-      } else if (cell.style === 'bold') {
-        const baseStyle = isRight ? TD_R : TD;
-        html += `<td style="${baseStyle};font-weight:700;">${cell.value}</td>`;
-      } else {
-        const baseStyle = isRight ? TD_R : TD;
-        html += `<td style="${baseStyle}">${cell.value}</td>`;
-      }
-    }
-    html += `</tr>`;
-  }
-
-  html += `</tbody></table>`;
+  let html = `<div class="report-section" style="font-family:Arial,sans-serif;margin-bottom:24px;">
+    <div style="background:linear-gradient(135deg,#1e40af,#3730a3);color:#fff;font-size:14px;font-weight:800;padding:10px 14px;border-radius:8px 8px 0 0;">Uppal Reebok — Daywise + MTD</div>`;
+  html += renderPeriodPanel('today', `TODAY — ${fmtDate(reportDate)}`, ['Metric', 'Value'], renderRows('today'));
+  html += renderPeriodPanel('mtd', `MTD — 01 ${fmtDate(reportDate).slice(3)}`, ['Metric', 'Value'], renderRows('mtd'));
   html += `<div style="font-size:10px;color:#64748b;margin-top:6px;font-style:italic;">`;
   for (const fn of footnotes) html += `<div>${fn}</div>`;
   html += `</div></div>`;
@@ -296,10 +287,20 @@ function buildStaffTable(staffRows) {
 
   html += `</tbody></table>`;
   html += `<div style="font-size:10px;color:#64748b;margin-top:6px;font-style:italic;">
-    Today Total Qty and NSV are divided equally across the three associates; product categories use actual salesperson records.
+    Staff Qty and NSV use the salesperson attached to each actual sales record; targets are calculated separately.
   </div></div>`;
 
   return html;
+}
+
+function buildStaffPeriodTables(staffRows, reportDate) {
+  const associates = ['BALRAJ GADDAM', 'RAMBABU DHARAVATH', 'ERRI SRIJA'];
+  const headers = ['Salesperson', 'Role', 'NSV', 'Bills', 'Qty', 'ATV', 'UPT', 'ASP', 'SFR', 'AFR'];
+  const rowsFor = (period) => associates.map((name) => {
+    const row = (staffRows || []).find((item) => item.period_type === period && item.salesperson_name === name) || {};
+    return `<tr><td style="${TOTAL}">${name}</td><td style="${TD}">${row.role || 'Sales Associate'}</td><td style="${TD_R}">${fmtINR(n(row.nsv))}</td><td style="${TD_R}">${fmtNum(row.bills)}</td><td style="${TD_R};font-weight:700;">${fmtNum(row.qty)}</td><td style="${TD_R}">${fmtINR(n(row.atv))}</td><td style="${TD_R}">${fmtDec(row.upt)}</td><td style="${TD_R}">${fmtINR(n(row.asp))}</td><td style="${TD_R}">${fmtDec(row.sfr)}</td><td style="${TD_R}">${fmtDec(row.afr)}</td></tr>`;
+  }).join('');
+  return `<div class="report-section" style="font-family:Arial,sans-serif;margin-bottom:24px;"><div style="background:linear-gradient(135deg,#1e40af,#3730a3);color:#fff;font-size:14px;font-weight:800;padding:10px 14px;">Uppal Reebok — Staffwise KPI</div>${renderPeriodPanel('today', `TODAY — ${fmtDate(reportDate)}`, headers, rowsFor('today'))}${renderPeriodPanel('mtd', 'MTD — 01 Aug to report date', headers, rowsFor('mtd'))}</div>`;
 }
 
 // ─── Build the Category table ────────────────────────────────────────────
@@ -343,6 +344,16 @@ function buildCategoryTable(catRows) {
 
   html += `</tbody></table></div>`;
   return html;
+}
+
+function buildCategoryPeriodTables(catRows, reportDate) {
+  const cats = ['footwear', 'apparel', 'accessories'];
+  const labels = { footwear: 'Footwear', apparel: 'Apparel', accessories: 'Accessories' };
+  const data = { today: {}, mtd: {} };
+  for (const row of catRows || []) data[row.period_type][row.category] = row;
+  const headers = ['Category', 'Qty', 'NSV'];
+  const rowsFor = (period) => cats.map((cat) => { const row = data[period][cat] || {}; return `<tr><td style="${TOTAL}">${labels[cat]}</td><td style="${TD_R}">${fmtNum(row.qty)}</td><td style="${TD_R}">${fmtINR(n(row.nsv))}</td></tr>`; }).join('');
+  return `<div class="report-section" style="font-family:Arial,sans-serif;margin-bottom:24px;"><div style="background:linear-gradient(135deg,#1e40af,#3730a3);color:#fff;font-size:14px;font-weight:800;padding:10px 14px;">Uppal Reebok — Division Wise Report</div>${renderPeriodPanel('today', `TODAY — ${fmtDate(reportDate)}`, headers, rowsFor('today'))}${renderPeriodPanel('mtd', 'MTD — 01 Aug to report date', headers, rowsFor('mtd'))}</div>`;
 }
 
 // ─── Build the Gender / Division table ──────────────────────────────────
@@ -390,6 +401,34 @@ function buildGenderDivisionTable(gdRows) {
 
   html += `</tbody></table></div>`;
   return html;
+}
+
+function buildGenderDivisionPeriodTables(gdRows) {
+  const genders = ['men', 'women', 'unisex'];
+  const divisions = ['footwear', 'apparel', 'accessories'];
+  const labels = { men: 'Men', women: 'Women', unisex: 'Unisex', footwear: 'Footwear', apparel: 'Apparel', accessories: 'Accessories' };
+  const data = { today: {}, mtd: {} };
+  for (const row of gdRows || []) data[row.period_type][`${row.gender}__${row.division}`] = row;
+  const rowsFor = (period) => genders.flatMap((gender) => {
+    const total = divisions.reduce((sum, division) => sum + Number(data[period][`${gender}__${division}`]?.qty || 0), 0);
+    return divisions.map((division) => { const row = data[period][`${gender}__${division}`] || {}; const mix = total ? `${((Number(row.qty || 0) / total) * 100).toFixed(1)}%` : '—'; return `<tr><td style="${TD}">${labels[gender]}</td><td style="${TOTAL}">${labels[division]}</td><td style="${TD_R}">${fmtNum(row.qty)}</td><td style="${TD_R}">${fmtINR(n(row.nsv))}</td><td style="${TD_R}">${mix}</td></tr>`; });
+  }).join('');
+  const headers = ['Gender', 'Division', 'Qty', 'NSV', '% within Gender'];
+  return `<div class="report-section" style="font-family:Arial,sans-serif;margin-bottom:24px;"><div style="background:linear-gradient(135deg,#1e40af,#3730a3);color:#fff;font-size:14px;font-weight:800;padding:10px 14px;">Uppal Reebok — Division Split Within Gender</div>${renderPeriodPanel('today', 'TODAY', headers, rowsFor('today'))}${renderPeriodPanel('mtd', 'MTD — 01 Aug to report date', headers, rowsFor('mtd'))}</div>`;
+}
+
+function buildGenderPeriodTables(gdRows) {
+  const genders = ['men', 'women', 'unisex'];
+  const labels = { men: 'Men', women: 'Women', unisex: 'Unisex' };
+  const grouped = { today: {}, mtd: {} };
+  for (const row of gdRows || []) {
+    grouped[row.period_type][row.gender] ||= { qty: 0, nsv: 0 };
+    grouped[row.period_type][row.gender].qty += Number(row.qty || 0);
+    grouped[row.period_type][row.gender].nsv += Number(row.nsv || 0);
+  }
+  const rowsFor = (period) => { const total = genders.reduce((sum, gender) => sum + Number(grouped[period][gender]?.qty || 0), 0); return genders.map((gender) => { const row = grouped[period][gender] || {}; const mix = total ? `${((Number(row.qty || 0) / total) * 100).toFixed(1)}%` : '—'; return `<tr><td style="${TOTAL}">${labels[gender]}</td><td style="${TD_R}">${fmtNum(row.qty)}</td><td style="${TD_R}">${fmtINR(row.nsv)}</td><td style="${TD_R}">${mix}</td></tr>`; }).join(''); };
+  const headers = ['Group', 'Qty', 'NSV', '% Mix'];
+  return `<div class="report-section" style="font-family:Arial,sans-serif;margin-bottom:24px;"><div style="background:linear-gradient(135deg,#1e40af,#3730a3);color:#fff;font-size:14px;font-weight:800;padding:10px 14px;">Uppal Reebok — Gender Wise Report</div>${renderPeriodPanel('today', 'TODAY', headers, rowsFor('today'))}${renderPeriodPanel('mtd', 'MTD — 01 Aug to report date', headers, rowsFor('mtd'))}</div>`;
 }
 
 // ─── POST handler ────────────────────────────────────────────────────────
@@ -448,9 +487,10 @@ export async function POST(req) {
 
     const parts = [
       { title: 'Reebok Daywise + MTD',   html: buildDaywiseTable(daywiseRows || [], effectiveDate) },
-      { title: 'Reebok Staff KPI',       html: buildStaffTable(staffRows || []) },
-      { title: 'Reebok FW / APP / ACC',  html: buildCategoryTable(catRows || []) },
-      { title: 'Reebok Gender / Division', html: buildGenderDivisionTable(gdRows || []) },
+      { title: 'Reebok Staff KPI',       html: buildStaffPeriodTables(staffRows || [], effectiveDate) },
+      { title: 'Reebok FW / APP / ACC',  html: buildCategoryPeriodTables(catRows || [], effectiveDate) },
+      { title: 'Reebok Gender Wise', html: buildGenderPeriodTables(gdRows || []) },
+      { title: 'Reebok Gender / Division', html: buildGenderDivisionPeriodTables(gdRows || []) },
     ];
 
     return NextResponse.json({

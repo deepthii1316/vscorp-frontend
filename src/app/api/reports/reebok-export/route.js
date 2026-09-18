@@ -1,7 +1,8 @@
 // app/api/reports/reebok-export/route.js
 // Reebok Sales — beautifully styled Excel export
 //
-// 5-sheet workbook: Cover, Daywise MTD, Staff KPI, FW/APP/ACC, Gender Division
+// 7-sheet workbook: Cover, Daywise MTD, Staff KPI, staff/category, division,
+// gender, and gender/division detail sheets.
 // - Branded green title bar, white header row, colour-coded Achievement %
 // - Alternating row shading, currency formatting, % formatting
 // - Numbers stored as true values (no ₹ in cells), footer note
@@ -462,6 +463,83 @@ function addGenderSheet(wb, gdRows) {
   return ws;
 }
 
+function addStaffCategorySheet(wb, staffRows) {
+  const ws = wb.addWorksheet('Staff Categories');
+  ws.columns = [
+    { width: 10 }, { width: 24 }, { width: 18 }, { width: 11 }, { width: 15 },
+    { width: 11 }, { width: 15 }, { width: 11 }, { width: 15 },
+  ];
+  writeTitle(ws, 1, 'Uppal Reebok — Staffwise Footwear / Apparel / Accessories');
+  writeHeader(ws, 3, ['PERIOD', 'SALESPERSON', 'ROLE', 'FW QTY', 'FW NSV', 'APP QTY', 'APP NSV', 'ACC QTY', 'ACC NSV']);
+  let r = 4;
+  for (const period of ['today', 'mtd']) {
+    for (const row of (staffRows || []).filter((item) => item.period_type === period)) {
+      const values = [period === 'today' ? 'TODAY' : 'MTD', row.salesperson_name, row.role || 'Sales Associate', row.footwear_qty, row.footwear_nsv, row.apparel_qty, row.apparel_nsv, row.accessories_qty, row.accessories_nsv];
+      values.forEach((value, index) => { ws.getCell(r, index + 1).value = index >= 3 ? safeNum(value) : value; ws.getCell(r, index + 1).style = index >= 3 ? ([4, 6, 8].includes(index) ? valCurStyle() : valStyle()) : labelStyle(); });
+      r++;
+    }
+  }
+  writeFooter(ws, r + 1, 'Category quantities and NSV use actual salesperson records.', 1, 9);
+  return ws;
+}
+
+function addDivisionSheet(wb, catRows) {
+  const ws = wb.addWorksheet('Division Wise');
+  ws.columns = [{ width: 12 }, { width: 18 }, { width: 13 }, { width: 17 }, { width: 14 }];
+  writeTitle(ws, 1, 'Uppal Reebok — Division Wise Report');
+  writeHeader(ws, 3, ['PERIOD', 'DIVISION', 'QTY', 'NSV', '% MIX']);
+  const rows = (catRows || []).filter((row) => row.period_type === 'today' || row.period_type === 'mtd');
+  const totals = { today: 0, mtd: 0 };
+  rows.forEach((row) => { totals[row.period_type] += Number(row.qty || 0); });
+  rows.sort((a, b) => a.period_type.localeCompare(b.period_type) || a.category.localeCompare(b.category));
+  rows.forEach((row, index) => {
+    const values = [row.period_type === 'today' ? 'TODAY' : 'MTD', row.category, row.qty, row.nsv, totals[row.period_type] ? Number(row.qty || 0) / totals[row.period_type] : null];
+    values.forEach((value, column) => { ws.getCell(index + 4, column + 1).value = value; ws.getCell(index + 4, column + 1).style = column === 3 ? valCurStyle() : column === 4 ? valPctStyle() : column > 1 ? valStyle() : labelStyle(); });
+  });
+  return ws;
+}
+
+function addGenderWiseSheet(wb, gdRows) {
+  const ws = wb.addWorksheet('Gender Wise');
+  ws.columns = [{ width: 12 }, { width: 16 }, { width: 13 }, { width: 17 }, { width: 14 }];
+  writeTitle(ws, 1, 'Uppal Reebok — Gender Wise Report');
+  writeHeader(ws, 3, ['PERIOD', 'GROUP', 'QTY', 'NSV', '% MIX']);
+  const grouped = {};
+  for (const row of gdRows || []) {
+    const key = `${row.period_type}:${row.gender}`;
+    grouped[key] ||= { period_type: row.period_type, gender: row.gender, qty: 0, nsv: 0 };
+    grouped[key].qty += Number(row.qty || 0); grouped[key].nsv += Number(row.nsv || 0);
+  }
+  const rows = Object.values(grouped); const totals = { today: 0, mtd: 0 };
+  rows.forEach((row) => { totals[row.period_type] += row.qty; });
+  rows.sort((a, b) => a.period_type.localeCompare(b.period_type) || a.gender.localeCompare(b.gender));
+  rows.forEach((row, index) => {
+    const values = [row.period_type === 'today' ? 'TODAY' : 'MTD', row.gender, row.qty, row.nsv, totals[row.period_type] ? row.qty / totals[row.period_type] : null];
+    values.forEach((value, column) => { ws.getCell(index + 4, column + 1).value = value; ws.getCell(index + 4, column + 1).style = column === 3 ? valCurStyle() : column === 4 ? valPctStyle() : column > 1 ? valStyle() : labelStyle(); });
+  });
+  return ws;
+}
+
+function addGenderDivisionDetailSheet(wb, gdRows) {
+  const ws = wb.addWorksheet('Gender Division');
+  ws.columns = [{ width: 12 }, { width: 14 }, { width: 16 }, { width: 13 }, { width: 17 }, { width: 14 }];
+  writeTitle(ws, 1, 'Uppal Reebok — Division Split Within Gender');
+  writeHeader(ws, 3, ['PERIOD', 'GENDER', 'DIVISION', 'QTY', 'NSV', '% WITHIN GENDER']);
+  const grouped = {}; const totals = {};
+  for (const row of gdRows || []) {
+    const key = `${row.period_type}:${row.gender}:${row.division}`;
+    grouped[key] = row;
+    const totalKey = `${row.period_type}:${row.gender}`;
+    totals[totalKey] = (totals[totalKey] || 0) + Number(row.qty || 0);
+  }
+  Object.values(grouped).sort((a, b) => a.period_type.localeCompare(b.period_type) || a.gender.localeCompare(b.gender) || a.division.localeCompare(b.division)).forEach((row, index) => {
+    const total = totals[`${row.period_type}:${row.gender}`] || 0;
+    const values = [row.period_type === 'today' ? 'TODAY' : 'MTD', row.gender, row.division, row.qty, row.nsv, total ? Number(row.qty || 0) / total : null];
+    values.forEach((value, column) => { ws.getCell(index + 4, column + 1).value = value; ws.getCell(index + 4, column + 1).style = column === 4 ? valCurStyle() : column === 5 ? valPctStyle() : column > 2 ? valStyle() : labelStyle(); });
+  });
+  return ws;
+}
+
 // ─── GET handler ──────────────────────────────────────────────────────────
 
 export async function GET(req) {
@@ -524,8 +602,10 @@ export async function GET(req) {
     addCoverSheet(wb, enriched.find(r => r.period_type === 'today') || {}, enriched.find(r => r.period_type === 'mtd') || {}, reportDate);
     addDaywiseSheet(wb, enriched);
     addStaffSheet(wb, staffRows || []);
-    addCategorySheet(wb, catRows || []);
-    addGenderSheet(wb, gdRows || []);
+    addStaffCategorySheet(wb, staffRows || []);
+    addDivisionSheet(wb, catRows || []);
+    addGenderWiseSheet(wb, gdRows || []);
+    addGenderDivisionDetailSheet(wb, gdRows || []);
 
     const buf = await wb.xlsx.writeBuffer();
 

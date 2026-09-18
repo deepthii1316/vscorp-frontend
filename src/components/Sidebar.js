@@ -70,7 +70,10 @@ export default function Sidebar() {
         </div>
         <div className="sidebar-brand-text">
           <span className="sidebar-brand-name">Virata Retail</span>
+          <br />
           <span className="sidebar-brand-sub">Retail Operations</span>
+          <br />
+          <span className="sidebar-brand-sub" style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>A V S Corp Company</span>
         </div>
       </div>
 

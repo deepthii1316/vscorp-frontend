@@ -88,12 +88,20 @@ REVOKE EXECUTE ON FUNCTION public.rpt_reebok_daywise(date) FROM anon;
 -- ─── 2. rpt_reebok_staffwise ───────────────────────────────────────────────
 -- One row per (period_type, salesperson) for the 3 known associates.
 -- The RPC unpacks the gold.staffwise JSONB into columns.
+DROP FUNCTION IF EXISTS public.rpt_reebok_staffwise(date);
 CREATE OR REPLACE FUNCTION public.rpt_reebok_staffwise(p_date date)
 RETURNS TABLE (
     period_type         text,
     salesperson_name    text,
+    role                text,
     qty                 numeric,
     nsv                 numeric,
+    bills               integer,
+    atv                 numeric,
+    upt                 numeric,
+    asp                 numeric,
+    sfr                 numeric,
+    afr                 numeric,
     footwear_qty        numeric,
     footwear_nsv        numeric,
     apparel_qty         numeric,
@@ -115,8 +123,15 @@ AS $$
         SELECT
             m.period_type,
             k.key  AS salesperson_name,
+            'Sales Associate'::text AS role,
             (k.value ->> 'qty')::numeric              AS qty,
             (k.value ->> 'nsv')::numeric              AS nsv,
+            COALESCE((k.value ->> 'bills')::integer, 0) AS bills,
+            (k.value ->> 'atv')::numeric              AS atv,
+            (k.value ->> 'upt')::numeric              AS upt,
+            (k.value ->> 'asp')::numeric              AS asp,
+            (k.value ->> 'sfr')::numeric              AS sfr,
+            (k.value ->> 'afr')::numeric              AS afr,
             (k.value ->> 'footwear_qty')::numeric     AS footwear_qty,
             (k.value ->> 'footwear_nsv')::numeric     AS footwear_nsv,
             (k.value ->> 'apparel_qty')::numeric      AS apparel_qty,

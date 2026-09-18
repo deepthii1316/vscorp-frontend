@@ -1,14 +1,12 @@
 'use client';
 
-import { TrendingUp, Users, Package, Truck, RefreshCw, CreditCard } from 'lucide-react';
+import { TrendingUp, Users, Package, Truck } from 'lucide-react';
 
 const reportTypes = [
-  { id: 'sales',         icon: TrendingUp, name: 'Sales',         description: 'Sales Item Report' },
-  { id: 'inventory',     icon: Package,   name: 'Inventory',     description: 'Stock Report' },
-  { id: 'account_dsr',   icon: CreditCard, name: 'Account DSR',  description: 'Payment Mode Split' },
-  { id: 'salesperson',   icon: Users,     name: 'Salesperson',   description: 'Sales Person Report' },
-  { id: 'grn',           icon: Truck,     name: 'GRN',           description: 'Goods Received Note' },
-  { id: 'site_movement', icon: RefreshCw, name: 'Site Movement', description: 'Site Movement Report' },
+  { id: 'sales',       icon: TrendingUp, name: 'Sales',       description: 'Sales Item Report' },
+  { id: 'inventory',   icon: Package,   name: 'Inventory',   description: 'Stock Report' },
+  { id: 'salesperson', icon: Users,     name: 'Salesperson', description: 'Sales Person Report' },
+  { id: 'grn',         icon: Truck,     name: 'GRN',         description: 'Goods Received Note' },
 ];
 
 export default function ReportTypeSelector({ selectedType, onSelect }) {

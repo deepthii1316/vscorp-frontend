@@ -40,6 +40,10 @@ from datetime import datetime
 from dotenv import load_dotenv
 import psycopg2
 from psycopg2.extras import execute_values
+try:
+    from scripts.sales_snapshot import select_authoritative_sales_rows
+except ModuleNotFoundError:
+    from sales_snapshot import select_authoritative_sales_rows
 
 # Force UTF-8 on stdout for Windows
 if hasattr(sys.stdout, "reconfigure"):
@@ -171,18 +175,10 @@ def is_socks(class_name):
 
 def fetch_reebok_rows(conn):
     """Pull every sales row for UPPAL — but only real data rows, not footer/header."""
-    return pg_fetch_all(
+    raw_rows = pg_fetch_all(
         conn,
         """
-        SELECT
-            "Bill Date"   AS bill_date,
-            "Bill No."    AS bill_no,
-            "Qty"         AS qty_raw,
-            "Taxable Amount" AS tax_raw,
-            "Item Division"  AS item_division,
-            "Section"        AS section,
-            "Class Name"     AS class_name,
-            "Salesman"       AS salesman
+        SELECT *
         FROM raw.sales
         WHERE "Store Number" = %s
           AND "Bill No." IS NOT NULL
@@ -192,9 +188,16 @@ def fetch_reebok_rows(conn):
         """,
         (UPPAL_STORE,),
     )
+    selected = select_authoritative_sales_rows(raw_rows)
+    return [{
+        "bill_date": row.get("Bill Date"), "bill_no": row.get("Bill No."),
+        "qty_raw": row.get("Qty"), "tax_raw": row.get("Taxable Amount"),
+        "item_division": row.get("Item Division"), "section": row.get("Section"),
+        "class_name": row.get("Class Name"), "salesman": row.get("Salesman"),
+    } for row in selected]
 
 
-def aggregate_one_date(rows_for_date, equal_staff_totals=False):
+def aggregate_one_date(rows_for_date):
     """
     Compute every KPI for one (full_date, period_type) given a list of raw rows.
     Returns a dict matching the gold table columns.
@@ -216,6 +219,7 @@ def aggregate_one_date(rows_for_date, equal_staff_totals=False):
 
     division_breakdown = {}  # division -> {qty, nsv}
     staffwise = {}           # name -> {qty, nsv, footwear_qty, footwear_nsv, ...}
+    staff_bills = {}         # name -> distinct bill numbers
     gender_division = {}     # gender -> {division -> {qty, nsv}}
 
     for r in rows_for_date:
@@ -274,8 +278,13 @@ def aggregate_one_date(rows_for_date, equal_staff_totals=False):
         })
         s["qty"] += line_qty
         s["nsv"] += line_nsv
+        if is_socks(cls):
+            s["socks_qty"] = s.get("socks_qty", 0.0) + line_qty
         s[f"{div}_qty"] += line_qty
         s[f"{div}_nsv"] += line_nsv
+        staff_bills.setdefault(sm, set())
+        if bill_no:
+            staff_bills[sm].add(str(bill_no).strip())
 
         # Gender × division
         if sec:
@@ -284,13 +293,34 @@ def aggregate_one_date(rows_for_date, equal_staff_totals=False):
             gd_bucket["qty"] += line_qty
             gd_bucket["nsv"] += line_nsv
 
+    def safe_div(a, b):
+        return (a / b) if b and b != 0 else None
+
+    # Keep all known associates visible, including associates with no sales.
+    for staff_name in ("BALRAJ GADDAM", "RAMBABU DHARAVATH", "ERRI SRIJA"):
+        staffwise.setdefault(staff_name, {
+            "qty": 0.0, "nsv": 0.0,
+            "socks_qty": 0.0,
+            "footwear_qty": 0.0, "footwear_nsv": 0.0,
+            "apparel_qty": 0.0, "apparel_nsv": 0.0,
+            "accessories_qty": 0.0, "accessories_nsv": 0.0,
+        })
+
     # Round JSONB nested values to 2dp to avoid float artefacts downstream
     for d in division_breakdown.values():
         d["qty"] = round(d["qty"], 2)
         d["nsv"] = round(d["nsv"], 2)
-    for s in staffwise.values():
+    for staff_name, s in staffwise.items():
+        bills_for_staff = len(staff_bills.get(staff_name, set()))
+        s["bills"] = bills_for_staff
+        s["atv"] = safe_div(s["nsv"], bills_for_staff)
+        s["upt"] = safe_div(s["qty"], bills_for_staff)
+        s["asp"] = safe_div(s["nsv"], s["qty"])
+        s["sfr"] = safe_div(s.get("socks_qty", 0), s["footwear_qty"])
+        s["afr"] = safe_div(s["apparel_qty"], s["footwear_qty"])
         for k in s:
-            s[k] = round(s[k], 2)
+            if isinstance(s[k], (int, float)):
+                s[k] = round(s[k], 4 if k in ("upt", "sfr", "afr") else 2)
     for gd in gender_division.values():
         for d in gd.values():
             d["qty"] = round(d["qty"], 2)
@@ -307,19 +337,6 @@ def aggregate_one_date(rows_for_date, equal_staff_totals=False):
     fupt = safe_div(fw_qty, bills_count)
     sfr = safe_div(socks_qty, fw_qty)
     afr = safe_div(app_qty, fw_qty)
-
-    if equal_staff_totals:
-        staff_total_qty = qty / 3
-        staff_total_nsv = nsv / 3
-        for staff_name in ("BALRAJ GADDAM", "RAMBABU DHARAVATH", "ERRI SRIJA"):
-            staff = staffwise.setdefault(staff_name, {
-                "qty": 0.0, "nsv": 0.0,
-                "footwear_qty": 0.0, "footwear_nsv": 0.0,
-                "apparel_qty": 0.0, "apparel_nsv": 0.0,
-                "accessories_qty": 0.0, "accessories_nsv": 0.0,
-            })
-            staff["qty"] = staff_total_qty
-            staff["nsv"] = staff_total_nsv
 
     return {
         "nsv": round(nsv, 2),
@@ -441,7 +458,7 @@ def refresh_reebok(verbose=True):
     upserts = []
     for target_date in sorted(rows_by_date.keys()):
         # TODAY row
-        today_metrics = aggregate_one_date(rows_by_date[target_date], equal_staff_totals=True)
+        today_metrics = aggregate_one_date(rows_by_date[target_date])
         if today_store_name is None:
             # best-effort: read store name from any raw row (default to "Reebok Uppal")
             today_store_name = "Reebok Uppal"

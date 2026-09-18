@@ -15,6 +15,7 @@ function TopBar() {
         <h2>Virata Retail</h2>
         <span style={{ color: 'var(--border-strong)', margin: '0 4px' }}>·</span>
         <p>Retail Operations</p>
+        <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginLeft: '8px' }}>A V S Corp Company</span>
       </div>
       <div className="top-bar-right">
         <button type="button" className="top-bar-icon-btn" title="Notifications" aria-label="Notifications">
