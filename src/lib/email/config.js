@@ -1,18 +1,18 @@
 /**
- * Email configuration for VS Corp reports.
+ * Email configuration for Virata Retail reports.
  *
  * SMTP credentials should be set via environment variables:
  *   SMTP_USER - Gmail SMTP username (e.g. palashrupani2621@gmail.com)
  *   SMTP_PASS - Gmail app password
  *
- * The full distribution list (ALL) includes all Skechers stores and VS Corp team members.
+ * The full distribution list (ALL) includes all Skechers stores and Virata Retail team members.
  * The test list (TEST) goes only to the two internal reviewers.
  */
 
 /**
  * @type {string}
  */
-export const EMAIL_FROM = `VS Corp Analytics <${process.env.SMTP_USER ?? 'palashrupani2621@gmail.com'}>`;
+export const EMAIL_FROM = `Virata Retail Analytics <${process.env.SMTP_USER ?? 'palashrupani2621@gmail.com'}>`;
 
 /**
  * Send mode: 'test' or 'all'.

@@ -613,7 +613,7 @@ export async function GET(req) {
       status: 200,
       headers: {
         'Content-Type':        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="VS_Corp_Reebok_Sales_${reportDate}.xlsx"`,
+        'Content-Disposition': `attachment; filename="Virata_Retail_Reebok_Sales_${reportDate}.xlsx"`,
         'Cache-Control':        'no-store',
       },
     });

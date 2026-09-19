@@ -88,7 +88,7 @@ export async function POST(req) {
     ],
     reportDate,
     displayDate: displayDate(reportDate),
-    subject: `VS Corp KPI Dashboard — ${displayDate(reportDate)} (Day + MTD)`,
+    subject: `Virata Retail KPI Dashboard — ${displayDate(reportDate)} (Day + MTD)`,
     stores: rows.length,
     dataQuality: dayAlert.stats,
   });

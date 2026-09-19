@@ -49,7 +49,7 @@ export async function POST(req) {
   //  • JSON { images: ['data:image/...;base64,...'] } — legacy fallback.
   const attachments = [];
   let totalBytes = 0;
-  let subject = 'VS Corp Report';
+  let subject = 'Virata Retail Report';
   let displayDate;
   let mode = 'test';
 
@@ -105,7 +105,7 @@ export async function POST(req) {
   const html = `
     <div style="font-family:Arial,Helvetica,sans-serif;color:#222;">
       <p style="font-size:13px;color:#555;margin:0 0 8px;">
-        ${displayDate ? `VS Corp Report for <b>${displayDate}</b>` : 'VS Corp Report'}. Full report below (tap to zoom for detail).
+        ${displayDate ? `Virata Retail Report for <b>${displayDate}</b>` : 'Virata Retail Report'}. Full report below (tap to zoom for detail).
       </p>
       ${imgTags}
     </div>`;

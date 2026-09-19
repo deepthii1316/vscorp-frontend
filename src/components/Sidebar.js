@@ -38,12 +38,7 @@ const navItems = [
       { href: '/upload',          label: 'Data Upload',    icon: UploadCloud },
       { href: '/upload-history',  label: 'Upload History', icon: History },
       { href: '/data-coverage',   label: 'Data Coverage',  icon: FileCheck },
-      { href: '/sales-reports',   label: 'Sales Reports',  icon: FileSpreadsheet, subItems: [
-        { href: '/reebok-reports?report=daywise',  label: 'Daywise + MTD' },
-        { href: '/reebok-reports?report=staff',    label: 'Staff KPI' },
-        { href: '/reebok-reports?report=category', label: 'FW / APP / ACC' },
-        { href: '/reebok-reports?report=gender',   label: 'Gender / Division' },
-      ]},
+      { href: '/reebok-reports',  label: 'Sales Reports',  icon: FileSpreadsheet },
       { href: '/merchandiser-reports', label: 'Merchandiser', icon: Package, disabled: true },
     ],
   },
@@ -66,14 +61,12 @@ export default function Sidebar() {
       {/* Brand */}
       <div className="sidebar-brand">
         <div className="sidebar-logo">
-          <img src="/logo.png" alt="Virata Retail" className="sidebar-logo-img" />
+          <img src="/virata-logo.png" alt="Virata Retail" className="sidebar-logo-img" />
         </div>
         <div className="sidebar-brand-text">
           <span className="sidebar-brand-name">Virata Retail</span>
           <br />
           <span className="sidebar-brand-sub">Retail Operations</span>
-          <br />
-          <span className="sidebar-brand-sub" style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>A V S Corp Company</span>
         </div>
       </div>
 

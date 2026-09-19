@@ -36,7 +36,7 @@ export default function LoginPage() {
     <div className="login-shell">
       <div className="login-card">
         <div className="login-logo">
-          <Image src="/logo.png" alt="Virata Retail" width={48} height={48} priority />
+          <Image src="/virata-logo.png" alt="Virata Retail" width={48} height={48} priority />
         </div>
         <h1 className="login-title">Virata Retail</h1>
         <p className="login-sub">Sign in to access retail operations</p>

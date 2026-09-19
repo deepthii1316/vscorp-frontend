@@ -99,7 +99,7 @@ function MasterDashboardPage() {
 
       const formData = new FormData();
       formData.append('images', new Blob([await (await fetch(imageBase64)).arrayBuffer()], { type: 'image/png' }), 'report.png');
-      formData.append('subject', `VS Corp KPI Dashboard — ${emailDate}`);
+      formData.append('subject', `Virata Retail KPI Dashboard — ${emailDate}`);
       formData.append('displayDate', emailDate);
       formData.append('mode', emailMode);
 

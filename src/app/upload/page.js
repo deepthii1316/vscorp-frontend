@@ -17,7 +17,6 @@ import {
 import ReportTypeSelector from '@/components/ReportTypeSelector';
 import FileDropZone from '@/components/FileDropZone';
 import UploadProgress from '@/components/UploadProgress';
-import UploadHistory from '@/components/UploadHistory';
 import RequireAuth from '@/components/RequireAuth';
 import { SkeletonCard } from '@/components/Skeleton';
 import { hashFile } from '@/lib/hashFile';
@@ -578,9 +577,6 @@ function UploadPageContent() {
             )}
           </div>
         </div>
-
-        {/* Upload History */}
-        <UploadHistory uploads={uploads} loading={uploadsLoading} />
       </div>
     </>
   );
