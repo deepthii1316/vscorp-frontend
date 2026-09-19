@@ -7,9 +7,6 @@ export default function UploadHistory({ uploads, loading, showHeader = true }) {
     switch (type) {
       case 'sales':         return 'Sales';
       case 'inventory': case 'stock': return 'Stock';
-      case 'salesperson':   return 'Salesperson';
-      case 'grn':           return 'GRN';
-      case 'site_movement': return 'Site Movement';
       case 'account_dsr':   return 'Account DSR';
       default: return type || 'Report';
     }

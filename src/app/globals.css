@@ -657,6 +657,11 @@ body {
   min-height: 100px;
 }
 
+.report-type-card,
+.report-type-card * {
+  cursor: pointer;
+}
+
 .report-type-card:hover {
   border-color: var(--green-line);
   background: var(--green-soft);
@@ -1392,6 +1397,12 @@ body {
   background: var(--info-soft);
   color: var(--info);
   border-color: var(--info-soft);
+}
+
+.status-pill.failed {
+  background: var(--negative-soft);
+  color: var(--negative);
+  border-color: var(--negative-soft);
 }
 
 .status-dot-inline {

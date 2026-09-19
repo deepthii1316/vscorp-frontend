@@ -148,10 +148,24 @@ export async function POST() {
 }
 
 export async function GET(request) {
-  const runId = new URL(request.url).searchParams.get('runId');
-  if (!runId) return NextResponse.json({ error: 'runId is required.' }, { status: 400 });
-
+  let runId = new URL(request.url).searchParams.get('runId');
   const supabase = createServerClient();
+
+  // No runId: report the latest in-flight run (if any) so a reloaded page can
+  // resume showing live progress.
+  if (!runId) {
+    const { data: active, error: activeError } = await supabase
+      .from('processing_runs')
+      .select('id')
+      .in('status', ['queued', 'processing'])
+      .order('requested_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (activeError) return NextResponse.json({ error: activeError.message }, { status: 500 });
+    if (!active) return NextResponse.json({ run: null, uploads: [] });
+    runId = active.id;
+  }
+
   const [{ data: run, error: runError }, { data: uploads, error: uploadsError }] = await Promise.all([
     supabase.from('processing_runs').select('*').eq('id', runId).single(),
     supabase.from('upload_audit_log')

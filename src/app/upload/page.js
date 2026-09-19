@@ -24,6 +24,14 @@ import { hashFile } from '@/lib/hashFile';
 import { generateFileName } from '@/lib/fileRename';
 import { createBrowserClient } from '@/lib/supabase';
 
+const PIPELINE_STEPS = [
+  { step: 'raw', name: 'Raw ingest', desc: '— Validated and stored in the raw layer' },
+  { step: 'dimensions', name: 'Dimensions', desc: '— Conformed Calendar, Store, Product, Salesperson' },
+  { step: 'facts', name: 'Facts', desc: '— Fact Sales & Fact Stock in Staging' },
+  { step: 'gold', name: 'Gold tables', desc: '— Store x Day Summary & granular aggregates' },
+];
+const POLL_INTERVAL_MS = 3000;
+
 function UploadPageContent() {
   const [selectedType, setSelectedType] = useState(null);
   const [file, setFile] = useState(null);
@@ -42,14 +50,81 @@ function UploadPageContent() {
   const [uploadsLoading, setUploadsLoading] = useState(true);
 
   const [isProcessingPipeline, setIsProcessingPipeline] = useState(false);
-  const [pipelineStep, setPipelineStep] = useState(null);
+  const [pipelineRun, setPipelineRun] = useState(null); // { id, status, stage, error_message }
   const [pipelineResult, setPipelineResult] = useState(null);
   const [showLogs, setShowLogs] = useState(false);
   const pipelineTriggeredRef = useRef(false);
+  const pollTimerRef = useRef(null);
+  const pollInFlightRef = useRef(false);
 
   useEffect(() => {
     loadRecentUploads();
+    resumeActiveRun();
+    return () => stopPolling();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const stopPolling = () => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  };
+
+  // Ask the server how the run is actually doing (stage is written by the
+  // GitHub Actions worker) and reflect it in the UI.
+  const pollRun = async (runId) => {
+    if (pollInFlightRef.current) return;
+    pollInFlightRef.current = true;
+    try {
+      const res = await fetch(`/api/process?runId=${encodeURIComponent(runId)}`, { cache: 'no-store' });
+      const json = await res.json();
+      if (!res.ok || !json.run) return; // transient — try again next tick
+      const run = json.run;
+      setPipelineRun(run);
+      await loadRecentUploads(false);
+
+      if (run.status === 'completed' || run.status === 'failed') {
+        stopPolling();
+        setIsProcessingPipeline(false);
+        pipelineTriggeredRef.current = false;
+        setPipelineResult({
+          success: run.status === 'completed',
+          message: run.status === 'completed'
+            ? 'Processing completed. Reports now reflect the uploaded data.'
+            : run.error_message || 'Processing failed. Check the GitHub Actions run for details.',
+          output: run.error_message || undefined,
+          runTime: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        });
+      }
+    } catch {
+      // network blip — keep polling
+    } finally {
+      pollInFlightRef.current = false;
+    }
+  };
+
+  const startPolling = (runId) => {
+    stopPolling();
+    pollRun(runId);
+    pollTimerRef.current = setInterval(() => pollRun(runId), POLL_INTERVAL_MS);
+  };
+
+  // After a page reload, pick up a run that is still in flight.
+  const resumeActiveRun = async () => {
+    try {
+      const res = await fetch('/api/process', { cache: 'no-store' });
+      const json = await res.json();
+      if (res.ok && json.run) {
+        pipelineTriggeredRef.current = true;
+        setIsProcessingPipeline(true);
+        setPipelineRun(json.run);
+        startPolling(json.run.id);
+      }
+    } catch {
+      // not fatal
+    }
+  };
 
   const loadRecentUploads = async (showLoading = true) => {
     try {
@@ -177,40 +252,81 @@ function UploadPageContent() {
     // Guard against multiple triggers — once a pipeline has been dispatched,
     // clicking again should not spawn a second GitHub Actions workflow.
     if (pipelineTriggeredRef.current) return;
+    pipelineTriggeredRef.current = true;
 
     setIsProcessingPipeline(true);
     setPipelineResult(null);
-    setPipelineStep('raw');
-    pipelineTriggeredRef.current = true;
+    setPipelineRun({ id: null, status: 'queued', stage: null });
+
+    const finishIdle = () => {
+      setIsProcessingPipeline(false);
+      pipelineTriggeredRef.current = false;
+    };
 
     try {
       const res = await fetch('/api/process', { method: 'POST' });
       const json = await res.json();
-      if (json.success) {
-        setPipelineStep('triggered');
-        setPipelineResult({
-          success: true,
-          message: 'Pipeline triggered successfully. GitHub Actions is processing the queued files.',
-          output: json.output,
-          runTime: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-        });
-      } else {
-        setPipelineStep('failed');
+      if (!json.success) {
+        setPipelineRun({ id: null, status: 'failed', stage: null });
         setPipelineResult({
           success: false,
           message: [json.error, json.details].filter(Boolean).join(' — ') || 'Pipeline execution failed.',
         });
+        finishIdle();
+        return;
       }
+
+      if (json.status === 'completed' || json.uploadCount === 0) {
+        setPipelineRun(null);
+        setPipelineResult({ success: true, message: 'Nothing to process — there are no queued uploads.' });
+        finishIdle();
+        await loadRecentUploads(false);
+        return;
+      }
+
+      setPipelineRun({ id: json.runId, status: json.status || 'queued', stage: null });
+      setPipelineResult({
+        success: true,
+        message: json.alreadyRunning
+          ? 'A run is already in progress — showing its live progress.'
+          : 'Queued in GitHub Actions. Progress below updates automatically.',
+        output: json.output,
+        runTime: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      });
       await loadRecentUploads(false);
+      startPolling(json.runId); // stays "processing" until the run reaches a terminal state
     } catch {
-      setPipelineStep('failed');
+      setPipelineRun({ id: null, status: 'failed', stage: null });
       setPipelineResult({ success: false, message: 'Failed to trigger batch processing pipeline.' });
-    } finally {
-      setIsProcessingPipeline(false);
+      finishIdle();
     }
   };
 
-  const pendingCount = uploads.filter((u) => u.status === 'pending' || u.status === 'uploaded').length;
+  // New uploads are saved as 'queued', so it must count here or Pending stays at 0.
+  const pendingCount = uploads.filter(
+    (u) => u.status === 'queued' || u.status === 'pending' || u.status === 'uploaded'
+  ).length;
+
+  // Derive step states from the run's real stage, as written by the worker.
+  const runStatus = pipelineRun?.status;
+  const runActive = runStatus === 'queued' || runStatus === 'processing';
+  const stageIndex = runStatus === 'completed'
+    ? PIPELINE_STEPS.length
+    : PIPELINE_STEPS.findIndex((st) => st.step === pipelineRun?.stage);
+  const progressPct = runStatus === 'completed'
+    ? 100
+    : stageIndex >= 0
+      ? Math.round(((stageIndex + 0.5) / PIPELINE_STEPS.length) * 100)
+      : runActive ? 4 : 0;
+  const statusPill = runStatus === 'completed'
+    ? { cls: 'success', label: 'Completed' }
+    : runStatus === 'failed'
+      ? { cls: 'failed', label: 'Failed' }
+      : runStatus === 'processing' || (runStatus === 'queued' && pipelineRun?.stage)
+        ? { cls: 'processing', label: 'Processing' }
+        : runStatus === 'queued'
+          ? { cls: 'processing', label: 'Queued' }
+          : { cls: 'ready', label: 'Ready' };
   const lastActivityDate = uploads[0]?.uploaded_at
     ? new Date(uploads[0].uploaded_at).toLocaleDateString('en-IN', {
         day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
@@ -364,9 +480,9 @@ function UploadPageContent() {
             <div className="run-processing-metrics">
               <div className="metric-item">
                 <span className="metric-label">Status</span>
-                <span className={`status-pill ${isProcessingPipeline ? 'processing' : pipelineResult?.success ? 'success' : 'ready'}`}>
+                <span className={`status-pill ${statusPill.cls}`}>
                   <span className="status-dot-inline" />
-                  {isProcessingPipeline ? 'Triggering' : pipelineResult?.success ? 'Triggered' : pipelineResult ? 'Failed' : 'Ready'}
+                  {statusPill.label}
                 </span>
               </div>
               <div className="metric-item">
@@ -413,23 +529,21 @@ function UploadPageContent() {
 
             <div className="pipeline-progress-bar-container">
               <div className="pipeline-progress-bar-fill" style={{
-                width: pipelineStep === 'raw' || pipelineStep === 'triggered' ? '25%' : '0%',
+                width: `${progressPct}%`,
               }} />
             </div>
 
             <div className="pipeline-steps-list">
-              {[
-                { step: 'raw', name: 'Raw ingest', desc: '— Validated and stored in the raw layer' },
-                { step: 'dimensions', name: 'Dimensions', desc: '— Conformed Calendar, Store, Product, Salesperson' },
-                { step: 'facts', name: 'Facts', desc: '— Fact Sales & Fact Stock in Staging' },
-                { step: 'gold', name: 'Gold tables', desc: '— Store x Day Summary & granular aggregates' },
-              ].map(({ step, name, desc }) => {
-                const done = false;
-                const current = pipelineStep === step;
+              {PIPELINE_STEPS.map(({ step, name, desc }, i) => {
+                const done = stageIndex > i;
+                const current = stageIndex === i && runActive;
+                const failed = stageIndex === i && runStatus === 'failed';
                 return (
                   <div className="pipeline-step-item" key={step}>
                     <div className="step-icon-status">
-                      {current ? (
+                      {failed ? (
+                        <XCircle className="step-check-icon" style={{ color: 'var(--negative)' }} />
+                      ) : current ? (
                         <div className="spinner dark-sm" />
                       ) : done ? (
                         <CheckCircle2 className="step-check-icon" />
@@ -445,6 +559,17 @@ function UploadPageContent() {
                 );
               })}
             </div>
+
+            {runStatus === 'queued' && !pipelineRun?.stage && (
+              <p className="run-processing-subtext" style={{ marginTop: 'var(--space-3)' }}>
+                Waiting for a GitHub Actions runner to start…
+              </p>
+            )}
+            {runStatus === 'failed' && pipelineResult?.message && (
+              <p className="run-processing-subtext" style={{ marginTop: 'var(--space-3)', color: 'var(--negative)' }}>
+                {pipelineResult.message}
+              </p>
+            )}
 
             {showLogs && pipelineResult?.output && (
               <div className="pipeline-logs-box">
