@@ -1,0 +1,120 @@
+// app/api/reports/reebok-send/route.js
+// Emails the Uppal Reebok sales report: table screenshots (PNG, inline) + the Excel workbook.
+//
+// Pipeline (see public/EMAIL-REPORTS.md):
+//   browser captures each table with html2canvas → POSTs the PNGs here (multipart)
+//   → this route builds the Excel (same builder as the download) → sends one email.
+//
+// POST multipart/form-data: images[] (png), date (YYYY-MM-DD), mode ('test' | 'all')
+// GET → { test: <count>, all: <count> }   (recipient COUNTS only, never addresses)
+//
+// Recipients are decided server-side from lib/email/config.js; the client only picks the mode.
+
+import { NextResponse } from 'next/server';
+import nodemailer from 'nodemailer';
+import { createServerClient } from '@/lib/supabase';
+import { EMAIL_FROM, recipientsFor } from '@/lib/email/config';
+import { buildReebokWorkbook } from '@/lib/email/reebokExcel';
+
+export const runtime = 'nodejs';
+// Building the Excel + sending 8 images can exceed the default serverless timeout.
+export const maxDuration = 60;
+
+// Serverless request cap is ~4.5MB; leave headroom (images + Excel attachment together).
+const MAX_BYTES = Math.floor(4.3 * 1024 * 1024);
+
+let transporter = null;
+function getTransporter(user, pass) {
+  if (!transporter) {
+    // Dev-only escape hatch for machines whose antivirus / proxy re-signs TLS traffic
+    // ("self-signed certificate in certificate chain"). Never active in production.
+    // Preferred fix: set NODE_EXTRA_CA_CERTS to that software's root certificate instead.
+    const allowSelfSigned = process.env.SMTP_ALLOW_SELF_SIGNED === 'true' && process.env.NODE_ENV !== 'production';
+    transporter = nodemailer.createTransport({
+      service: 'gmail',
+      pool: true,
+      maxConnections: 3,
+      auth: { user, pass },
+      ...(allowSelfSigned ? { tls: { rejectUnauthorized: false } } : {}),
+    });
+  }
+  return transporter;
+}
+
+function fmtDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+export async function GET() {
+  return NextResponse.json({ test: recipientsFor('test').length, all: recipientsFor('all').length });
+}
+
+export async function POST(req) {
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  if (!smtpUser || !smtpPass) {
+    return NextResponse.json({ error: 'Email not configured (SMTP_USER / SMTP_PASS missing).' }, { status: 500 });
+  }
+
+  try {
+    const form = await req.formData();
+    const files = form.getAll('images').filter((f) => typeof f !== 'string');
+    if (files.length === 0) return NextResponse.json({ error: 'Missing report image(s).' }, { status: 400 });
+    const mode = form.get('mode') === 'all' ? 'all' : 'test';
+    const dateParam = /^\d{4}-\d{2}-\d{2}$/.test(String(form.get('date') || '')) ? String(form.get('date')) : null;
+
+    // Images → inline (CID) attachments, in the order the tables were captured.
+    let totalBytes = 0;
+    const attachments = [];
+    for (const [i, f] of files.entries()) {
+      const buf = Buffer.from(await f.arrayBuffer());
+      totalBytes += buf.byteLength;
+      attachments.push({ filename: `report-${i + 1}.png`, content: buf, cid: `report${i}`, contentType: 'image/png' });
+    }
+
+    // Excel workbook (same builder as the Download .xlsx button).
+    const { buffer: xlsx, reportDate, filename } = await buildReebokWorkbook(createServerClient(), dateParam);
+    totalBytes += xlsx.byteLength;
+
+    if (totalBytes > MAX_BYTES) {
+      return NextResponse.json(
+        { error: `Report is too large to email (${(totalBytes / 1024 / 1024).toFixed(1)}MB, limit ${(MAX_BYTES / 1024 / 1024).toFixed(1)}MB).` },
+        { status: 413 },
+      );
+    }
+    attachments.push({
+      filename,
+      content: xlsx,
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+
+    const displayDate = fmtDate(reportDate);
+    const subject = `${mode === 'test' ? '[TEST] ' : ''}Uppal Reebok Sales Report — ${displayDate}`;
+    const imgTags = attachments
+      .filter((a) => a.cid)
+      .map((a) => `<img src="cid:${a.cid}" alt="Uppal Reebok report" style="display:block;max-width:100%;height:auto;margin-bottom:16px;" />`)
+      .join('');
+    const html = `
+      <div style="font-family:Arial,Helvetica,sans-serif;color:#222;">
+        <p style="font-size:13px;color:#555;margin:0 0 12px;">
+          Uppal Reebok sales report for <b>${displayDate}</b>. The Excel workbook is attached.
+        </p>
+        ${imgTags}
+      </div>`;
+
+    const recipients = recipientsFor(mode);
+    const info = await getTransporter(smtpUser, smtpPass).sendMail({
+      from: EMAIL_FROM,
+      to: recipients.join(', '),
+      subject,
+      html,
+      attachments,
+    });
+
+    return NextResponse.json({ success: true, messageId: info.messageId, recipients: recipients.length, mode, subject });
+  } catch (err) {
+    console.error('[reebok-send] Error:', err);
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed to send email' }, { status: 500 });
+  }
+}

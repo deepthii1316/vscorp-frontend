@@ -2660,3 +2660,102 @@ body {
   letter-spacing: 0.1em;
   margin-bottom: 4px;
 }
+
+/* ─── Sales report: enterprise table presentation (display only) ─── */
+.report-section table tbody tr:nth-child(even) td { background: #f7f8fa; }
+.report-section table tbody tr:hover td { background: #eef2f7; }
+.report-section table td:not(:first-child) { white-space: nowrap; }
+.report-section .nsv-cell { color: inherit; font-weight: 400; }
+.report-section .ach-cell {
+  background: transparent !important;
+  padding: 0;
+  min-width: 0;
+  border-radius: 0;
+  font-size: inherit;
+  font-weight: 700;
+}
+.report-section .ach-cell[style*="color:#16a34a"] { color: #15803d !important; }
+
+/* ─── Sales reports: left sub-report navigation + send button ─── */
+.reebok-layout { display: flex; align-items: flex-start; gap: 20px; padding: 0 var(--space-7); }
+.reebok-layout .reebok-page-container { padding: 0; max-width: none; margin: 0; }
+.reebok-layout .reebok-page-container { flex: 1; min-width: 0; }
+.reebok-subnav {
+  position: sticky; top: 16px; flex: 0 0 230px;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 12px 8px; background: var(--bg-elevated);
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+}
+.reebok-subnav-label {
+  padding: 4px 12px 8px; font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);
+}
+.reebok-subnav-item {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 10px 12px; border: 0; border-radius: var(--r-md, 8px);
+  background: transparent; color: var(--text); font: inherit; font-size: 13.5px;
+  text-align: left; cursor: pointer; transition: background-color 100ms var(--ease);
+}
+.reebok-subnav-item svg { width: 18px; height: 18px; stroke-width: 1.6; flex: none; color: var(--text-muted); }
+.reebok-subnav-item:hover { background: var(--bg-subtle); }
+.reebok-subnav-item.active { background: var(--bg-inset); font-weight: 600; }
+.reebok-subnav-item.active svg { color: var(--text); }
+@media (max-width: 900px) {
+  .reebok-layout { flex-direction: column; }
+  .reebok-subnav { position: static; flex: none; width: 100%; flex-direction: row; overflow-x: auto; }
+  .reebok-subnav-label { display: none; }
+  .reebok-subnav-item { width: auto; white-space: nowrap; }
+}
+
+/* Sales reports: pull the sub-report panel flush against the main sidebar */
+.page-content:has(.reebok-layout) { max-width: none; margin: 0; padding-left: var(--space-3, 12px); padding-right: var(--space-5); padding-top: var(--space-4); }
+.page-content:has(.reebok-layout) .reebok-page-wrapper { padding: 0; }
+.page-content:has(.reebok-layout) .reebok-layout { padding: 0; gap: 16px; }
+.reebok-subnav { flex-basis: 220px; }
+
+/* Sales reports: compact, reference-style presentation */
+.report-section { padding: 16px 18px; margin-bottom: 16px; }
+.report-section table th { text-transform: none !important; letter-spacing: 0 !important; font-size: 12px !important; padding: 7px 10px !important; }
+.report-section table td { padding: 5px 10px !important; }
+.report-section table th:first-child, .report-section table td:first-child { min-width: 170px; }
+.report-section details > summary { list-style: none; }
+.report-section details > summary::-webkit-details-marker { display: none; }
+
+/* ─── Sales reports: email buttons, status toast, confirmation dialog ─── */
+.reebok-send-bar {
+  position: fixed; right: 28px; bottom: 24px; z-index: 50;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+}
+.reebok-send-actions { display: flex; gap: 10px; }
+.reebok-send-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 20px; border-radius: 10px; border: 1px solid var(--text);
+  background: var(--text); color: var(--text-inverse);
+  font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+}
+.reebok-send-btn.secondary { background: var(--bg-elevated); color: var(--text); }
+.reebok-send-btn svg { width: 16px; height: 16px; }
+.reebok-send-btn:hover:not(:disabled) { opacity: 0.9; }
+.reebok-send-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+.reebok-send-status {
+  display: flex; align-items: center; gap: 10px; max-width: 420px;
+  padding: 10px 14px; border-radius: 8px; font-size: 13px;
+  background: var(--bg-elevated); border: 1px solid var(--border); box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+}
+.reebok-send-status.success { border-color: #63BE7B; background: #eefaf1; color: #14532d; }
+.reebok-send-status.error   { border-color: #F8696B; background: #fdeeee; color: #7a1212; }
+.reebok-send-status button { border: 0; background: transparent; cursor: pointer; color: inherit; display: inline-flex; padding: 0; }
+.reebok-send-status button svg { width: 15px; height: 15px; }
+.reebok-modal-backdrop {
+  position: fixed; inset: 0; z-index: 100; background: rgba(15,23,42,0.45);
+  display: flex; align-items: center; justify-content: center;
+}
+.reebok-modal {
+  background: var(--bg-elevated); border-radius: 12px; padding: 22px 24px; width: min(440px, 92vw);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+}
+.reebok-modal h3 { margin: 0 0 8px; font-size: 16px; }
+.reebok-modal p { margin: 0 0 18px; font-size: 13.5px; line-height: 1.5; color: var(--text); }
+.reebok-modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.reebok-modal .reebok-send-btn { box-shadow: none; }

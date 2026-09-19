@@ -6,16 +6,24 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { Download, RefreshCw, Calendar } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { Download, RefreshCw, Calendar, CalendarDays, Users, Layers, VenusAndMars, LayoutList, FlaskConical, Send, X } from 'lucide-react';
 import RequireAuth from '@/components/RequireAuth';
 import { SkeletonTable } from '@/components/Skeleton';
 
 const REPORT_KEYS = ['daywise', 'staff', 'category', 'gender'];
 const REPORT_TITLES = {
-  daywise:  'Daywise + MTD',
+  daywise:  'Target, Daywise, MTD & YTD',
   staff:    'Staff KPI',
   category: 'FW / APP / ACC',
   gender:   'Gender / Division',
+};
+
+const REPORT_ICONS = {
+  daywise:  CalendarDays,
+  staff:    Users,
+  category: Layers,
+  gender:   VenusAndMars,
 };
 
 function todayIST() { return new Date().toISOString().split('T')[0]; }
@@ -35,6 +43,15 @@ function ReebokReportsInner() {
   const [latestDate, setLatestDate] = useState(null);
   const [subject, setSubject]    = useState('');
   const refs = useRef({});
+  const stageRef = useRef(null);
+
+  // Email: captured table images, send status, "send to all" confirmation
+  const [reportDate, setReportDate] = useState(null);
+  const [images, setImages]         = useState([]);
+  const [capturing, setCapturing]   = useState(false);
+  const [sendState, setSendState]   = useState({ status: 'idle', message: '' });
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [counts, setCounts]         = useState({ test: null, all: null });
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
@@ -54,6 +71,7 @@ function ReebokReportsInner() {
       setNoData(json.noData || false);
       setLatestDate(json.latestDate || null);
       setSubject(json.subject || '');
+      setReportDate(json.reportDate || null);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -76,34 +94,96 @@ function ReebokReportsInner() {
     }
   }, [loading, report]);
 
+  // Recipient counts for the confirmation dialog (counts only, never addresses)
+  useEffect(() => {
+    fetch('/api/reports/reebok-send').then((r) => r.json()).then(setCounts).catch(() => {});
+  }, []);
+
+  // Capture every table as a PNG in the background so a click only has to send.
+  useEffect(() => {
+    setImages([]);
+    if (loading || parts.length === 0) return undefined;
+    let cancelled = false;
+    setCapturing(true);
+    (async () => {
+      try {
+        await new Promise((r) => setTimeout(r, 200)); // let the staging DOM paint
+        const nodes = Array.from(stageRef.current?.children || []);
+        const blobs = [];
+        for (const node of nodes) {
+          node.querySelectorAll('div').forEach((d) => { d.style.overflow = 'visible'; });
+          const canvas = await html2canvas(node, {
+            scale: 1.75,
+            backgroundColor: '#ffffff',
+            useCORS: true,
+            logging: false,
+            width: node.scrollWidth,
+            height: node.scrollHeight,
+            windowWidth: node.scrollWidth,
+            windowHeight: node.scrollHeight,
+          });
+          const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
+          if (cancelled) return;
+          blobs.push(blob);
+        }
+        if (!cancelled) setImages(blobs);
+      } catch (e) {
+        if (!cancelled) setSendState({ status: 'error', message: 'Could not prepare report images: ' + e.message });
+      } finally {
+        if (!cancelled) setCapturing(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [parts, loading]);
+
+  const sendReport = async (mode) => {
+    setConfirmOpen(false);
+    setSendState({ status: 'sending', message: mode === 'all' ? 'Sending to all recipients…' : 'Sending test email…' });
+    try {
+      const fd = new FormData();
+      images.forEach((b, i) => fd.append('images', b, 'report-' + (i + 1) + '.png'));
+      fd.append('date', reportDate || date);
+      fd.append('mode', mode);
+      const res = await fetch('/api/reports/reebok-send', { method: 'POST', body: fd });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'HTTP ' + res.status);
+      setSendState({
+        status: 'success',
+        message: (mode === 'all' ? 'Report' : 'Test report') + ' emailed to ' + json.recipients + ' recipient' + (json.recipients === 1 ? '' : 's') + '.',
+      });
+    } catch (e) {
+      setSendState({ status: 'error', message: e.message });
+    }
+  };
+
+  const sendReady = images.length > 0 && !capturing && !loading && sendState.status !== 'sending';
+
   const setReport = (key) => {
     if (!key || !REPORT_KEYS.includes(key)) router.replace(pathname);
     else router.replace(`${pathname}?report=${key}`);
   };
 
-  const visibleParts = (() => {
-    if (!report) return parts;
-    return parts.filter((p) => {
-      const t = (p.title || '').toLowerCase();
-      if (report === 'daywise')  return t.includes('daywise') || t.includes('mtd');
-      if (report === 'staff')    return t.includes('staff');
-      if (report === 'category') return t.includes('fw') || t.includes('app') || t.includes('acc') || t.includes('category');
-      if (report === 'gender')   return t.includes('gender') || t.includes('division');
-      return true;
-    });
-  })();
-
-  const reportKeyForPart = (p) => {
-    const t = (p.title || '').toLowerCase();
-    if (t.includes('daywise'))  return 'daywise';
-    if (t.includes('staff'))    return 'staff';
-    if (t.includes('fw'))       return 'category';
-    if (t.includes('gender'))  return 'gender';
-    return null;
-  };
+  // Each part carries a `key` (daywise | staff | category | gender) from the API.
+  const visibleParts = report ? parts.filter((p) => p.key === report) : parts;
+  const reportKeyForPart = (p) => p.key || null;
 
   return (
     <div className="reebok-page-wrapper">
+      <div className="reebok-layout">
+        <nav className="reebok-subnav" aria-label="Sales reports">
+          <div className="reebok-subnav-label">Sales Reports</div>
+          <button type="button" className={`reebok-subnav-item ${!report ? 'active' : ''}`} onClick={() => setReport(null)}>
+            <LayoutList /><span>All Reports</span>
+          </button>
+          {REPORT_KEYS.map((k) => {
+            const Icon = REPORT_ICONS[k];
+            return (
+              <button key={k} type="button" className={`reebok-subnav-item ${report === k ? 'active' : ''}`} onClick={() => setReport(k)}>
+                <Icon /><span>{REPORT_TITLES[k]}</span>
+              </button>
+            );
+          })}
+        </nav>
       <div className="reebok-page-container">
         {/* Page Header */}
         <div className="reebok-page-header">
@@ -146,19 +226,6 @@ function ReebokReportsInner() {
             </div>
           </div>
 
-          {/* Quick-jump tabs */}
-          <div className="reebok-jump-row">
-            <span className="reebok-jump-label">Jump to</span>
-            <button className={`reebok-jump-tab ${!report ? 'active' : ''}`} onClick={() => setReport(null)} type="button">
-              All Reports
-            </button>
-            {REPORT_KEYS.map((k) => (
-              <button key={k} className={`reebok-jump-tab ${report === k ? 'active' : ''}`} onClick={() => setReport(k)} type="button">
-                {REPORT_TITLES[k]}
-              </button>
-            ))}
-          </div>
-
           {noData && (
             <div className="reebok-warn">
               No data for <strong>{date}</strong>.
@@ -181,7 +248,7 @@ function ReebokReportsInner() {
               return (
                 <div
                   key={p.title}
-                  ref={(el) => { if (rk && el) refs.current[rk] = el; }}
+                  ref={(el) => { if (rk && el && !refs.current[rk]?.isConnected) refs.current[rk] = el; }}
                   className="report-section"
                   dangerouslySetInnerHTML={{ __html: p.html }}
                 />
@@ -193,6 +260,50 @@ function ReebokReportsInner() {
           </>
         )}
       </div>
+      </div>
+      {/* Off-screen staging: every table rendered once, captured to PNG for the email */}
+      <div ref={stageRef} aria-hidden="true" style={{ position: 'fixed', left: -30000, top: 0, width: 1400, pointerEvents: 'none' }}>
+        {parts.map((p) => (
+          <div key={p.title} style={{ background: '#fff', padding: 16, width: 'max-content', maxWidth: 1400 }} dangerouslySetInnerHTML={{ __html: p.html }} />
+        ))}
+      </div>
+
+      <div className="reebok-send-bar">
+        {sendState.status !== 'idle' && (
+          <div className={'reebok-send-status ' + sendState.status} role="status">
+            <span>{sendState.message}</span>
+            {sendState.status !== 'sending' && (
+              <button type="button" aria-label="Dismiss" onClick={() => setSendState({ status: 'idle', message: '' })}><X /></button>
+            )}
+          </div>
+        )}
+        <div className="reebok-send-actions">
+          <button type="button" className="reebok-send-btn secondary" disabled={!sendReady} onClick={() => sendReport('test')}
+                  title="Email this report to the test recipients only">
+            <FlaskConical /> {capturing ? 'Preparing…' : 'Send Test'}
+          </button>
+          <button type="button" className="reebok-send-btn" disabled={!sendReady} onClick={() => setConfirmOpen(true)}
+                  title="Email this report to the full distribution list">
+            <Send /> Send to All
+          </button>
+        </div>
+      </div>
+
+      {confirmOpen && (
+        <div className="reebok-modal-backdrop" onClick={() => setConfirmOpen(false)}>
+          <div className="reebok-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <h3>Send report to everyone?</h3>
+            <p>
+              This will email the <strong>{reportDate || date}</strong> Uppal Reebok report ({images.length} tables as images + the Excel file)
+              to <strong>{counts.all ?? '…'}</strong> recipient{counts.all === 1 ? '' : 's'}.
+            </p>
+            <div className="reebok-modal-actions">
+              <button type="button" className="reebok-send-btn secondary" onClick={() => setConfirmOpen(false)}>Cancel</button>
+              <button type="button" className="reebok-send-btn" onClick={() => sendReport('all')}><Send /> Send to All</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,18 +1,19 @@
 /**
- * Email configuration for Virata Retail reports.
+ * Email configuration for the Uppal Reebok sales reports.
  *
- * SMTP credentials should be set via environment variables:
- *   SMTP_USER - Gmail SMTP username (e.g. palashrupani2621@gmail.com)
+ * SMTP credentials are set via environment variables:
+ *   SMTP_USER - Gmail SMTP username
  *   SMTP_PASS - Gmail app password
  *
- * The full distribution list (ALL) includes all Skechers stores and Virata Retail team members.
- * The test list (TEST) goes only to the two internal reviewers.
+ * Reebok has a single store (no clusters), so there is one recipient list.
+ * For now both modes go to the developer's own address only; replace
+ * RECIPIENTS with the real Reebok distribution list when it is confirmed.
  */
 
 /**
  * @type {string}
  */
-export const EMAIL_FROM = `Virata Retail Analytics <${process.env.SMTP_USER ?? 'palashrupani2621@gmail.com'}>`;
+export const EMAIL_FROM = `Virata Retail Analytics <${process.env.SMTP_USER ?? ''}>`;
 
 /**
  * Send mode: 'test' or 'all'.
@@ -23,54 +24,11 @@ export const SendMode = {
   ALL: 'all',
 };
 
-/**
- * Test recipients - only the two internal reviewers.
- * @type {string[]}
- */
-export const TEST_RECIPIENTS = [
-  'palashrupani2621@gmail.com',
-  'adityapappu01@vscorp.in',
-];
+/** Test recipients. */
+export const TEST_RECIPIENTS = ['deepthialter@gmail.com'];
 
-/**
- * Full distribution list - management, cluster heads, and all Skechers stores.
- * @type {string[]}
- */
-export const ALL_RECIPIENTS = [
-  'adityapappu01@vscorp.in',
-  'adityapappu@vscorp.in',
-  'srinivas.narsin@vscorp.in',
-  'satish.mutyala@vscorp.in',
-  'cluster2@vscorp.in',
-  'sandeep.anumala@vscorp.in',
-  'bharatparepalli@vscorp.in',
-  'auditor1@vscorp.in',
-  'ravishankar@vscorp.in',
-  'trainer@vscorp.in',
-  'adityapappu31@gmail.com',
-  'skechers.jubileehills@gmail.com',
-  'skechersmg.vizag@gmail.com',
-  'skechers.gsmmall@gmail.com',
-  'skechers.guntur@gmail.com',
-  'skechers.kharkhana@gmail.com',
-  'skechers.asraonagar@gmail.com',
-  'skechers.panjagutta@gmail.com',
-  'skechers.hmyt@gmail.com',
-  'skechers.rajamahendravaram@gmail.com',
-  'skechers.vijayawada@gmail.com',
-  'skechers.nellore@gmail.com',
-  'skechers.kakinada@gmail.com',
-  'skechers.vijayawada2@gmail.com',
-  'skecherscpr@gmail.com',
-  'skechers.sccmall@gmail.com',
-  'skechers.gvk@gmail.com',
-  'skechers.kothapet@gmail.com',
-  'skechersnallagandla@gmail.com',
-  'skechers.inorbitvizag@gmail.com',
-  'skechers.vijayawada3@gmail.com',
-  'sreekar@vscorp.in',
-  'nagendra@vscorp.in',
-];
+/** Full distribution list (temporarily the same single address as test). */
+export const ALL_RECIPIENTS = ['deepthialter@gmail.com'];
 
 /**
  * Get recipients for the specified send mode.

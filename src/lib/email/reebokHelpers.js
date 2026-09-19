@@ -91,38 +91,33 @@ export function genderLabel(rawSection) {
 }
 
 /**
- * Compute the weekly/day target from the ₹8L monthly budget.
- * Returns null if the date cannot be mapped (e.g. outside known months).
- *
- * Monthly = ₹8,00,000
- * Week 1 = 25%, Week 2 = 20%, Week 3 = 20%, Week 4 = 15%
- * Within week: weekend = 50%, weekday = 15%
- *
- * Note: this is the APPROVED assumption. The existing ₹45,161 value
- * was Claude-generated and must NOT be reverse-engineered.
+ * Monthly sales target for Uppal Reebok (₹14,00,000).
+ * Source of truth: REEBOOK_KPI_DEFINITIONS.md §4 "Target".
+ */
+export const MONTHLY_TARGET = 1400000;
+
+/** Split 'YYYY-MM-DD' without timezone conversion. */
+function parseYMD(dateStr) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dateStr || ''));
+  if (!m) return null;
+  return { year: +m[1], month: +m[2], day: +m[3] };
+}
+
+/** Number of days in the month of the given date (28 / 29 / 30 / 31). */
+export function daysInMonth(dateStr) {
+  const p = parseYMD(dateStr);
+  if (!p) return null;
+  return new Date(Date.UTC(p.year, p.month, 0)).getUTCDate();
+}
+
+/**
+ * Daywise target = monthly target ÷ number of days in that month.
+ * Not rounded here (rounding is display-only) so MTD sums stay exact.
+ * Returns null if the date is missing/invalid.
  */
 export function calcTarget(dateStr) {
-  if (!dateStr) return null;
-  const date = new Date(dateStr);
-  const year = date.getFullYear();
-  const month = date.getMonth(); // 0-indexed
-  const day = date.getDate();
-  const dayOfWeek = date.getDay(); // 0=Sun, 6=Sat
-
-  // Monthly budget
-  const MONTHLY = 800000;
-  const WEEKLY_SPLITS = [0.25, 0.20, 0.20, 0.15];
-
-  // Find week of month (1-indexed)
-  const weekNum = Math.ceil(day / 7);
-  const weekIdx = Math.min(weekNum - 1, 3); // cap at week 4
-  const weeklyBudget = MONTHLY * WEEKLY_SPLITS[weekIdx];
-
-  // Weekend = Sat (6) or Sun (0)
-  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-  const dayFraction = isWeekend ? 0.5 : 0.15;
-
-  return Math.round(weeklyBudget * dayFraction);
+  const days = daysInMonth(dateStr);
+  return days ? MONTHLY_TARGET / days : null;
 }
 
 /**
@@ -135,43 +130,26 @@ export function calcAchievement(nsv, target) {
 }
 
 /**
- * MTD target = cumulative monthly target up to and including the report date.
- * Uses the same weekly split logic as calcTarget():
- *   - Week 1 (days 1-7)   → 25% of ₹8L
- *   - Week 2 (days 8-14)  → +20%
- *   - Week 3 (days 15-21) → +20%
- *   - Week 4+ (days 22+)  → +15% (capped at end of month)
- *
- * So if report date is in Week 1, MTD target = 25% of ₹8L (₹2,00,000).
- * If in Week 2, MTD target = 45% of ₹8L (₹3,60,000), etc.
- *
- * Returns 0 if date is missing/invalid.
+ * MTD target = sum of the daywise targets from the 1st of the month through
+ * the report date (i.e. daywise target × day of month).
+ * Returns null if the date is missing/invalid.
  */
 export function MTD_TARGET(dateStr) {
-  if (!dateStr) return 0;
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return 0;
+  const p = parseYMD(dateStr);
+  const daily = calcTarget(dateStr);
+  return p && daily != null ? daily * p.day : null;
+}
 
-  const MONTHLY = 800000;
-  const WEEKLY_SPLITS = [0.25, 0.20, 0.20, 0.15];
-  const day = date.getDate();
-
-  // Sum the week weights that are fully or partially complete
-  // For a date in week N, include weeks 1..N-1 fully, plus a fraction of week N.
-  const weekNum = Math.ceil(day / 7);            // 1-indexed
-  const fullWeeks = Math.max(0, weekNum - 1);    // weeks before the current one
-  const dayInWeek = day - fullWeeks * 7;         // 1..7
-  const weekFraction = dayInWeek / 7;            // 0..1 of the current week
-
-  let pct = 0;
-  for (let i = 0; i < fullWeeks && i < WEEKLY_SPLITS.length; i++) {
-    pct += WEEKLY_SPLITS[i];
-  }
-  if (weekNum - 1 < WEEKLY_SPLITS.length) {
-    pct += WEEKLY_SPLITS[weekNum - 1] * weekFraction;
-  }
-
-  return Math.round(MONTHLY * pct);
+/**
+ * YTD target (calendar year) = ₹14,00,000 for every completed month since 1 January
+ * + the current month's MTD target. YTD actuals (NSV / Bills / Qty) come from the
+ * 'ytd' row in gold.reebok_daily_metrics, computed by the pipeline.
+ * Returns null if the date is missing/invalid.
+ */
+export function YTD_TARGET(dateStr) {
+  const p = parseYMD(dateStr);
+  const mtd = MTD_TARGET(dateStr);
+  return p && mtd != null ? MONTHLY_TARGET * (p.month - 1) + mtd : null;
 }
 
 /**
