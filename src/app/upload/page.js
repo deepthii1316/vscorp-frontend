@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Database,
   Activity,
@@ -45,6 +45,7 @@ function UploadPageContent() {
   const [pipelineStep, setPipelineStep] = useState(null);
   const [pipelineResult, setPipelineResult] = useState(null);
   const [showLogs, setShowLogs] = useState(false);
+  const pipelineTriggeredRef = useRef(false);
 
   useEffect(() => {
     loadRecentUploads();
@@ -72,6 +73,9 @@ function UploadPageContent() {
   };
 
   const handleFileSelect = useCallback(async (selectedFile) => {
+    // Allow a fresh pipeline trigger after the user selects a new file.
+    pipelineTriggeredRef.current = false;
+
     setFile(selectedFile);
     setSha256(null);
     setIsDuplicate(false);
@@ -170,9 +174,14 @@ function UploadPageContent() {
   const canUpload = file && selectedType && sha256 && !isDuplicate && !isHashing && !isUploading;
 
   const handleRunProcessing = async () => {
+    // Guard against multiple triggers — once a pipeline has been dispatched,
+    // clicking again should not spawn a second GitHub Actions workflow.
+    if (pipelineTriggeredRef.current) return;
+
     setIsProcessingPipeline(true);
     setPipelineResult(null);
     setPipelineStep('raw');
+    pipelineTriggeredRef.current = true;
 
     try {
       const res = await fetch('/api/process', { method: 'POST' });
