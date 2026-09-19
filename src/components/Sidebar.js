@@ -5,9 +5,6 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   LayoutDashboard,
-  BarChart3,
-  TrendingUp,
-  Target,
   Box,
   UploadCloud,
   History,
@@ -15,9 +12,7 @@ import {
   Users,
   Grid3x3,
   PieChart,
-  Store,
   FileSpreadsheet,
-  Package,
 } from 'lucide-react';
 
 const navItems = [
@@ -25,10 +20,6 @@ const navItems = [
     section: 'Analytics',
     items: [
       { href: '/master-dashboard', label: 'Master Dashboard', icon: LayoutDashboard },
-      { href: '/store-board', label: 'Store Board', icon: BarChart3, disabled: true },
-      { href: '/store-dashboard', label: 'Store Dashboard', icon: Store, disabled: true },
-      { href: '/store-performance', label: 'Store Performance', icon: TrendingUp, disabled: true },
-      { href: '/target-management', label: 'Target Management', icon: Target, disabled: true },
       { href: '/assets', label: 'Assets', icon: Box, disabled: true },
     ],
   },
@@ -39,7 +30,6 @@ const navItems = [
       { href: '/upload-history',  label: 'Upload History', icon: History },
       { href: '/data-coverage',   label: 'Data Coverage',  icon: FileCheck },
       { href: '/reebok-reports',  label: 'Sales Reports',  icon: FileSpreadsheet },
-      { href: '/merchandiser-reports', label: 'Merchandiser', icon: Package, disabled: true },
     ],
   },
 ];
