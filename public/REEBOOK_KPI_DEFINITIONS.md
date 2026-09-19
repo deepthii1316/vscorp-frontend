@@ -46,6 +46,23 @@
 
 ---
 
+## 2a. Units Sold — Data Rules
+
+Verified against the raw SAP export (Aug-2026 audit).
+
+- **Carry Bag lines are not units sold.** Lines with Class Name = `Carry Bag` are free packaging
+  (MRP ₹1, 100% discount, ₹0 taxable amount, Section `RB UNISEX`, blank Item Division). They are
+  excluded from Qty, division, gender and salesperson counts. NSV and Bills are unaffected
+  (a bag never creates a bill). Do not confuse with Class Name `Bag`, which is real Accessories merchandise.
+- **Blank Item Division is never defaulted to Accessories.** A blank division is resolved from Class Name
+  using the `CLASS_TO_DIVISION` lookup in `refresh_reebok.py` (T Shirt, Shorts, GL HOODIE, Jogger → Apparel, etc.).
+  Unknown classes are reported by the refresh job and kept out of the FW/APP/ACC buckets until mapped.
+- **Similar-looking lines are separate units.** Two rows with the same Bill No., Class Name, Qty and
+  Taxable Amount are different items (different stock numbers/sizes). Do not de-duplicate on those fields.
+- **Returns** are negative rows inside exchange bills; keep them netted against sales.
+
+---
+
 ## 3. Amount Source Rule
 
 For Uppal Reebok, the final amount used for sales/KPI calculations is always the **Taxable Amount**.
@@ -374,3 +391,4 @@ All calculations should flow through the canonical KPI/metrics definitions so th
 | 19-Sep-2026 | % Mix and % within Gender now NSV-based; SFR/AFR displayed as %; per-staff Target = store target ÷ 3; store-total rows added | Sales report tables and Excel follow public/SALES-REPORT-LAYOUT.md via src/lib/email/reebokReportModel.js |
 | 19-Sep-2026 | YTD column added (calendar year, derived from gold MTD rows) | Daywise + MTD + YTD table and Excel show YTD NSV, Target, ACH%, Bills, Qty |
 | 19-Sep-2026 | YTD is now computed in the pipeline (new `ytd` period_type) instead of summing MTD rows | Migration 2026_09_19_reebok_ytd.sql + refresh_reebok.py; YTD target = ₹14L × completed months + MTD target |
+| 19-Sep-2026 | Carry Bag lines excluded from unit counts; blank Item Division resolved from Class Name (no default to Accessories) | Fixes inflated Qty (120→66), Accessories and Unisex; refresh_reebok.py must be re-run |
