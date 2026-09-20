@@ -9,7 +9,7 @@
 
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
-import { buildReportModel, formatCell, achLevel, ACH_FILL, ZEBRA, TOTAL_BG } from '@/lib/email/reebokReportModel';
+import { buildReportModel, formatCell, heatColor, ZEBRA, TOTAL_BG } from '@/lib/email/reebokReportModel';
 
 const STORE = 'R1157';
 
@@ -42,8 +42,7 @@ function renderTable(t) {
       if (c.rowspan) style += 'font-weight:700;vertical-align:middle;background:#F6F7F9;';
       if (isTotal) style += 'font-weight:700;';
       if (c.t === 'ach') {
-        const level = achLevel(c.v);
-        if (level) style += `background:#${ACH_FILL[level]};font-weight:700;`;
+        if (c.heat !== undefined) style += `background:#${heatColor(c.heat)};font-weight:700;`;   // relative colour: lowest red, highest green
       }
       const span = c.rowspan ? ` rowspan="${c.rowspan}"` : '';
       return `<td${span} style="${style}">${text}</td>`;

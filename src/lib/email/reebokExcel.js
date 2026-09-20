@@ -8,7 +8,7 @@
 // Sheets: Cover, Daywise MTD YTD, Staff KPI, Staff FW APP ACC, Gender Wise,
 //         Division Wise, Gender Division Split.
 
-import { buildReportModel, achLevel, ACH_FILL, ZEBRA, TOTAL_BG } from './reebokReportModel';
+import { buildReportModel, heatColor, ZEBRA, TOTAL_BG } from './reebokReportModel';
 
 const STORE     = 'R1157';
 const STORE_NM = 'Uppal Reebok';
@@ -70,8 +70,7 @@ function writeTable(ws, startRow, t) {
       ref.alignment = { horizontal: t.columns[i].align === 'l' ? 'left' : 'right', vertical: 'middle' };
       if (NUM_FMT[c.t]) ref.numFmt = NUM_FMT[c.t];
       if (c.t === 'ach') {
-        const level = achLevel(c.v);
-        if (level) { ref.fill = fill(ACH_FILL[level]); ref.font = font(true, 11, '111827'); }
+        if (c.heat !== undefined) { ref.fill = fill(heatColor(c.heat)); ref.font = font(true, 11, '111827'); }   // relative colour: lowest red, highest green
       }
       if (c.rowspan) {
         ws.mergeCells(r, i + 1, r + c.rowspan - 1, i + 1);

@@ -21,16 +21,59 @@ export const TONE = {
   coral:  'D9534F',
   amber:  'B7791F',
 };
-// ACH% is the ONLY conditionally coloured value: green / yellow / red.
-export const ACH_FILL = { high: '63BE7B', mid: 'FFEB84', low: 'F8696B' };
+// ACH% is the ONLY conditionally coloured value, and it is coloured RELATIVELY: within each comparison
+// group the lowest value is red, the highest is green, and everything between is blended through yellow
+// (same three colours as Excel's default colour scale). There are no fixed percentage cut-offs.
+export const HEAT_STOPS = { low: 'F8696B', mid: 'FFEB84', high: '63BE7B' };
 export const ZEBRA = ['FFFFFF', 'E9ECF1'];
 export const TOTAL_BG = 'C9CED6';
 
-/** ≥80 green, 60–<80 yellow, <60 red (thresholds carried over from the existing report; pending manager confirmation). */
-export function achLevel(pct) {
-  if (pct == null || Number.isNaN(Number(pct))) return null;
-  const v = Number(pct);
-  return v >= 80 ? 'high' : v >= 60 ? 'mid' : 'low';
+const hexToRgb = (h) => [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+const lerp = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+const rgbToHex = (rgb) => rgb.map((v) => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+
+/** Colour (hex, no #) for a position t between 0 (lowest, red) and 1 (highest, green). */
+export function heatColor(t) {
+  const x = Math.max(0, Math.min(1, Number(t)));
+  const { low, mid, high } = HEAT_STOPS;
+  return x <= 0.5
+    ? rgbToHex(lerp(hexToRgb(low), hexToRgb(mid), x / 0.5))
+    : rgbToHex(lerp(hexToRgb(mid), hexToRgb(high), (x - 0.5) / 0.5));
+}
+
+/**
+ * Give each ACH% cell a position `heat` (0 = lowest, 1 = highest) within its group.
+ * `cells` define the range; `extra` cells (the store total) are placed on the same scale and clamped.
+ * If every value is the same there is nothing to rank, so they all get the middle colour.
+ */
+function heatGroup(cells, extra = []) {
+  const vals = cells.filter((c) => c.v !== null && c.v !== undefined && !Number.isNaN(Number(c.v))).map((c) => Number(c.v));
+  if (!vals.length) return;
+  const min = Math.min(...vals), max = Math.max(...vals);
+  for (const c of [...cells, ...extra]) {
+    if (c.v === null || c.v === undefined || Number.isNaN(Number(c.v))) continue;
+    c.heat = max === min ? 0.5 : Math.max(0, Math.min(1, (Number(c.v) - min) / (max - min)));
+  }
+}
+
+/**
+ * Relative colouring groups:
+ *   - Daywise / MTD / YTD table: the three Achievement % cells of that row;
+ *   - each Staffwise KPI table: the ACH% column of the salespeople (the STORE TOTAL is placed on that scale).
+ */
+export function applyRelativeHeat(tables) {
+  for (const t of tables) {
+    if (t.key === 'daywise') {
+      const row = t.rows.find((r) => r.cells[0].v === 'Achievement %');
+      if (row) heatGroup(row.cells.filter((c) => c.t === 'ach'));
+    } else if (t.key === 'staff') {
+      const i = t.columns.findIndex((c) => c.label === 'ACH%');
+      if (i >= 0) {
+        heatGroup(t.rows.filter((r) => r.kind !== 'total').map((r) => r.cells[i]), t.rows.filter((r) => r.kind === 'total').map((r) => r.cells[i]));
+      }
+    }
+  }
+  return tables;
 }
 
 // ─── Small helpers ────────────────────────────────────────────────────────
@@ -283,7 +326,7 @@ function divisionSplitTable(gdRows) {
 
 /** Build every sales-report table model, in display order. */
 export function buildReportModel({ reportDate, daywiseRows = [], staffRows = [], catRows = [], gdRows = [] }) {
-  return [
+  return applyRelativeHeat([
     daywiseTable(daywiseRows, reportDate),
     staffKpiTable('today', staffRows, daywiseRows, reportDate),
     staffKpiTable('mtd', staffRows, daywiseRows, reportDate),
@@ -292,7 +335,7 @@ export function buildReportModel({ reportDate, daywiseRows = [], staffRows = [],
     genderWiseTable(gdRows),
     divisionWiseTable(catRows),
     divisionSplitTable(gdRows),
-  ];
+  ]);
 }
 
 // ─── Value formatting shared by HTML renderers ────────────────────────────
