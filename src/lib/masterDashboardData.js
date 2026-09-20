@@ -21,25 +21,31 @@ async function fetchRange(supabase, table, start, end) {
   return data || [];
 }
 
-/** Latest date that has sales data (anchor for the preset ranges). */
-export async function loadLatestDate(supabase) {
-  const { data, error } = await supabase
-    .schema('gold')
-    .from(SALES_TABLE)
-    .select('full_date')
-    .order('full_date', { ascending: false })
-    .limit(1);
-  if (error) throw new Error(`${SALES_TABLE}: ${error.message}`);
-  return data?.[0]?.full_date || null;
+/** First and latest date that have sales data (latest is the anchor for the preset ranges). */
+export async function loadDataBounds(supabase) {
+  const edge = async (ascending) => {
+    const { data, error } = await supabase
+      .schema('gold')
+      .from(SALES_TABLE)
+      .select('full_date')
+      .order('full_date', { ascending })
+      .limit(1);
+    if (error) throw new Error(`${SALES_TABLE}: ${error.message}`);
+    return data?.[0]?.full_date || null;
+  };
+  const [firstDate, latestDate] = await Promise.all([edge(true), edge(false)]);
+  return { firstDate, latestDate };
 }
 
 /**
  * Everything the Overview tab needs for [start, end]:
- * day rows for the period, day rows for the comparison month (or none), and the payment rows.
+ * day rows for the period, day rows for the comparison period (or none), and the payment rows.
+ * The comparison period is the same days one month earlier, unless an explicit window is passed
+ * (Compare mode: Period B).
  * The browser aggregates them (sums first, ratios after).
  */
-export async function loadOverview(supabase, start, end) {
-  const cmp = comparisonRange(start, end);
+export async function loadOverview(supabase, start, end, compare = null) {
+  const cmp = compare && compare.start && compare.end ? { start: compare.start, end: compare.end } : comparisonRange(start, end);
   const [days, prevDays, payments] = await Promise.all([
     fetchRange(supabase, SALES_TABLE, start, end),
     cmp ? fetchRange(supabase, SALES_TABLE, cmp.start, cmp.end) : Promise.resolve([]),

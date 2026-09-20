@@ -75,3 +75,26 @@ blocked by SHA-256 duplicate detection. Add a Re-process action on Upload Histor
 - Keeps the audit record and file hash, so duplicate protection is unchanged.
 - Runs through the normal processing-run lock so it cannot overlap another run.
 Origin: re-loading the Account DSR after the loader was fixed for the Reebok layout (20 Sep 2026).
+
+## 9. One consistent theme across the whole app
+      The Master Dashboard and most pages use the green theme, but the Sales Reports page shows a
+      blue loading bar and some blue elements. Pick a single palette and apply it everywhere:
+      - Replace the blue loading/skeleton bar and any blue accents on the Sales Reports page with the
+        app's green tokens (`--green`, `--green-soft`, ...).
+      - Audit `globals.css` for hard-coded colours outside the design tokens and move them onto tokens.
+      - Check the other pages (Upload, Upload History, Data Coverage) for the same mismatch.
+      - Chart and status colours may stay fixed, but they should come from the same shared set.
+## 10. Collapsible sidebar
+      Add a collapse/expand control to the main sidebar:
+      - Collapsed state shows icons only; expanded shows icons and labels.
+      - Remember the choice (browser storage) and keep the content area width in sync.
+      - Keep the active item highlighted and show a tooltip with the label when collapsed.
+
+## 11. Mobile responsive layout
+The app is desktop-first today. Make every page usable on a phone and tablet:
+- Sidebar becomes a slide-in drawer with a menu button on small screens.
+- Filter bars (Master Dashboard, Sales Reports) wrap or scroll horizontally instead of overflowing.
+- Wide tables scroll inside their own container; cards and charts stack to one column.
+- The bottom-right Send Test / Send to All buttons must not cover content on small screens.
+- Test at common widths (360, 390, 768 and 1024 px) before calling it done.
+

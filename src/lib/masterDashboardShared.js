@@ -266,3 +266,121 @@ export function divisionTable(days, prevDays, hasPrev) {
   }
   return { rows, total: line('Total', 'ALL', total, totalPrev) };
 }
+
+// ─── Filter date ranges ────────────────────────────────────────────────────
+// Presets are anchored on the latest date that has data (never the system clock).
+// Groups are mutually exclusive: quick range, week, month, half-year, quarter, custom dates.
+
+export const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const pad2 = (n) => String(n).padStart(2, '0');
+const ymd = (y, m, d) => `${y}-${pad2(m)}-${pad2(d)}`;          // m is 1-12
+const lastDayOf = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+const partsOf = (dateStr) => ({ y: +dateStr.slice(0, 4), m: +dateStr.slice(5, 7), d: +dateStr.slice(8, 10) });
+
+/** WTD (Monday of the anchor's week), MTD, YTD (1 Jan) and All (from the first data date). */
+export function quickRange(preset, anchor, firstDate) {
+  const { y, m } = partsOf(anchor);
+  if (preset === 'WTD') {
+    const e = utc(anchor);
+    const monday = new Date(e.getTime() - ((e.getUTCDay() + 6) % 7) * 86400000);
+    return [iso(monday), anchor];
+  }
+  if (preset === 'MTD') return [ymd(y, m, 1), anchor];
+  if (preset === 'YTD') return [ymd(y, 1, 1), anchor];
+  return [firstDate || anchor, anchor];
+}
+
+/** Week n (1-5) of a month: days 1-7, 8-14, 15-21, 22-28, 29-end. Null when the month has no such week. */
+export function weekOfMonth(year, month, week) {
+  const last = lastDayOf(year, month);
+  const from = (week - 1) * 7 + 1;
+  if (week < 1 || week > 5 || from > last) return null;
+  return [ymd(year, month, from), ymd(year, month, week === 5 ? last : Math.min(week * 7, last))];
+}
+
+export function monthRange(year, month) {
+  return [ymd(year, month, 1), ymd(year, month, lastDayOf(year, month))];
+}
+
+/** Weeks (1-5) that exist in the anchor month and have started by the anchor date. */
+export function availableWeeks(anchor) {
+  const { y, m, d } = partsOf(anchor);
+  return [1, 2, 3, 4, 5].filter((w) => { const r = weekOfMonth(y, m, w); return r && partsOf(r[0]).d <= d; });
+}
+
+/**
+ * Half-year (kind 'H', index 1-2) or quarter (kind 'Q', index 1-4).
+ * financial = April to March year that contains the anchor date; calendar = January to December.
+ */
+export function periodBounds(kind, index, fiscal, anchor) {
+  const { y, m } = partsOf(anchor);
+  const size = kind === 'H' ? 6 : 3;
+  const base = fiscal === 'financial' ? (m >= 4 ? y : y - 1) * 12 + 3 : y * 12;   // absolute month index of the year's first month
+  const startAbs = base + (index - 1) * size;
+  const endAbs = startAbs + size - 1;
+  const sy = Math.floor(startAbs / 12), sm = (startAbs % 12) + 1;
+  const ey = Math.floor(endAbs / 12), em = (endAbs % 12) + 1;
+  return [ymd(sy, sm, 1), ymd(ey, em, lastDayOf(ey, em))];
+}
+
+/** Several halves/quarters selected: the range spans the earliest start to the latest end. */
+function spanOf(ranges) {
+  if (!ranges.length) return null;
+  return [ranges.map((r) => r[0]).sort()[0], ranges.map((r) => r[1]).sort().slice(-1)[0]];
+}
+
+function clampToData(range, anchor) {
+  if (!range) return { start: null, end: null, clamped: false, empty: true };
+  let [start, end] = range;
+  const clamped = end > anchor;
+  if (clamped) end = anchor;
+  return { start, end, clamped, empty: start > end };
+}
+
+/**
+ * Turn the filter selection into a date range.
+ * sel = { group: 'quick'|'week'|'month'|'half'|'quarter'|'custom', quick, week, month, halves[], quarters[], fiscal, from, to }
+ * Returns { start, end, clamped, empty }; end is never later than the latest data date.
+ */
+export function resolveRange(sel, anchor, firstDate) {
+  if (!anchor) return { start: null, end: null, clamped: false, empty: true };
+  const { y, m } = partsOf(anchor);
+  let range = null;
+  if (sel.group === 'quick') range = quickRange(sel.quick, anchor, firstDate);
+  else if (sel.group === 'week') range = weekOfMonth(y, m, sel.week);
+  else if (sel.group === 'month') range = monthRange(y, sel.month);
+  else if (sel.group === 'half') range = spanOf((sel.halves || []).map((i) => periodBounds('H', i, sel.fiscal, anchor)));
+  else if (sel.group === 'quarter') range = spanOf((sel.quarters || []).map((i) => periodBounds('Q', i, sel.fiscal, anchor)));
+  else if (sel.group === 'custom' && sel.from && sel.to && sel.from <= sel.to) range = [sel.from, sel.to];
+  return clampToData(range, anchor);
+}
+
+/** One side of Compare mode: year + month, optionally a week (1-5, 0 or null = the whole month). */
+export function periodRange(p, anchor) {
+  const range = p.week ? weekOfMonth(p.year, p.month, p.week) : monthRange(p.year, p.month);
+  return clampToData(range, anchor);
+}
+
+const addDaysTo = (dateStr, n) => iso(new Date(utc(dateStr).getTime() + n * 86400000));
+
+/**
+ * Compare mode windows. When either period is cut short by the data (for example the current month is
+ * only partly loaded), both are limited to the same number of days so the comparison is like for like.
+ * Returns { a, b, limitedTo } where limitedTo is the day count when limiting was applied.
+ */
+export function compareWindows(pa, pb, anchor) {
+  const a = periodRange(pa, anchor);
+  const b = periodRange(pb, anchor);
+  if (a.empty || b.empty) return { a, b, limitedTo: null };
+  const da = daysBetween(a.start, a.end), db = daysBetween(b.start, b.end);
+  const full = (p) => (p.week ? weekOfMonth(p.year, p.month, p.week) : monthRange(p.year, p.month));
+  const fa = full(pa), fb = full(pb);
+  const aShort = a.end < fa[1], bShort = b.end < fb[1];
+  if (!aShort && !bShort) return { a, b, limitedTo: null };
+  const n = Math.min(da, db);
+  return {
+    a: { ...a, end: addDaysTo(a.start, n - 1) },
+    b: { ...b, end: addDaysTo(b.start, n - 1) },
+    limitedTo: n,
+  };
+}

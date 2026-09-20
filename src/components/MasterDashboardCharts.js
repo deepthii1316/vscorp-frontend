@@ -22,6 +22,8 @@ function formatBy(kind, value, compact = false) {
   return formatNumber(value);
 }
 
+const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+
 function Empty({ children }) {
   return <div className="md-empty">{children}</div>;
 }
@@ -42,7 +44,7 @@ export function Sparkline({ values }) {
 
 // ─── Daily trend ───────────────────────────────────────────────────────────
 
-export function TrendCard({ series, metric, onMetric, hasComparison }) {
+export function TrendCard({ series, metric, onMetric, hasComparison, compareLabel = 'last month' }) {
   const def = TREND_METRICS.find((m) => m.key === metric) || TREND_METRICS[0];
   const hasData = series.some((p) => p.cur !== null);
   return (
@@ -55,7 +57,7 @@ export function TrendCard({ series, metric, onMetric, hasComparison }) {
         </select>
       </div>
       <p className="md-note">
-        Solid line: this period.{hasComparison ? ' Dashed line: the same days one month earlier.' : ' No comparison month is available for this range.'}
+        Solid line: this period.{hasComparison ? ` Dashed line: ${compareLabel}, day by day.` : ' No comparison period is available for this selection.'}
       </p>
       {hasData ? (
         <div className="md-chart">
@@ -71,7 +73,7 @@ export function TrendCard({ series, metric, onMetric, hasComparison }) {
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: CHART_COLORS.axis }} tickLine={false} axisLine={{ stroke: CHART_COLORS.grid }} minTickGap={24} />
               <YAxis tick={{ fontSize: 11, fill: CHART_COLORS.axis }} tickLine={false} axisLine={false} width={56} tickFormatter={(v) => formatBy(def.kind, v, true)} />
               <Tooltip
-                formatter={(value, name) => [formatBy(def.kind, value), name === 'cur' ? 'This period' : 'Last month']}
+                formatter={(value, name) => [formatBy(def.kind, value), name === 'cur' ? 'This period' : cap(compareLabel)]}
                 labelFormatter={(label) => label}
                 contentStyle={{ borderRadius: 6, border: `1px solid ${CHART_COLORS.grid}`, fontSize: 12 }}
               />
@@ -195,7 +197,7 @@ export function PaymentCard({ payments, grossSales }) {
 
 // ─── Month on month (weekly NSV) ───────────────────────────────────────────
 
-export function WeeklyCard({ weeks, hasComparison }) {
+export function WeeklyCard({ weeks, hasComparison, compareLabel = 'last month' }) {
   const hasData = weeks.some((w) => w.cur > 0);
   return (
     <div className="card">
@@ -204,7 +206,7 @@ export function WeeklyCard({ weeks, hasComparison }) {
         <h3>Month on month</h3>
       </div>
       <p className="md-note">
-        NSV by week of the selected range{hasComparison ? ', against the same weeks one month earlier.' : '. No comparison month is available for this range.'}
+        NSV by week of the selected range{hasComparison ? `, against ${compareLabel === 'last month' ? 'the same weeks one month earlier' : compareLabel}.` : '. No comparison period is available for this selection.'}
       </p>
       {hasData ? (
         <>
@@ -215,7 +217,7 @@ export function WeeklyCard({ weeks, hasComparison }) {
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: CHART_COLORS.axis }} tickLine={false} axisLine={{ stroke: CHART_COLORS.grid }} />
                 <YAxis tick={{ fontSize: 11, fill: CHART_COLORS.axis }} tickLine={false} axisLine={false} width={56} tickFormatter={(v) => formatINR(v)} />
                 <Tooltip
-                  formatter={(value, name) => [formatINRFull(value), name === 'cur' ? 'This period' : 'Last month']}
+                  formatter={(value, name) => [formatINRFull(value), name === 'cur' ? 'This period' : cap(compareLabel)]}
                   labelFormatter={(label, payload) => `${label} (${payload && payload[0] ? payload[0].payload.sub : ''})`}
                   contentStyle={{ borderRadius: 6, border: `1px solid ${CHART_COLORS.grid}`, fontSize: 12 }}
                   cursor={{ fill: 'rgba(0,0,0,0.04)' }}
@@ -227,7 +229,7 @@ export function WeeklyCard({ weeks, hasComparison }) {
           </div>
           <div className="md-legend">
             <span><i className="md-dot" style={{ background: CHART_COLORS.green }} />This period</span>
-            {hasComparison && <span><i className="md-dot" style={{ background: '#B4B2A8' }} />Same days last month</span>}
+            {hasComparison && <span><i className="md-dot" style={{ background: '#B4B2A8' }} />{compareLabel === 'last month' ? 'Same days last month' : cap(compareLabel)}</span>}
           </div>
         </>
       ) : <Empty>No sales in the selected range.</Empty>}
@@ -245,7 +247,7 @@ function ChangeCell({ value }) {
   return <span className={`md-delta ${tone}`}><Icon />{Math.abs(value).toFixed(1)}%</span>;
 }
 
-export function DivisionTableCard({ table }) {
+export function DivisionTableCard({ table, compareLabel = 'last month' }) {
   return (
     <div className="card">
       <div className="card-header">
@@ -256,7 +258,7 @@ export function DivisionTableCard({ table }) {
       <div className="md-table-wrap">
         <table className="md-table">
           <thead>
-            <tr><th>Division</th><th>NSV</th><th>Contribution</th><th>Qty</th><th>Bills</th><th>MD %</th><th>NSV vs last month</th></tr>
+            <tr><th>Division</th><th>NSV</th><th>Contribution</th><th>Qty</th><th>Bills</th><th>MD %</th><th>NSV vs {compareLabel}</th></tr>
           </thead>
           <tbody>
             {table.rows.map((r) => (

@@ -6,7 +6,7 @@
  *   SMTP_PASS - Gmail app password
  *
  * Reebok has a single store (no clusters), so there is one recipient list.
- * For now both modes go to the developer's own address only; replace
+ * For now both modes go to two addresses only; replace
  * RECIPIENTS with the real Reebok distribution list when it is confirmed.
  */
 
@@ -25,10 +25,10 @@ export const SendMode = {
 };
 
 /** Test recipients. */
-export const TEST_RECIPIENTS = ['deepthialter@gmail.com'];
+export const TEST_RECIPIENTS = ['deepthialter@gmail.com', 'adityapappu@gmail.com'];
 
-/** Full distribution list (temporarily the same single address as test). */
-export const ALL_RECIPIENTS = ['deepthialter@gmail.com'];
+/** Full distribution list (temporarily the same two addresses as test). */
+export const ALL_RECIPIENTS = ['deepthialter@gmail.com', 'adityapappu@gmail.com'];
 
 /**
  * Get recipients for the specified send mode.

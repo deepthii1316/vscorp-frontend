@@ -91,10 +91,24 @@ export function genderLabel(rawSection) {
 }
 
 /**
- * Monthly sales target for Uppal Reebok (₹14,00,000).
+ * Monthly sales targets for Uppal Reebok.
  * Source of truth: REEBOOK_KPI_DEFINITIONS.md §4 "Target".
+ *
+ * Every month uses DEFAULT_MONTHLY_TARGET unless it has an entry in MONTHLY_TARGET_OVERRIDES.
+ * To change a month's target, add or edit ONE line below (key is 'YYYY-MM').
  */
-export const MONTHLY_TARGET = 1400000;
+export const DEFAULT_MONTHLY_TARGET = 1400000;   // ₹14,00,000
+export const MONTHLY_TARGET_OVERRIDES = {
+  '2026-09': 800000,                             // September 2026: ₹8,00,000
+};
+
+/** The monthly target that applies to the month of the given date ('YYYY-MM-DD'). */
+export function monthlyTarget(dateStr) {
+  const key = String(dateStr || '').slice(0, 7);
+  return Object.prototype.hasOwnProperty.call(MONTHLY_TARGET_OVERRIDES, key)
+    ? MONTHLY_TARGET_OVERRIDES[key]
+    : DEFAULT_MONTHLY_TARGET;
+}
 
 /** Split 'YYYY-MM-DD' without timezone conversion. */
 function parseYMD(dateStr) {
@@ -111,13 +125,13 @@ export function daysInMonth(dateStr) {
 }
 
 /**
- * Daywise target = monthly target ÷ number of days in that month.
+ * Daywise target = that month's target ÷ number of days in that month.
  * Not rounded here (rounding is display-only) so MTD sums stay exact.
  * Returns null if the date is missing/invalid.
  */
 export function calcTarget(dateStr) {
   const days = daysInMonth(dateStr);
-  return days ? MONTHLY_TARGET / days : null;
+  return days ? monthlyTarget(dateStr) / days : null;
 }
 
 /**
@@ -141,15 +155,18 @@ export function MTD_TARGET(dateStr) {
 }
 
 /**
- * YTD target (calendar year) = ₹14,00,000 for every completed month since 1 January
- * + the current month's MTD target. YTD actuals (NSV / Bills / Qty) come from the
+ * YTD target (calendar year) = the target of every completed month since 1 January
+ * (each month's own target) + the current month's MTD target. YTD actuals (NSV / Bills / Qty) come from the
  * 'ytd' row in gold.reebok_daily_metrics, computed by the pipeline.
  * Returns null if the date is missing/invalid.
  */
 export function YTD_TARGET(dateStr) {
   const p = parseYMD(dateStr);
   const mtd = MTD_TARGET(dateStr);
-  return p && mtd != null ? MONTHLY_TARGET * (p.month - 1) + mtd : null;
+  if (!p || mtd == null) return null;
+  let completed = 0;
+  for (let m = 1; m < p.month; m++) completed += monthlyTarget(`${p.year}-${String(m).padStart(2, '0')}-01`);
+  return completed + mtd;
 }
 
 /**

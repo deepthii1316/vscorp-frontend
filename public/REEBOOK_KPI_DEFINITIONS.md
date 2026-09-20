@@ -25,7 +25,7 @@
 |---|---|---|---|
 | RSV | Retail Sale Value | `SUM(Taxable Amount)` | The retail sale value used as the primary sales basis for Uppal Reebok. |
 | NSV | Net Sales Value | `SUM(Taxable Amount)` | The final sales value used for achievement and KPI calculations. |
-| Target | Sales Target | Daywise: `₹14,00,000 ÷ days in the month (28/29/30/31)`. MTD: sum of the daywise targets from the 1st through the report date | The sales amount that is expected to be achieved for the relevant period. |
+| Target | Sales Target | Daywise: `that month's target ÷ days in the month (28/29/30/31)`; the monthly target is ₹14,00,000 unless the month has its own (September 2026: ₹8,00,000). MTD: sum of the daywise targets from the 1st through the report date | The sales amount that is expected to be achieved for the relevant period. |
 | ACH% | Achievement Percentage | `(NSV Achieved / Target) × 100` | How much of the target has been achieved. |
 | Bills | Number of Bills | `SUM(Bills)` | Total number of bills/transactions made. |
 | Qty | Quantity Sold | `SUM(Qty Sold)` | Total number of units sold. |
@@ -105,12 +105,22 @@ Achievement percentage must use the report's **NSV Achieved** and the applicable
 ### Target rule
 
 ```text
-Monthly Target   = ₹14,00,000
-Daywise Target   = Monthly Target ÷ days in that month
+Monthly Target   = ₹14,00,000 by default; a month can have its own target (see the table below)
+Daywise Target   = that month's Monthly Target ÷ days in that month
 MTD Target       = Daywise Target × day-of-month  (sum of daywise targets 1st → report date)
 ```
 
+Monthly targets in force:
+
+| Month | Monthly target |
+|---|---|
+| Every month unless listed | ₹14,00,000 |
+| September 2026 | ₹8,00,000 |
+
 Example (August, 31 days): Daywise Target = 14,00,000 ÷ 31 = ₹45,161; MTD Target on 3-Aug = ₹1,35,484.
+Example (September, 30 days): Daywise Target = 8,00,000 ÷ 30 = ₹26,667; MTD Target on 17-Sep = ₹4,53,333.
+YTD Target = each completed month's own target since 1 January + the current MTD target.
+To change a month's target, edit `MONTHLY_TARGET_OVERRIDES` in `src/lib/email/reebokHelpers.js` (one line per month).
 The daywise value is not rounded in calculations (rounding is display-only) so MTD sums stay exact.
 Canonical implementation: `calcTarget`, `MTD_TARGET`, `calcAchievement` in `src/lib/email/reebokHelpers.js`.
 
@@ -394,3 +404,5 @@ All calculations should flow through the canonical KPI/metrics definitions so th
 | 19-Sep-2026 | YTD is now computed in the pipeline (new `ytd` period_type) instead of summing MTD rows | Migration 2026_09_19_reebok_ytd.sql + refresh_reebok.py; YTD target = ₹14L × completed months + MTD target |
 | 19-Sep-2026 | Carry Bag lines excluded from unit counts; blank Item Division resolved from Class Name (no default to Accessories) | Fixes inflated Qty (120→66), Accessories and Unisex; refresh_reebok.py must be re-run |
 | 20-Sep-2026 | MD % defined as (MRP - NSV) / MRP; master dashboard tables added (gold.reebok_master_dashboard, gold.reebok_master_dashboard_payments); Account DSR loader maps the real Reebok headers | Migration 2026_09_20_reebok_master_dashboard.sql; DSR files must be re-uploaded |
+| 20-Sep-2026 | Monthly target is now per month: default ₹14,00,000, September 2026 = ₹8,00,000 | Daywise, MTD and YTD targets and ACH% in the sales report, Excel and (later) the dashboard follow the month's own target |
+| 20-Sep-2026 | YTD confirmed as the calendar year, 1 January to the report date | No change to the calculation; YTD target counts every month since 1 January at its own target |

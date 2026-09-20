@@ -6,41 +6,28 @@ import {
   ChartColumn, Layers, RefreshCw, ArrowUpRight, ArrowDownRight, Minus,
 } from 'lucide-react';
 import {
-  formatINRFull, formatNumber, formatPercent, DIVISIONS,
+  formatINRFull, formatNumber, formatPercent, MONTH_NAMES,
   sumDays, kpisFrom, change, sumPayments,
   trendSeries, weeklyNsv, divisionSplit, divisionTable,
+  resolveRange, compareWindows,
 } from '@/lib/masterDashboardShared';
 import RequireAuth from '@/components/RequireAuth';
+import MasterDashboardFilters from '@/components/MasterDashboardFilters';
 import { Sparkline, TrendCard, DivisionSplitCard, PaymentCard, WeeklyCard, DivisionTableCard } from '@/components/MasterDashboardCharts';
 
-// Overview tab, Phase 2: real data from gold.reebok_master_dashboard and
-// gold.reebok_master_dashboard_payments (see public/MASTER-DASHBOARD-OVERVIEW-PLAN.md).
-// Phase 3: charts. Every number here is calculated from the day rows returned by the API.
-
-const QUICK_RANGES = ['WTD', 'MTD', 'YTD', 'All'];
-
-const iso = (d) => d.toISOString().split('T')[0];
-
-// Preset ranges are anchored on the latest date that has data.
-function rangeFor(preset, anchor) {
-  const end = new Date(anchor + 'T00:00:00Z');
-  const first = (y, m) => iso(new Date(Date.UTC(y, m, 1)));
-  if (preset === 'WTD') {
-    const start = new Date(end);
-    start.setUTCDate(end.getUTCDate() - ((end.getUTCDay() + 6) % 7)); // Monday
-    return [iso(start), anchor];
-  }
-  if (preset === 'MTD') return [first(end.getUTCFullYear(), end.getUTCMonth()), anchor];
-  if (preset === 'YTD') return [first(end.getUTCFullYear(), 0), anchor];
-  return ['2026-01-01', anchor];
-}
+// Overview tab. Data: gold.reebok_master_dashboard and gold.reebok_master_dashboard_payments.
+// Filters (Phase 4): quick range, week, month, half-year, quarter, financial/calendar, custom dates,
+// division, and Compare mode (Period A vs Period B). Every number is calculated from the day rows
+// returned by the API; see src/lib/masterDashboardShared.js.
 
 const shortDate = (s) => new Date(s + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+const periodLabel = (p) => `${MONTH_NAMES[p.month - 1].slice(0, 3)} ${p.year}${p.week ? ` week ${p.week}` : ''}`;
+const DEFAULT_SEL = { group: 'quick', quick: 'MTD', week: null, month: null, halves: [], quarters: [], fiscal: 'financial' };
 
 /** Change chip: arrow + value, coloured green (good) or red (bad). goodWhen says which direction is good. */
-function Delta({ value, kind, goodWhen = 'up' }) {
+function Delta({ value, kind, goodWhen = 'up', compareLabel }) {
   if (value === null) {
-    return <div className="md-delta flat" title="No comparison month is available for this range"><Minus />No comparison</div>;
+    return <div className="md-delta flat" title="No comparison period is available for this selection"><Minus />No comparison</div>;
   }
   const flat = Math.abs(value) < 0.05;
   const up = value > 0;
@@ -48,15 +35,17 @@ function Delta({ value, kind, goodWhen = 'up' }) {
   const tone = flat ? 'flat' : good ? 'good' : 'bad';
   const Icon = flat ? Minus : up ? ArrowUpRight : ArrowDownRight;
   const text = kind === 'points' ? `${Math.abs(value).toFixed(1)} pts` : `${Math.abs(value).toFixed(1)}%`;
-  return <div className={`md-delta ${tone}`} title="Compared with the same days one month earlier"><Icon />{text}</div>;
+  return <div className={`md-delta ${tone}`} title={`Compared with ${compareLabel}`}><Icon />{text}</div>;
 }
 
 function MasterDashboardPage() {
-  const [latestDate, setLatestDate] = useState(null);
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
+  const [bounds, setBounds] = useState({ firstDate: null, latestDate: null });
+  const [mode, setMode] = useState('m2m');                       // 'm2m' | 'compare'
+  const [sel, setSel] = useState(DEFAULT_SEL);
+  const [draft, setDraft] = useState({ from: '', to: '' });      // date boxes, applied with the Apply button
+  const [cmpA, setCmpA] = useState(null);                        // { year, month, week }
+  const [cmpB, setCmpB] = useState(null);
   const [selectedDivision, setSelectedDivision] = useState('ALL');
-  const [selectedQuickRange, setSelectedQuickRange] = useState('MTD');
   const [activeTab, setActiveTab] = useState('overview');
   const [trendMetric, setTrendMetric] = useState('nsv');
 
@@ -64,7 +53,9 @@ function MasterDashboardPage() {
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
 
-  // 1. Find the latest date with data and start on the month-to-date range.
+  const { firstDate, latestDate } = bounds;
+
+  // 1. Data bounds: presets are anchored on the latest date that has data.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -73,15 +64,11 @@ function MasterDashboardPage() {
         const json = await res.json();
         if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
         if (cancelled) return;
-        if (!json.latestDate) {
-          setError('No sales data has been loaded yet.');
-          setLoading(false);
-          return;
-        }
-        const [s, e] = rangeFor('MTD', json.latestDate);
-        setLatestDate(json.latestDate);
-        setStartDate(s);
-        setEndDate(e);
+        if (!json.latestDate) { setError('No sales data has been loaded yet.'); setLoading(false); return; }
+        const y = +json.latestDate.slice(0, 4), m = +json.latestDate.slice(5, 7);
+        setBounds({ firstDate: json.firstDate, latestDate: json.latestDate });
+        setCmpA({ year: y, month: m, week: 0 });
+        setCmpB(m === 1 ? { year: y - 1, month: 12, week: 0 } : { year: y, month: m - 1, week: 0 });
       } catch (err) {
         if (!cancelled) { setError(err.message); setLoading(false); }
       }
@@ -89,13 +76,33 @@ function MasterDashboardPage() {
     return () => { cancelled = true; };
   }, []);
 
-  // 2. Load the day rows whenever the range changes.
+  // 2. Turn the filter selection into the date range (and Period B in Compare mode).
+  const resolved = useMemo(() => {
+    if (!latestDate) return null;
+    if (mode === 'compare' && cmpA && cmpB) {
+      const w = compareWindows(cmpA, cmpB, latestDate);
+      return {
+        ...w.a, empty: w.a.empty || w.b.empty,
+        compare: w.b.empty ? null : { start: w.b.start, end: w.b.end },
+        compareLabel: periodLabel(cmpB), limitedTo: w.limitedTo,
+      };
+    }
+    return { ...resolveRange(sel, latestDate, firstDate), compare: null, compareLabel: 'last month', limitedTo: null };
+  }, [mode, sel, cmpA, cmpB, latestDate, firstDate]);
+
+  // Keep the date boxes showing the range that is actually in use.
+  useEffect(() => {
+    if (resolved && !resolved.empty) setDraft({ from: resolved.start, to: resolved.end });
+  }, [resolved?.start, resolved?.end, resolved?.empty]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 3. Load the day rows whenever the resolved range changes.
   const fetchData = useCallback(async () => {
-    if (!startDate || !endDate) return;
+    if (!resolved || resolved.empty) { setData(null); setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ startDate, endDate });
+      const params = new URLSearchParams({ startDate: resolved.start, endDate: resolved.end });
+      if (resolved.compare) { params.set('compareStart', resolved.compare.start); params.set('compareEnd', resolved.compare.end); }
       const res = await fetch(`/api/reports/master-dashboard?${params.toString()}`);
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
@@ -105,29 +112,32 @@ function MasterDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate]);
+  }, [resolved?.start, resolved?.end, resolved?.empty, resolved?.compare?.start, resolved?.compare?.end]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleQuickRange = (range) => {
-    if (!latestDate) return;
-    const [s, e] = rangeFor(range, latestDate);
-    setSelectedQuickRange(range);
-    setStartDate(s);
-    setEndDate(e);
+  // Selection handlers. Groups are mutually exclusive; emptying a multi-select falls back to month to date.
+  const handleSel = (patch) => {
+    if ((patch.group === 'half' && patch.halves.length === 0) || (patch.group === 'quarter' && patch.quarters.length === 0)) {
+      setSel((s) => ({ ...s, group: 'quick', quick: 'MTD' }));
+      return;
+    }
+    setSel((s) => ({ ...s, ...patch }));
   };
+  const applyCustom = () => setSel((s) => ({ ...s, group: 'custom', from: draft.from, to: draft.to }));
 
-  const handleDateChange = (s, e) => {
-    setSelectedQuickRange(null);
-    setStartDate(s);
-    setEndDate(e);
-  };
+  const years = useMemo(() => {
+    if (!firstDate || !latestDate) return [];
+    const out = [];
+    for (let y = +firstDate.slice(0, 4); y <= +latestDate.slice(0, 4); y++) out.push(y);
+    return out;
+  }, [firstDate, latestDate]);
 
   // Aggregate in the browser: sum the inputs first, then compute every ratio from the sums.
   const view = useMemo(() => {
     if (!data) return null;
     const cur = kpisFrom(sumDays(data.days, selectedDivision), data.range.days, selectedDivision);
-    const hasPrev = data.comparison && data.prevDays.length > 0;
+    const hasPrev = !!data.comparison && data.prevDays.length > 0;
     const prev = hasPrev ? kpisFrom(sumDays(data.prevDays, selectedDivision), data.comparison.days, selectedDivision) : null;
     const grossSales = data.days.reduce((s, r) => s + Number(r.gross_value || 0), 0);
     const cmpStart = hasPrev ? data.comparison.start : null;
@@ -143,6 +153,7 @@ function MasterDashboardPage() {
     };
   }, [data, selectedDivision]);
 
+  const compareLabel = resolved?.compareLabel || 'last month';
   const pick = (key, kind) => (view && view.prev ? change(view.cur[key], view.prev[key], kind) : null);
 
   const tiles = view ? [
@@ -155,11 +166,17 @@ function MasterDashboardPage() {
     { label: 'SSR',       icon: ShoppingBag, value: formatPercent(view.cur.ssr),       foot: 'Socks / shoes',       delta: pick('ssr', 'points'), kind: 'points', spark: 'ssr' },
   ] : [];
 
-  const comparisonText = !data ? '' : data.comparison
-    ? (data.prevDays.length > 0
-        ? `compared with ${shortDate(data.comparison.start)} to ${shortDate(data.comparison.end)}`
-        : `no data for ${shortDate(data.comparison.start)} to ${shortDate(data.comparison.end)}, so there is no comparison`)
-    : 'comparison shown for ranges up to one month';
+  // Header text: the range, whether it was cut at the latest data date, and what it is compared with.
+  const rangeText = resolved && !resolved.empty ? `${shortDate(resolved.start)} to ${shortDate(resolved.end)}` : '';
+  let compareText = '';
+  if (data) {
+    if (data.comparison && data.prevDays.length > 0) compareText = `compared with ${shortDate(data.comparison.start)} to ${shortDate(data.comparison.end)}`;
+    else if (data.comparison) compareText = `no data for ${shortDate(data.comparison.start)} to ${shortDate(data.comparison.end)}, so there is no comparison`;
+    else compareText = 'month-on-month comparison is shown for ranges up to one month';
+  }
+  const notices = [];
+  if (resolved?.clamped && !resolved.empty && mode === 'm2m') notices.push(`Data is available up to ${shortDate(latestDate)}, so the range ends there.`);
+  if (resolved?.limitedTo) notices.push(`Both periods are limited to ${resolved.limitedTo} day(s) so they can be compared like for like (data is available up to ${shortDate(latestDate)}).`);
 
   return (
     <div className="md-page">
@@ -170,13 +187,10 @@ function MasterDashboardPage() {
         </div>
         <div className="page-header-text">
           <h1>Master Dashboard</h1>
-          <p>
-            Uppal Reebok - sales overview{startDate && endDate ? `, ${shortDate(startDate)} to ${shortDate(endDate)}` : ''}
-            {comparisonText ? `, ${comparisonText}` : ''}
-          </p>
+          <p>Uppal Reebok - sales overview{rangeText ? `, ${rangeText}` : ''}{compareText ? `, ${compareText}` : ''}</p>
         </div>
         <div className="md-header-actions">
-          <button type="button" className="reebok-btn secondary" onClick={fetchData} disabled={loading || !startDate}>
+          <button type="button" className="reebok-btn secondary" onClick={fetchData} disabled={loading || !resolved || resolved.empty}>
             <RefreshCw />
             {loading ? 'Loading...' : 'Refresh'}
           </button>
@@ -184,28 +198,18 @@ function MasterDashboardPage() {
       </div>
 
       {/* Filters */}
-      <div className="card md-filters">
-        <div className="md-filter-group">
-          <span className="md-label">From</span>
-          <input type="date" className="md-date" value={startDate || ''} max={endDate || undefined} onChange={(e) => handleDateChange(e.target.value, endDate)} />
-          <span className="md-label">To</span>
-          <input type="date" className="md-date" value={endDate || ''} min={startDate || undefined} onChange={(e) => handleDateChange(startDate, e.target.value)} />
-          <div className="md-seg" role="group" aria-label="Quick range">
-            {QUICK_RANGES.map((r) => (
-              <button key={r} type="button" className={selectedQuickRange === r ? 'active' : ''} onClick={() => handleQuickRange(r)}>
-                {r}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="md-seg" role="group" aria-label="Division">
-          {DIVISIONS.map((d) => (
-            <button key={d.value} type="button" className={selectedDivision === d.value ? 'active' : ''} onClick={() => setSelectedDivision(d.value)}>
-              {d.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {latestDate && cmpA && cmpB && (
+        <MasterDashboardFilters
+          mode={mode} onMode={setMode}
+          sel={sel} onSel={handleSel}
+          draft={draft} onDraft={setDraft} onApply={applyCustom}
+          division={selectedDivision} onDivision={setSelectedDivision}
+          latestDate={latestDate} years={years}
+          cmpA={cmpA} cmpB={cmpB} onCmpA={setCmpA} onCmpB={setCmpB}
+        />
+      )}
+
+      {notices.map((n) => <div key={n} className="md-notice">{n}</div>)}
 
       {/* Tabs */}
       <div className="md-tabs" role="tablist">
@@ -222,8 +226,14 @@ function MasterDashboardPage() {
 
       {error && <div className="reebok-error">Could not load the dashboard: {error}</div>}
 
+      {resolved?.empty && (
+        <div className="md-empty card">
+          There is no data for this selection yet. Sales data is available from {firstDate ? shortDate(firstDate) : '-'} to {latestDate ? shortDate(latestDate) : '-'}.
+        </div>
+      )}
+
       {/* Overview */}
-      {activeTab === 'overview' && view && (
+      {activeTab === 'overview' && view && !resolved?.empty && (
         <>
           {data.days.length === 0 && <div className="md-empty card">No sales data in this date range.</div>}
 
@@ -238,7 +248,7 @@ function MasterDashboardPage() {
                   </div>
                   <div className="md-kpi-value">{t.value}</div>
                   <div className="md-kpi-foot">{t.foot}</div>
-                  <Delta value={t.delta} kind={t.kind || 'pct'} goodWhen={t.goodWhen || 'up'} />
+                  <Delta value={t.delta} kind={t.kind || 'pct'} goodWhen={t.goodWhen || 'up'} compareLabel={compareLabel} />
                   <Sparkline values={view.series(t.spark).map((p) => p.cur)} />
                 </div>
               );
@@ -246,16 +256,16 @@ function MasterDashboardPage() {
           </div>
 
           <div className="md-row md-row-trend">
-            <TrendCard series={view.series(trendMetric)} metric={trendMetric} onMetric={setTrendMetric} hasComparison={view.hasPrev} />
+            <TrendCard series={view.series(trendMetric)} metric={trendMetric} onMetric={setTrendMetric} hasComparison={view.hasPrev} compareLabel={compareLabel} />
             <DivisionSplitCard split={view.split} selectedDivision={selectedDivision} onSelect={setSelectedDivision} />
           </div>
 
           <div className="md-row md-row-even">
             <PaymentCard payments={view.payments} grossSales={view.grossSales} />
-            <WeeklyCard weeks={view.weeks} hasComparison={view.hasPrev} />
+            <WeeklyCard weeks={view.weeks} hasComparison={view.hasPrev} compareLabel={compareLabel} />
           </div>
 
-          <DivisionTableCard table={view.table} />
+          <DivisionTableCard table={view.table} compareLabel={compareLabel} />
         </>
       )}
     </div>

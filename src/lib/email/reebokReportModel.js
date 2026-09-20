@@ -8,7 +8,7 @@
 // Cell types: text | inr | int | dec | pct | ach | empty
 //   pct / ach values are in PERCENT units (25.6 means 25.6%).
 
-import { n, calcTarget, MTD_TARGET, YTD_TARGET, calcAchievement } from './reebokHelpers';
+import { n, calcTarget, MTD_TARGET, YTD_TARGET, monthlyTarget, calcAchievement } from './reebokHelpers';
 
 // ─── Palette (hex without #) ──────────────────────────────────────────────
 export const TONE = {
@@ -73,7 +73,7 @@ function daywiseTable(daywiseRows, reportDate) {
       { cells: [cell('Qty Sold'), cell(n(today.qty_sold), 'int'), cell(n(mtd.qty_sold), 'int'), ytd ? cell(ytd.qty, 'int') : cell(null, 'empty')] },
     ],
     footnotes: [
-      'Target = ₹14,00,000 ÷ days in month (daywise); MTD target = sum of daywise targets; YTD (calendar year) target = ₹14,00,000 per completed month since 1 Jan + current MTD target.  ACH% = NSV ÷ Target × 100.',
+      `Target = ₹${monthlyTarget(reportDate).toLocaleString('en-IN')} (this month's target) ÷ days in month (daywise); MTD target = sum of daywise targets; YTD (calendar year) target = each completed month's target since 1 Jan + current MTD target.  ACH% = NSV ÷ Target × 100.`,
     ],
   };
 }

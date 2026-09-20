@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
-import { loadLatestDate, loadOverview } from '@/lib/masterDashboardData';
+import { loadDataBounds, loadOverview } from '@/lib/masterDashboardData';
 
-// GET /api/reports/master-dashboard?meta=1                 -> { latestDate }
-// GET /api/reports/master-dashboard?startDate=..&endDate=.. -> day rows for the period, the
-//                                                              month-earlier comparison and payments.
+// GET /api/reports/master-dashboard?meta=1                 -> { firstDate, latestDate }
+// GET /api/reports/master-dashboard?startDate=..&endDate=.. -> day rows for the period, the comparison
+//                                                              period and payments. Optional compareStart /
+//                                                              compareEnd give Period B (Compare mode);
+//                                                              otherwise the same days one month earlier.
 // Reads the Reebok gold tables (see lib/masterDashboardData.js). The old fact_master_dashboard
 // tables are no longer used.
 
@@ -18,7 +20,7 @@ export async function GET(request) {
     const supabase = createServerClient();
 
     if (searchParams.get('meta')) {
-      return NextResponse.json({ success: true, latestDate: await loadLatestDate(supabase) });
+      return NextResponse.json({ success: true, ...(await loadDataBounds(supabase)) });
     }
 
     const startDate = searchParams.get('startDate');
@@ -27,7 +29,17 @@ export async function GET(request) {
       return NextResponse.json({ success: false, error: 'startDate and endDate (YYYY-MM-DD) are required, start on or before end.' }, { status: 400 });
     }
 
-    const data = await loadOverview(supabase, startDate, endDate);
+    const compareStart = searchParams.get('compareStart');
+    const compareEnd = searchParams.get('compareEnd');
+    let compare = null;
+    if (compareStart || compareEnd) {
+      if (!ISO_DATE.test(compareStart || '') || !ISO_DATE.test(compareEnd || '') || compareStart > compareEnd) {
+        return NextResponse.json({ success: false, error: 'compareStart and compareEnd must both be valid dates, start on or before end.' }, { status: 400 });
+      }
+      compare = { start: compareStart, end: compareEnd };
+    }
+
+    const data = await loadOverview(supabase, startDate, endDate, compare);
     return NextResponse.json({ success: true, ...data });
   } catch (err) {
     console.error('Master Dashboard API error:', err);
