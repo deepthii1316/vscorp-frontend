@@ -41,6 +41,7 @@
 | YTD | Year Till Date | `From 1 January through report date` | Cumulative result for the calendar year, computed by the pipeline from raw sales (`ytd` row in `gold.reebok_daily_metrics`). Target = ₹14,00,000 × completed months since 1 Jan + current MTD target. |
 | MTD | Month Till Date | `From 1st of month through report date` | The cumulative result from the beginning of the month up to the report date. |
 | WTD | Week Till Date | `From start of week through report date` | Week-to-date value, if/when implemented. |
+| MD % | Markdown Percentage | `(MRP - NSV) / MRP x 100`, MRP = SUM(MRP x Qty) | How far below MRP the sales were made (decided 20-Sep-2026). Note: MRP includes GST and NSV does not, so this reads higher than a GST-inclusive comparison. |
 | % Mix | Percentage Mix | `Category NSV / Total relevant NSV × 100` | The proportion of a category within the relevant total (NSV basis). |
 | % within Gender | Division share within a gender | `Division MTD NSV / that Gender's total MTD NSV × 100` | Division split inside Men / Women / Unisex. |
 
@@ -392,3 +393,4 @@ All calculations should flow through the canonical KPI/metrics definitions so th
 | 19-Sep-2026 | YTD column added (calendar year, derived from gold MTD rows) | Daywise + MTD + YTD table and Excel show YTD NSV, Target, ACH%, Bills, Qty |
 | 19-Sep-2026 | YTD is now computed in the pipeline (new `ytd` period_type) instead of summing MTD rows | Migration 2026_09_19_reebok_ytd.sql + refresh_reebok.py; YTD target = ₹14L × completed months + MTD target |
 | 19-Sep-2026 | Carry Bag lines excluded from unit counts; blank Item Division resolved from Class Name (no default to Accessories) | Fixes inflated Qty (120→66), Accessories and Unisex; refresh_reebok.py must be re-run |
+| 20-Sep-2026 | MD % defined as (MRP - NSV) / MRP; master dashboard tables added (gold.reebok_master_dashboard, gold.reebok_master_dashboard_payments); Account DSR loader maps the real Reebok headers | Migration 2026_09_20_reebok_master_dashboard.sql; DSR files must be re-uploaded |

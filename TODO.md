@@ -52,3 +52,26 @@ Get-ChildItem -Recurse -File -Exclude package-lock.json |
 ```
 Then `npm run build`, commit + push both repos, and do one real upload +
 processing run end to end.
+
+## 7. Fresh, clean data copy for the client
+Files (sales, inventory, Account DSR) are sometimes uploaded more than once, so
+the raw tables, the storage bucket and the gold tables can hold duplicates,
+junk rows and superseded values. Before the client handover, produce one clean copy:
+- Storage bucket `retail-ops`: keep only the final version of each file, delete re-uploads and test files.
+- `raw.sales`, `raw.account_dsr`, `raw.inventory`: remove duplicate loads (same date/rows from several uploads),
+  test uploads and non-data rows (for example the "Opening Cash" rows in the DSR).
+- `gold.*` and `staging.*`: rebuild from the cleaned raw data so nothing stale remains.
+- `public.upload_audit_log`: reset or archive the test history.
+- Then do one real upload and processing run end to end and reconcile totals with the sales reports.
+Scope note: for now only the fixes needed by current work are done (for example the DSR
+de-duplication in the master dashboard payments table). This item is the full cleanup pass.
+
+## 8. "Re-process" button for uploaded files
+Today, if the loader is fixed (or a file was read wrongly), the only way to re-read it is to
+delete its `upload_audit_log` record and upload the same file again, because uploads are
+blocked by SHA-256 duplicate detection. Add a Re-process action on Upload History:
+- Re-reads the file already stored in the `retail-ops` bucket with the current loader.
+- Removes only that file's rows (matched by `upload_audit_id`) before re-inserting, so nothing is duplicated.
+- Keeps the audit record and file hash, so duplicate protection is unchanged.
+- Runs through the normal processing-run lock so it cannot overlap another run.
+Origin: re-loading the Account DSR after the loader was fixed for the Reebok layout (20 Sep 2026).
