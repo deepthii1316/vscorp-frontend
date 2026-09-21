@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { createServerClient } from '@/lib/supabase';
+import { requireAuth } from '@/middleware/auth';
 import { EMAIL_FROM, recipientsFor } from '@/lib/email/config';
 
 // SEND step: receives one or more report screenshots (data URLs) from the
@@ -27,11 +28,12 @@ function getTransporter(user, pass) {
 }
 
 export async function POST(req) {
+  const auth = await requireAuth(req);
+  if (auth.response) return auth.response;
+
   const supabase = await createServerClient();
 
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
+  const { data: profile } = await supabase.from('users').select('role').eq('id', auth.user.id).single();
   if (!profile || profile.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const smtpUser = process.env.SMTP_USER;

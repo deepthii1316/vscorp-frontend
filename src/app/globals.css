@@ -2662,6 +2662,63 @@ body {
 }
 
 /* ─── Sales report: enterprise table presentation (display only) ─── */
+.report-section table { width: auto; min-width: 100%; }
+.report-section table tbody tr:nth-child(even) td { background: #f7f8fa; }
+.report-section table tbody tr:hover td { background: #eef2f7; }
+.report-section table td:not(:first-child) { white-space: nowrap; }
+.report-section .nsv-cell { color: inherit; font-weight: 400; }
+.report-section .ach-cell {
+  background: transparent !important;
+  padding: 0;
+  min-width: 0;
+  border-radius: 0;
+  font-size: inherit;
+  font-weight: 700;
+}
+.report-section .ach-cell[style*="color:#16a34a"] { color: #15803d !important; }
+
+/* ─── Sales reports: left sub-report navigation + send button ─── */
+.reebok-layout { display: flex; align-items: flex-start; gap: 20px; padding: 0 var(--space-7); }
+.reebok-layout .reebok-page-container { padding: 0; max-width: none; margin: 0; }
+.reebok-layout .reebok-page-container { flex: 1; min-width: 0; }
+.reebok-subnav {
+  position: sticky; top: 16px; flex: 0 0 230px;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 12px 8px; background: var(--bg-elevated);
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+}
+.reebok-subnav-label {
+  padding: 4px 12px 8px; font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);
+}
+.reebok-subnav-item {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 10px 12px; border: 0; border-radius: var(--r-md, 8px);
+  background: transparent; color: var(--text); font: inherit; font-size: 13.5px;
+  text-align: left; cursor: pointer; transition: background-color 100ms var(--ease);
+}
+.reebok-subnav-item svg { width: 18px; height: 18px; stroke-width: 1.6; flex: none; color: var(--text-muted); }
+.reebok-subnav-item:hover { background: var(--bg-subtle); }
+.reebok-subnav-item.active { background: var(--bg-inset); font-weight: 600; }
+.reebok-subnav-item.active svg { color: var(--text); }
+.reebok-send-fab {
+  position: fixed; right: 28px; bottom: 24px; z-index: 50;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 20px; border: 0; border-radius: 10px;
+  background: var(--text); color: var(--text-inverse);
+  font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+}
+.reebok-send-fab svg { width: 16px; height: 16px; }
+.reebok-send-fab:hover { opacity: 0.9; }
+@media (max-width: 900px) {
+  .reebok-layout { flex-direction: column; }
+  .reebok-subnav { position: static; flex: none; width: 100%; flex-direction: row; overflow-x: auto; }
+  .reebok-subnav-label { display: none; }
+  .reebok-subnav-item { width: auto; white-space: nowrap; }
+}
+
+/* ─── Sales report: enterprise table presentation (display only) ─── */
 .report-section table tbody tr:nth-child(even) td { background: #f7f8fa; }
 .report-section table tbody tr:hover td { background: #eef2f7; }
 .report-section table td:not(:first-child) { white-space: nowrap; }

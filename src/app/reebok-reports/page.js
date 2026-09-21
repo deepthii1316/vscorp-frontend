@@ -6,9 +6,11 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { Download, RefreshCw, Calendar, CalendarDays, Users, Layers, VenusAndMars, LayoutList, Mail } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { Download, RefreshCw, Calendar, CalendarDays, Users, Layers, VenusAndMars, LayoutList, FlaskConical, Send, X } from 'lucide-react';
 import RequireAuth from '@/components/RequireAuth';
+import { apiFetch } from '@/lib/api';
 import { SkeletonTable } from '@/components/Skeleton';
 
 const REPORT_KEYS = ['daywise', 'staff', 'category', 'gender'];
@@ -17,6 +19,13 @@ const REPORT_TITLES = {
   staff:    'Staff KPI',
   category: 'FW / APP / ACC',
   gender:   'Gender / Division',
+};
+
+const REPORT_ICONS = {
+  daywise:  CalendarDays,
+  staff:    Users,
+  category: Layers,
+  gender:   VenusAndMars,
 };
 
 const REPORT_ICONS = {
@@ -57,7 +66,7 @@ function ReebokReportsInner() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/reports/reebok-sales', {
+      const res = await apiFetch('/api/reports/reebok-sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date }),
@@ -184,6 +193,21 @@ function ReebokReportsInner() {
             );
           })}
         </nav>
+      <div className="reebok-layout">
+        <nav className="reebok-subnav" aria-label="Sales reports">
+          <div className="reebok-subnav-label">Sales Reports</div>
+          <button type="button" className={`reebok-subnav-item ${!report ? 'active' : ''}`} onClick={() => setReport(null)}>
+            <LayoutList /><span>All Reports</span>
+          </button>
+          {REPORT_KEYS.map((k) => {
+            const Icon = REPORT_ICONS[k];
+            return (
+              <button key={k} type="button" className={`reebok-subnav-item ${report === k ? 'active' : ''}`} onClick={() => setReport(k)}>
+                <Icon /><span>{REPORT_TITLES[k]}</span>
+              </button>
+            );
+          })}
+        </nav>
       <div className="reebok-page-container">
         {/* Page Header */}
         <div className="reebok-page-header">
@@ -260,6 +284,10 @@ function ReebokReportsInner() {
           </>
         )}
       </div>
+      </div>
+      <button type="button" className="reebok-send-fab" title="Send this report to an email address">
+        <Mail /> Send to Mail
+      </button>
       </div>
       {/* Off-screen staging: every table rendered once, captured to PNG for the email */}
       <div ref={stageRef} aria-hidden="true" style={{ position: 'fixed', left: -30000, top: 0, width: 1400, pointerEvents: 'none' }}>

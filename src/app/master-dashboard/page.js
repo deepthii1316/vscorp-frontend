@@ -12,6 +12,7 @@ import {
   resolveRange, compareWindows,
 } from '@/lib/masterDashboardShared';
 import RequireAuth from '@/components/RequireAuth';
+import { apiFetch } from '@/lib/api';
 import MasterDashboardFilters from '@/components/MasterDashboardFilters';
 import { Sparkline, TrendCard, DivisionSplitCard, PaymentCard, WeeklyCard, DivisionTableCard } from '@/components/MasterDashboardCharts';
 
@@ -101,6 +102,12 @@ function MasterDashboardPage() {
     setLoading(true);
     setError(null);
     try {
+      const params = new URLSearchParams({
+        startDate,
+        endDate,
+        divisions: selectedDivision !== 'ALL' ? selectedDivision : '',
+      });
+      const res = await apiFetch(`/api/reports/master-dashboard?${params.toString()}`);
       const params = new URLSearchParams({ startDate: resolved.start, endDate: resolved.end });
       if (resolved.compare) { params.set('compareStart', resolved.compare.start); params.set('compareEnd', resolved.compare.end); }
       const res = await fetch(`/api/reports/master-dashboard?${params.toString()}`);
@@ -112,6 +119,110 @@ function MasterDashboardPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  const handleDateChange = (start, end) => {
+    setStartDate(start);
+    setEndDate(end);
+  };
+
+  const handleQuickRangeChange = (range) => {
+    setSelectedQuickRange(range);
+    if (range === 'WTD') {
+      setStartDate('2026-08-14');
+      setEndDate('2026-08-18');
+    } else if (range === 'MTD') {
+      setStartDate('2026-08-01');
+      setEndDate('2026-08-18');
+    } else if (range === 'YTD') {
+      setStartDate('2026-01-01');
+      setEndDate('2026-08-18');
+    } else if (range === 'all') {
+      setStartDate('2026-01-01');
+      setEndDate('2026-12-31');
+    }
+  };
+
+  function yesterdayIST() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  }
+
+  async function handleSendEmail() {
+    setEmailState({ sending: true, status: 'loading', message: 'Generating report screenshot…' });
+    try {
+      const params = new URLSearchParams({
+        date: emailDate,
+        force: 'true',
+      });
+      const res = await apiFetch(`/api/reports/kpi-dashboard?${params.toString()}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const json = await res.json();
+      if (!res.ok || json.noData) {
+        setEmailState({ sending: false, status: 'error', message: json.error || 'No report data available.' });
+        return;
+      }
+
+      setEmailState({ sending: true, status: 'screenshot', message: 'Capturing screenshot…' });
+      const canvas = await html2canvas(dashboardRef.current, {
+        scale: 1.5,
+        useCORS: true,
+        logging: false,
+      });
+      const imageBase64 = canvas.toDataURL('image/png');
+
+      const formData = new FormData();
+      formData.append('images', new Blob([await (await fetch(imageBase64)).arrayBuffer()], { type: 'image/png' }), 'report.png');
+      formData.append('subject', `Virata Retail KPI Dashboard — ${emailDate}`);
+      formData.append('displayDate', emailDate);
+      formData.append('mode', emailMode);
+
+      const sendRes = await apiFetch('/api/reports/kpi-dashboard/send', { method: 'POST', body: formData });
+      const sendJson = await sendRes.json();
+      if (!sendRes.ok) {
+        setEmailState({ sending: false, status: 'error', message: sendJson.error || 'Failed to send email.' });
+        return;
+      }
+
+      setEmailState({ sending: false, status: 'success', message: `Email sent to ${sendJson.recipients} recipient(s).` });
+    } catch (err) {
+      setEmailState({ sending: false, status: 'error', message: err.message || 'Failed to send email.' });
+    }
+  }
+
+  function yesterdayIST() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  }
+
+  const kpis = dashboardData?.summary?.kpis || {
+    rsv: 0,
+    avgPerDay: 0,
+    mdPct: 0,
+    qtySold: 0,
+    bills: 0,
+    atv: 0,
+    daysCount: 1,
+  };
+
+  const payments = dashboardData?.payments?.totals || {
+    totalSales: 0,
+    upiAmount: 0,
+    upiPct: 0,
+    cashAmount: 0,
+    cashPct: 0,
+    cardAmount: 0,
+    cardPct: 0,
+    otherAmount: 0,
+    otherPct: 0,
+  };
+
+  const topStores = dashboardData?.summary?.topStores || [];
+  const storePerformance = dashboardData?.summary?.storePerformance || [];
   }, [resolved?.start, resolved?.end, resolved?.empty, resolved?.compare?.start, resolved?.compare?.end]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchData(); }, [fetchData]);

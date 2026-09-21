@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 
 export default function Home() {
-  const { isAuthenticated, ready } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!ready) return;
+    if (loading) return;
     router.replace(isAuthenticated ? '/upload' : '/login');
-  }, [ready, isAuthenticated, router]);
+  }, [loading, isAuthenticated, router]);
 
   return (
     <div style={{ padding: '48px', color: 'var(--text-muted)' }}>

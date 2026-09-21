@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { createServerClient } from '@/lib/supabase';
+import { requireAuth } from '@/middleware/auth';
 import { generateFileName, getStoragePath, BUCKET_NAME } from '@/lib/fileRename';
 
 // export const dynamic = 'force-dynamic';
@@ -155,6 +156,9 @@ async function legacyPOST(request) {
 }
 
 export async function POST(request) {
+  const auth = await requireAuth(request);
+  if (auth.response) return auth.response;
+
   let storagePath = null;
   try {
     const formData = await request.formData();

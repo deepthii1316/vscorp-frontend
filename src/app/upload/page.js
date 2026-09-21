@@ -22,6 +22,7 @@ import { SkeletonCard } from '@/components/Skeleton';
 import { hashFile } from '@/lib/hashFile';
 import { generateFileName } from '@/lib/fileRename';
 import { createBrowserClient } from '@/lib/supabase';
+import { apiFetch } from '@/lib/api';
 
 const PIPELINE_STEPS = [
   { step: 'raw', name: 'Raw ingest', desc: '— Validated and stored in the raw layer' },
@@ -76,7 +77,7 @@ function UploadPageContent() {
     if (pollInFlightRef.current) return;
     pollInFlightRef.current = true;
     try {
-      const res = await fetch(`/api/process?runId=${encodeURIComponent(runId)}`, { cache: 'no-store' });
+      const res = await apiFetch(`/api/process?runId=${encodeURIComponent(runId)}`, { cache: 'no-store' });
       const json = await res.json();
       if (!res.ok || !json.run) return; // transient — try again next tick
       const run = json.run;
@@ -112,7 +113,7 @@ function UploadPageContent() {
   // After a page reload, pick up a run that is still in flight.
   const resumeActiveRun = async () => {
     try {
-      const res = await fetch('/api/process', { cache: 'no-store' });
+      const res = await apiFetch('/api/process', { cache: 'no-store' });
       const json = await res.json();
       if (res.ok && json.run) {
         pipelineTriggeredRef.current = true;
@@ -214,7 +215,7 @@ function UploadPageContent() {
       setUploadProgress(20);
       setUploadStep('Uploading to storage…');
 
-      const response = await fetch('/api/upload', { method: 'POST', body: formData });
+      const response = await apiFetch('/api/upload', { method: 'POST', body: formData });
 
       setUploadProgress(60);
       setUploadStep('Processing data…');
@@ -263,7 +264,7 @@ function UploadPageContent() {
     };
 
     try {
-      const res = await fetch('/api/process', { method: 'POST' });
+      const res = await apiFetch('/api/process', { method: 'POST' });
       const json = await res.json();
       if (!json.success) {
         setPipelineRun({ id: null, status: 'failed', stage: null });
