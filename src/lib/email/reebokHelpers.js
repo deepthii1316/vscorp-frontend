@@ -155,7 +155,7 @@ export function MTD_TARGET(dateStr) {
 }
 
 /**
- * YTD target (calendar year) = the target of every completed month since 1 January
+ * YTD target (1 July onwards) = the target of every completed month since the most recent 1 July
  * (each month's own target) + the current month's MTD target. YTD actuals (NSV / Bills / Qty) come from the
  * 'ytd' row in gold.reebok_daily_metrics, computed by the pipeline.
  * Returns null if the date is missing/invalid.
@@ -164,8 +164,14 @@ export function YTD_TARGET(dateStr) {
   const p = parseYMD(dateStr);
   const mtd = MTD_TARGET(dateStr);
   if (!p || mtd == null) return null;
+  // YTD starts on the most recent 1 July: this year's if the date is Jul-Dec, else last year's.
+  let y = p.month >= 7 ? p.year : p.year - 1;
+  let m = 7;
   let completed = 0;
-  for (let m = 1; m < p.month; m++) completed += monthlyTarget(`${p.year}-${String(m).padStart(2, '0')}-01`);
+  while (y < p.year || m < p.month) {
+    completed += monthlyTarget(`${y}-${String(m).padStart(2, '0')}-01`);
+    if (++m > 12) { m = 1; y += 1; }
+  }
   return completed + mtd;
 }
 

@@ -116,7 +116,7 @@ function daywiseTable(daywiseRows, reportDate) {
       { cells: [cell('Qty Sold'), cell(n(today.qty_sold), 'int'), cell(n(mtd.qty_sold), 'int'), ytd ? cell(ytd.qty, 'int') : cell(null, 'empty')] },
     ],
     footnotes: [
-      `Target = ₹${monthlyTarget(reportDate).toLocaleString('en-IN')} (this month's target) ÷ days in month (daywise); MTD target = sum of daywise targets; YTD (calendar year) target = each completed month's target since 1 Jan + current MTD target.  ACH% = NSV ÷ Target × 100.`,
+      `Target = ₹${monthlyTarget(reportDate).toLocaleString('en-IN')} (this month's target) ÷ days in month (daywise); MTD target = sum of daywise targets; YTD (from 1 July) target = each completed month's target since 1 July + current MTD target.  ACH% = NSV ÷ Target × 100.`,
     ],
   };
 }

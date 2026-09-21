@@ -277,7 +277,7 @@ const ymd = (y, m, d) => `${y}-${pad2(m)}-${pad2(d)}`;          // m is 1-12
 const lastDayOf = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
 const partsOf = (dateStr) => ({ y: +dateStr.slice(0, 4), m: +dateStr.slice(5, 7), d: +dateStr.slice(8, 10) });
 
-/** WTD (Monday of the anchor's week), MTD, YTD (1 Jan) and All (from the first data date). */
+/** WTD (Monday of the anchor's week), MTD, YTD (most recent 1 July) and All (from the first data date). */
 export function quickRange(preset, anchor, firstDate) {
   const { y, m } = partsOf(anchor);
   if (preset === 'WTD') {
@@ -286,7 +286,7 @@ export function quickRange(preset, anchor, firstDate) {
     return [iso(monday), anchor];
   }
   if (preset === 'MTD') return [ymd(y, m, 1), anchor];
-  if (preset === 'YTD') return [ymd(y, 1, 1), anchor];
+  if (preset === 'YTD') return [ymd(m >= 7 ? y : y - 1, 7, 1), anchor];
   return [firstDate || anchor, anchor];
 }
 
