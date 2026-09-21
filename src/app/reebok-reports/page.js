@@ -185,21 +185,6 @@ function ReebokReportsInner() {
             );
           })}
         </nav>
-      <div className="reebok-layout">
-        <nav className="reebok-subnav" aria-label="Sales reports">
-          <div className="reebok-subnav-label">Sales Reports</div>
-          <button type="button" className={`reebok-subnav-item ${!report ? 'active' : ''}`} onClick={() => setReport(null)}>
-            <LayoutList /><span>All Reports</span>
-          </button>
-          {REPORT_KEYS.map((k) => {
-            const Icon = REPORT_ICONS[k];
-            return (
-              <button key={k} type="button" className={`reebok-subnav-item ${report === k ? 'active' : ''}`} onClick={() => setReport(k)}>
-                <Icon /><span>{REPORT_TITLES[k]}</span>
-              </button>
-            );
-          })}
-        </nav>
       <div className="reebok-page-container">
         {/* Page Header */}
         <div className="reebok-page-header">
@@ -275,7 +260,6 @@ function ReebokReportsInner() {
             )}
           </>
         )}
-      </div>
       </div>
       <button type="button" className="reebok-send-fab" title="Send this report to an email address">
         <Mail /> Send to Mail

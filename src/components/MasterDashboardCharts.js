@@ -203,7 +203,7 @@ export function WeeklyCard({ weeks, hasComparison, compareLabel = 'last month' }
     <div className="card">
       <div className="card-header">
         <ChartColumn className="card-header-icon-svg" />
-        <h3>Month on month</h3>
+        <h3>M2M</h3>
       </div>
       <p className="md-note">
         NSV by week of the selected range{hasComparison ? `, against ${compareLabel === 'last month' ? 'the same weeks one month earlier' : compareLabel}.` : '. No comparison period is available for this selection.'}

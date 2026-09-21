@@ -2604,6 +2604,16 @@ body {
   box-shadow: 0 0 0 3px var(--green-soft);
 }
 
+.login-password-field { position: relative; display: block; }
+.login-password-field input { width: 100%; padding-right: 42px; }
+.login-password-toggle {
+  position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 4px; border: 0; background: transparent; color: var(--text-muted); cursor: pointer;
+}
+.login-password-toggle:hover { color: var(--text); }
+.login-password-toggle svg { width: 16px; height: 16px; }
+
 .login-err {
   font-size: 12.5px;
   color: var(--negative);
@@ -2917,6 +2927,35 @@ body {
 .md-table .md-total-row td { background: #D9DCE1; font-weight: 700; border-bottom: 0; }
 .md-table .md-warn-row td { background: var(--amber-soft); color: var(--text); }
 .md-table .md-delta { display: inline-flex; margin-top: 0; }
+
+/* Retail metrics: single-store current period versus month-on-month view. */
+.md-metrics-view { display: flex; flex-direction: column; gap: var(--space-4); }
+.md-metric-kpis { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--space-3); }
+.md-metric-kpi { display: block; width: 100%; border: 1px solid var(--border); text-align: left; cursor: pointer; color: var(--text); font: inherit; }
+.md-metric-kpi:hover, .md-metric-kpi.selected { border-color: var(--green); box-shadow: 0 0 0 1px var(--green-line); }
+.md-metric-kpi .md-kpi-value { display: block; }
+.md-metric-delta { display: inline-flex; align-items: center; gap: 3px; margin-top: 6px; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.md-metric-delta svg { width: 12px; height: 12px; }
+.md-metric-delta.good { color: var(--positive); }
+.md-metric-delta.bad { color: var(--negative); }
+.md-metric-delta.flat { color: var(--text-muted); }
+.md-metric-legend { display: flex; gap: var(--space-5); color: var(--text-muted); font-size: 11px; }
+.md-metric-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.md-metric-legend i { width: 10px; height: 10px; display: inline-block; border-radius: 2px; background: var(--green); }
+.md-metric-legend i.previous { background: #B4B2A8; }
+.md-metric-store-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: var(--space-4); align-items: center; padding: var(--space-4) 0; border-top: 1px solid var(--border); }
+.md-metric-store-row > span { font-weight: 700; color: var(--text); }
+.md-metric-bars { display: flex; flex-direction: column; gap: 10px; }
+.md-metric-bar-row { display: grid; grid-template-columns: 70px minmax(0, 1fr) 90px; gap: 10px; align-items: center; font-size: 11px; color: var(--text-muted); }
+.md-metric-bar-row > div { height: 12px; background: var(--bg-subtle); border-radius: 3px; overflow: hidden; }
+.md-metric-bar-row i { display: block; height: 100%; min-width: 2px; border-radius: inherit; background: var(--green); }
+.md-metric-bar-row i.previous { background: #C9D3DE; }
+.md-metric-bar-row strong { padding: 2px 4px; border-radius: 3px; text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+.md-metric-table td { vertical-align: top; }
+.md-metric-table td .md-metric-delta { display: flex; }
+.md-metric-value-chip { display: inline-block; padding: 2px 0; border-bottom: 2px solid transparent; color: var(--text) !important; font-variant-numeric: tabular-nums; }
+@media (max-width: 1000px) { .md-metric-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .md-metric-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .md-metric-store-row { grid-template-columns: 1fr; } }
 
 /* Master Dashboard: filter bar (Phase 4) */
 .md-filters-stack { flex-direction: column; align-items: stretch; gap: 0; padding: 0; }

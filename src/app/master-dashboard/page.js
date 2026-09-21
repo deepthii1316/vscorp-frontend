@@ -15,6 +15,7 @@ import RequireAuth from '@/components/RequireAuth';
 import { apiFetch } from '@/lib/api';
 import MasterDashboardFilters from '@/components/MasterDashboardFilters';
 import { Sparkline, TrendCard, DivisionSplitCard, PaymentCard, WeeklyCard, DivisionTableCard } from '@/components/MasterDashboardCharts';
+import MasterDashboardMetrics from '@/components/MasterDashboardMetrics';
 
 // Overview tab. Data: gold.reebok_master_dashboard and gold.reebok_master_dashboard_payments.
 // Filters (Phase 4): quick range, week, month, half-year, quarter, financial/calendar, custom dates,
@@ -217,8 +218,8 @@ function MasterDashboardPage() {
         <button type="button" role="tab" aria-selected={activeTab === 'overview'} className={`md-tab ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>
           <LayoutDashboard />Overview
         </button>
-        <button type="button" role="tab" className="md-tab" disabled>
-          <ChartColumn />Retail metrics <span className="md-soon">Soon</span>
+        <button type="button" role="tab" aria-selected={activeTab === 'metrics'} className={`md-tab ${activeTab === 'metrics' ? 'active' : ''}`} onClick={() => setActiveTab('metrics')}>
+          <ChartColumn />Retail metrics
         </button>
         <button type="button" role="tab" className="md-tab" disabled>
           <Layers />Category drill-down <span className="md-soon">Soon</span>
@@ -268,6 +269,16 @@ function MasterDashboardPage() {
 
           <DivisionTableCard table={view.table} compareLabel={compareLabel} />
         </>
+      )}
+
+      {activeTab === 'metrics' && data && !resolved?.empty && (
+        <MasterDashboardMetrics
+          days={data.retailMetricsDays || []}
+          prevDays={data.retailMetricsPrevDays || []}
+          ssrDays={data.days || []}
+          ssrPrevDays={data.prevDays || []}
+          rangeText={rangeText}
+        />
       )}
     </div>
   );
