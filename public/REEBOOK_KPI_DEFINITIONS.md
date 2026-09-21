@@ -126,9 +126,12 @@ Canonical implementation: `calcTarget`, `MTD_TARGET`, `calcAchievement` in `src/
 
 ### Color coding
 
-Achievement % should use the agreed report color coding consistently across HTML/email and Excel outputs.
+Achievement % is the only value that is color coded, and it is coloured **relatively** (decided 21-Sep-2026), the same way in the on-screen report, the email images and the Excel download:
 
-The exact color thresholds should be added here once confirmed by the manager. Until then, code must not invent threshold values.
+- Within each comparison group the **lowest** value is **red**, the **highest** is **green**, and values in between are blended through yellow (the standard red-yellow-green color scale). There are no fixed percentage cut-offs.
+- Comparison groups: the ACH% column of the salespeople in each Staffwise KPI table (the STORE TOTAL is placed on the same scale), and the three Achievement % cells (Daywise, MTD, YTD) of the first table.
+- If every value in a group is the same there is nothing to rank, so they all get the middle (yellow) color.
+- Colors are computed in one place (`heatColor` and `applyRelativeHeat` in `src/lib/email/reebokReportModel.js`).
 
 ---
 
@@ -406,3 +409,4 @@ All calculations should flow through the canonical KPI/metrics definitions so th
 | 20-Sep-2026 | MD % defined as (MRP - NSV) / MRP; master dashboard tables added (gold.reebok_master_dashboard, gold.reebok_master_dashboard_payments); Account DSR loader maps the real Reebok headers | Migration 2026_09_20_reebok_master_dashboard.sql; DSR files must be re-uploaded |
 | 20-Sep-2026 | Monthly target is now per month: default ₹14,00,000, September 2026 = ₹8,00,000 | Daywise, MTD and YTD targets and ACH% in the sales report, Excel and (later) the dashboard follow the month's own target |
 | 20-Sep-2026 | YTD confirmed as the calendar year, 1 January to the report date | No change to the calculation; YTD target counts every month since 1 January at its own target |
+| 21-Sep-2026 | ACH% color coding changed from fixed thresholds (80 / 60) to relative coloring (lowest red, highest green) | Sales report tables, email images and Excel |
