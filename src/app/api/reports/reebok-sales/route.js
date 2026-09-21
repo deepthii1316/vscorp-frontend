@@ -9,7 +9,6 @@
 
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
-import { requireAuth } from '@/middleware/auth';
 import { n, fmtINR, fmtPct, fmtNum, fmtDec, achColor } from '@/lib/email/reebokHelpers';
 import { buildReportModel, formatCell, heatColor, ZEBRA, TOTAL_BG } from '@/lib/email/reebokReportModel';
 
@@ -48,6 +47,38 @@ function renderPeriodPanel(period, title, headers, rows) {
       <tbody>${rows}</tbody>
     </table></div>
   </details>`;
+}
+
+function renderTable(table) {
+  const headers = table.columns
+    .map((column) => `<th style="${TH}${column.align === 'l' ? 'text-align:left;' : 'text-align:right;'}">${column.label}</th>`)
+    .join('');
+
+  let zebra = 0;
+  const rows = table.rows.map((row) => {
+    const isTotal = row.kind === 'total';
+    const rowBackground = isTotal ? TOTAL_BG : ZEBRA[zebra++ % 2];
+    const cells = row.cells.map((cell, index) => {
+      if (cell.merged) return '';
+      const align = table.columns[index].align === 'l' ? 'left' : 'right';
+      let style = `${TD}text-align:${align};background:#${rowBackground};`;
+      if (cell.rowspan) style += 'font-weight:700;vertical-align:middle;background:#F6F7F9;';
+      if (isTotal) style += 'font-weight:700;';
+      if (cell.t === 'ach' && cell.heat !== undefined) style += `background:#${heatColor(cell.heat)};font-weight:700;`;
+      const rowspan = cell.rowspan ? ` rowspan="${cell.rowspan}"` : '';
+      return `<td${rowspan} style="${style}">${formatCell(cell)}</td>`;
+    }).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  return `<div class="report-section" style="${FONT}margin-bottom:24px;">
+    <div style="${TITLE_BAR}">${table.title}</div>
+    <div style="overflow-x:auto;"><table style="border-collapse:collapse;width:100%;max-width:${Math.min(1200, Math.max(520, table.columns.length * 120))}px;">
+      <thead><tr>${headers}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    ${table.footnotes?.length ? `<div style="font-size:10px;color:#64748b;margin-top:6px;font-style:italic;">${table.footnotes.map((note) => `<div>${note}</div>`).join('')}</div>` : ''}
+  </div>`;
 }
 
 function achBadge(pct) {
@@ -241,36 +272,7 @@ function buildDaywiseTable(daywiseRows, reportDate) {
       return `<td style="${baseStyle}">${cell.value}</td>`;
     });
     return `<tr>${cells[0]}${cells[period === 'today' ? 1 : 2]}</tr>`;
-// ─── Inline styles (inline only so html2canvas capture renders identically) ──
-const FONT = "font-family:'Inter','Segoe UI',Arial,sans-serif;";
-const TH = 'color:#fff;font-size:12px;padding:7px 10px;font-weight:700;border:1px solid #ffffff55;white-space:nowrap;';
-const TD = 'font-size:12.5px;padding:5px 10px;border:1px solid #d5dae1;color:#111827;font-variant-numeric:tabular-nums;white-space:nowrap;';
-const TITLE_BAR = 'color:#111827;font-size:15px;font-weight:800;letter-spacing:0.02em;text-transform:uppercase;padding:2px 0 8px;';
-
-function renderTable(t) {
-  const head = t.columns
-    .map((c) => `<th style="${TH}background:#${c.tone};text-align:${c.align === 'l' ? 'left' : 'right'};">${c.label}</th>`)
-    .join('');
-
-  let zebra = 0;
-  const body = t.rows.map((row) => {
-    const isTotal = row.kind === 'total';
-    const rowBg = isTotal ? TOTAL_BG : ZEBRA[zebra++ % 2];
-    const tds = row.cells.map((c, i) => {
-      if (c.merged) return '';
-      const align = t.columns[i].align === 'l' ? 'left' : 'right';
-      let style = `${TD}text-align:${align};background:#${rowBg};`;
-      let text = formatCell(c);
-      if (c.rowspan) style += 'font-weight:700;vertical-align:middle;background:#F6F7F9;';
-      if (isTotal) style += 'font-weight:700;';
-      if (c.t === 'ach') {
-        if (c.heat !== undefined) style += `background:#${heatColor(c.heat)};font-weight:700;`;   // relative colour: lowest red, highest green
-      }
-      const span = c.rowspan ? ` rowspan="${c.rowspan}"` : '';
-      return `<td${span} style="${style}">${text}</td>`;
-    }).join('');
-    return `<tr>${tds}</tr>`;
-  }).join('');
+  });
 
   let html = `<div class="report-section" style="${FONT}margin-bottom:24px;">
     <div style="${TITLE_BAR}">Uppal Reebok — Daywise + MTD</div>`;
@@ -410,17 +412,7 @@ function buildGenderDivisionTable(gdRows) {
   }
 
   let html = `<div class="report-section" style="${FONT}margin-bottom:24px;">`;
-  html += `<div style="${TITLE_BAR}">
-    Uppal Reebok — Gender / Division Split
-  const notes = (t.footnotes || []).map((f) => `<div>${f}</div>`).join('');
-  return `<div class="report-section" style="${FONT}margin-bottom:24px;">
-    <div style="${TITLE_BAR}">${t.title}</div>
-    <div style="overflow-x:auto;"><table style="border-collapse:collapse;width:100%;max-width:${Math.min(1200, Math.max(520, t.columns.length * 120))}px;">
-      <thead><tr>${head}</tr></thead>
-      <tbody>${body}</tbody>
-    </table></div>
-    ${notes ? `<div style="font-size:10px;color:#64748b;margin-top:6px;font-style:italic;">${notes}</div>` : ''}
-  </div>`;
+  html += `<div style="${TITLE_BAR}">Uppal Reebok — Gender / Division Split</div>`;
   html += `<table style="border-collapse:collapse;width:100%;max-width:700px;">`;
   html += `<thead><tr>`;
   html += `<th style="${TH}">Period</th>`;
@@ -479,9 +471,6 @@ function buildGenderPeriodTables(gdRows) {
 // ─── POST handler ────────────────────────────────────────────────────────
 
 export async function POST(req) {
-  const auth = await requireAuth(req);
-  if (auth.response) return auth.response;
-
   try {
     const supabase = createServerClient();
     const body = await req.json().catch(() => ({}));

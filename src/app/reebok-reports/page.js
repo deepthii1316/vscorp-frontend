@@ -6,9 +6,8 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { Download, RefreshCw, Calendar, CalendarDays, Users, Layers, VenusAndMars, LayoutList, Mail } from 'lucide-react';
+import { Download, RefreshCw, Calendar, CalendarDays, Users, Layers, VenusAndMars, LayoutList, Mail, FlaskConical, Send, X } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import { Download, RefreshCw, Calendar, CalendarDays, Users, Layers, VenusAndMars, LayoutList, FlaskConical, Send, X } from 'lucide-react';
 import RequireAuth from '@/components/RequireAuth';
 import { apiFetch } from '@/lib/api';
 import { SkeletonTable } from '@/components/Skeleton';
@@ -19,13 +18,6 @@ const REPORT_TITLES = {
   staff:    'Staff KPI',
   category: 'FW / APP / ACC',
   gender:   'Gender / Division',
-};
-
-const REPORT_ICONS = {
-  daywise:  CalendarDays,
-  staff:    Users,
-  category: Layers,
-  gender:   VenusAndMars,
 };
 
 const REPORT_ICONS = {
@@ -66,7 +58,7 @@ function ReebokReportsInner() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch('/api/reports/reebok-sales', {
+      const res = await fetch('/api/reports/reebok-sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date }),

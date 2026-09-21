@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import UploadHistory from '@/components/UploadHistory';
 import RequireAuth from '@/components/RequireAuth';
-import { createBrowserClient } from '@/lib/supabase';
 
 function UploadHistoryPage() {
   const [uploads, setUploads] = useState([]);
@@ -16,19 +15,10 @@ function UploadHistoryPage() {
   const loadUploads = async () => {
     try {
       setUploadsLoading(true);
-      const supabase = createBrowserClient();
-      const { data, error } = await supabase
-        .from('upload_audit_log')
-        .select('*')
-        .order('uploaded_at', { ascending: false })
-        .limit(50);
-
-      if (error) {
-        console.error('Failed to load upload history:', error);
-        setUploads([]);
-      } else {
-        setUploads(data || []);
-      }
+      const response = await fetch('/api/upload-history');
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      setUploads(result.uploads || []);
     } catch (err) {
       console.error('Failed to load upload history:', err);
       setUploads([]);
