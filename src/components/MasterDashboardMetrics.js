@@ -31,6 +31,9 @@ function aggregate(rows) {
     upt: totals.bills ? totals.qty / totals.bills : null,
     atv: totals.bills ? totals.nsv / totals.bills : null,
     asp: totals.qty ? totals.nsv / totals.qty : null,
+    // ssr is not computed here: these rows are gold.reebok_daily_metrics, which has no
+    // shoes_qty column. It needs gold.reebok_master_dashboard's rows instead — see
+    // aggregateSsr()/perRowSsr(), fed by the separate ssrDays/ssrPrevDays props.
     ssr: null,
     fupt: totals.bills ? totals.footwear / totals.bills : null,
     sfr: totals.footwear ? (totals.socks / totals.footwear) * 100 : null,
@@ -44,6 +47,12 @@ function aggregateSsr(rows) {
     shoes: result.shoes + num(row.shoes_qty),
   }), { socks: 0, shoes: 0 });
   return totals.shoes ? (totals.socks / totals.shoes) * 100 : null;
+}
+
+/** Single-day SSR, for the sparkline (aggregateSsr does the same over a range). */
+function perRowSsr(row) {
+  const shoes = num(row?.shoes_qty);
+  return shoes ? (num(row?.socks_qty) / shoes) * 100 : null;
 }
 
 function metricValue(row, key) {
@@ -111,7 +120,7 @@ export default function MasterDashboardMetrics({ days, prevDays, ssrDays, ssrPre
               <strong className="md-kpi-value">{item.format(current[item.key])}</strong>
               <span className="md-kpi-foot">Current period</span>
               <Delta value={delta(current[item.key], previous[item.key])} unavailableText={item.key === 'ssr' ? '—' : undefined} />
-              <Sparkline values={(days || []).map((row) => metricValue(row, item.key))} />
+              <Sparkline values={item.key === 'ssr' ? (ssrDays || []).map(perRowSsr) : (days || []).map((row) => metricValue(row, item.key))} />
             </button>
           );
         })}
