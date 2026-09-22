@@ -11,11 +11,13 @@ import {
   trendSeries, weeklyNsv, divisionSplit, divisionTable,
   resolveRange, compareWindows,
 } from '@/lib/masterDashboardShared';
+import { categoryDrilldownTree, footwearByDepartmentTree } from '@/lib/categoryDrilldownShared';
 import RequireAuth from '@/components/RequireAuth';
 import { apiFetch } from '@/lib/api';
 import MasterDashboardFilters from '@/components/MasterDashboardFilters';
 import { Sparkline, TrendCard, DivisionSplitCard, PaymentCard, WeeklyCard, DivisionTableCard } from '@/components/MasterDashboardCharts';
 import MasterDashboardMetrics from '@/components/MasterDashboardMetrics';
+import CategoryDrilldownTables from '@/components/CategoryDrilldownTables';
 
 // Overview tab. Data: gold.reebok_master_dashboard and gold.reebok_master_dashboard_payments.
 // Filters (Phase 4): quick range, week, month, half-year, quarter, financial/calendar, custom dates,
@@ -54,6 +56,10 @@ function MasterDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
+
+  const [catLoading, setCatLoading] = useState(false);
+  const [catError, setCatError] = useState(null);
+  const [catData, setCatData] = useState(null);
 
   const { firstDate, latestDate } = bounds;
 
@@ -117,6 +123,37 @@ function MasterDashboardPage() {
   }, [resolved, selectedDivision]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // 3b. Category drill-down: only loaded once that tab is opened, same range/compare as Overview.
+  useEffect(() => {
+    if (activeTab !== 'categories' || !resolved || resolved.empty) return;
+    let cancelled = false;
+    (async () => {
+      setCatLoading(true);
+      setCatError(null);
+      try {
+        const params = new URLSearchParams({ startDate: resolved.start, endDate: resolved.end });
+        if (resolved.compare) { params.set('compareStart', resolved.compare.start); params.set('compareEnd', resolved.compare.end); }
+        const res = await fetch(`/api/reports/master-dashboard/category-drilldown?${params.toString()}`);
+        const json = await res.json();
+        if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
+        if (!cancelled) setCatData(json);
+      } catch (err) {
+        if (!cancelled) setCatError(err.message);
+      } finally {
+        if (!cancelled) setCatLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [activeTab, resolved?.start, resolved?.end, resolved?.empty, resolved?.compare?.start, resolved?.compare?.end]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const catView = useMemo(() => {
+    if (!catData) return null;
+    return {
+      categoryTree: categoryDrilldownTree(catData.rows, catData.prevRows),
+      footwearTree: footwearByDepartmentTree(catData.rows, catData.prevRows),
+    };
+  }, [catData]);
 
   // Selection handlers. Groups are mutually exclusive; emptying a multi-select falls back to month to date.
   const handleSel = (patch) => {
@@ -221,8 +258,8 @@ function MasterDashboardPage() {
         <button type="button" role="tab" aria-selected={activeTab === 'metrics'} className={`md-tab ${activeTab === 'metrics' ? 'active' : ''}`} onClick={() => setActiveTab('metrics')}>
           <ChartColumn />Retail metrics
         </button>
-        <button type="button" role="tab" className="md-tab" disabled>
-          <Layers />Category drill-down <span className="md-soon">Soon</span>
+        <button type="button" role="tab" aria-selected={activeTab === 'categories'} className={`md-tab ${activeTab === 'categories' ? 'active' : ''}`} onClick={() => setActiveTab('categories')}>
+          <Layers />Category drill-down
         </button>
       </div>
 
@@ -279,6 +316,21 @@ function MasterDashboardPage() {
           ssrPrevDays={data.prevDays || []}
           rangeText={rangeText}
         />
+      )}
+
+      {/* Category drill-down */}
+      {activeTab === 'categories' && !resolved?.empty && (
+        <>
+          {catError && <div className="reebok-error">Could not load the category drill-down: {catError}</div>}
+          {catLoading && !catView && <div className="md-empty card">Loading...</div>}
+          {catView && (
+            <CategoryDrilldownTables
+              categoryTree={catView.categoryTree}
+              footwearTree={catView.footwearTree}
+              compareLabel={compareLabel}
+            />
+          )}
+        </>
       )}
     </div>
   );
