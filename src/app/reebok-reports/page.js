@@ -6,9 +6,10 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { Download, RefreshCw, Calendar, CalendarDays, Users, Layers, VenusAndMars, LayoutList, Mail, FlaskConical, Send, X } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import { Download, RefreshCw, Calendar, CalendarDays, Users, Layers, VenusAndMars, LayoutList, FlaskConical, Send, X } from 'lucide-react';
 import RequireAuth from '@/components/RequireAuth';
+import { apiFetch } from '@/lib/api';
 import { SkeletonTable } from '@/components/Skeleton';
 
 const REPORT_KEYS = ['daywise', 'staff', 'category', 'gender'];
@@ -260,6 +261,9 @@ function ReebokReportsInner() {
           </>
         )}
       </div>
+      <button type="button" className="reebok-send-fab" title="Send this report to an email address">
+        <Mail /> Send to Mail
+      </button>
       </div>
       {/* Off-screen staging: every table rendered once, captured to PNG for the email */}
       <div ref={stageRef} aria-hidden="true" style={{ position: 'fixed', left: -30000, top: 0, width: 1400, pointerEvents: 'none' }}>

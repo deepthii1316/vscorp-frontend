@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
+import { requireAuth } from '@/middleware/auth';
 
-export async function GET() {
+export async function GET(request) {
+  const auth = await requireAuth(request);
+  if (auth.response) return auth.response;
+
   return NextResponse.json({
     success: true,
     merchMatrix: {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireAuth } from '@/middleware/auth';
 
 async function legacyPOST() {
   try {
@@ -72,7 +73,10 @@ async function legacyPOST() {
   }
 }
 
-export async function POST() {
+export async function POST(request) {
+  const auth = await requireAuth(request);
+  if (auth.response) return auth.response;
+
   try {
     const token = process.env.GITHUB_TOKEN || process.env.MEDALLION_GITHUB_TOKEN;
     const owner = process.env.GITHUB_REPO_OWNER || 'deepthii1316';
@@ -148,6 +152,9 @@ export async function POST() {
 }
 
 export async function GET(request) {
+  const auth = await requireAuth(request);
+  if (auth.response) return auth.response;
+
   let runId = new URL(request.url).searchParams.get('runId');
   const supabase = createServerClient();
 

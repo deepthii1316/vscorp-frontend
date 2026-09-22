@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireAuth } from '@/middleware/auth';
 
 export async function GET(request) {
+  const auth = await requireAuth(request);
+  if (auth.response) return auth.response;
+
   const { searchParams } = new URL(request.url);
   const now = new Date();
   const currentMonth = now.getMonth() + 1; // 1-12

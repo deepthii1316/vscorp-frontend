@@ -2604,6 +2604,16 @@ body {
   box-shadow: 0 0 0 3px var(--green-soft);
 }
 
+.login-password-field { position: relative; display: block; }
+.login-password-field input { width: 100%; padding-right: 42px; }
+.login-password-toggle {
+  position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 4px; border: 0; background: transparent; color: var(--text-muted); cursor: pointer;
+}
+.login-password-toggle:hover { color: var(--text); }
+.login-password-toggle svg { width: 16px; height: 16px; }
+
 .login-err {
   font-size: 12.5px;
   color: var(--negative);
@@ -2659,6 +2669,63 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin-bottom: 4px;
+}
+
+/* ─── Sales report: enterprise table presentation (display only) ─── */
+.report-section table { width: auto; min-width: 100%; }
+.report-section table tbody tr:nth-child(even) td { background: #f7f8fa; }
+.report-section table tbody tr:hover td { background: #eef2f7; }
+.report-section table td:not(:first-child) { white-space: nowrap; }
+.report-section .nsv-cell { color: inherit; font-weight: 400; }
+.report-section .ach-cell {
+  background: transparent !important;
+  padding: 0;
+  min-width: 0;
+  border-radius: 0;
+  font-size: inherit;
+  font-weight: 700;
+}
+.report-section .ach-cell[style*="color:#16a34a"] { color: #15803d !important; }
+
+/* ─── Sales reports: left sub-report navigation + send button ─── */
+.reebok-layout { display: flex; align-items: flex-start; gap: 20px; padding: 0 var(--space-7); }
+.reebok-layout .reebok-page-container { padding: 0; max-width: none; margin: 0; }
+.reebok-layout .reebok-page-container { flex: 1; min-width: 0; }
+.reebok-subnav {
+  position: sticky; top: 16px; flex: 0 0 230px;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 12px 8px; background: var(--bg-elevated);
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+}
+.reebok-subnav-label {
+  padding: 4px 12px 8px; font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);
+}
+.reebok-subnav-item {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 10px 12px; border: 0; border-radius: var(--r-md, 8px);
+  background: transparent; color: var(--text); font: inherit; font-size: 13.5px;
+  text-align: left; cursor: pointer; transition: background-color 100ms var(--ease);
+}
+.reebok-subnav-item svg { width: 18px; height: 18px; stroke-width: 1.6; flex: none; color: var(--text-muted); }
+.reebok-subnav-item:hover { background: var(--bg-subtle); }
+.reebok-subnav-item.active { background: var(--bg-inset); font-weight: 600; }
+.reebok-subnav-item.active svg { color: var(--text); }
+.reebok-send-fab {
+  position: fixed; right: 28px; bottom: 24px; z-index: 50;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 20px; border: 0; border-radius: 10px;
+  background: var(--text); color: var(--text-inverse);
+  font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+}
+.reebok-send-fab svg { width: 16px; height: 16px; }
+.reebok-send-fab:hover { opacity: 0.9; }
+@media (max-width: 900px) {
+  .reebok-layout { flex-direction: column; }
+  .reebok-subnav { position: static; flex: none; width: 100%; flex-direction: row; overflow-x: auto; }
+  .reebok-subnav-label { display: none; }
+  .reebok-subnav-item { width: auto; white-space: nowrap; }
 }
 
 /* ─── Sales report: enterprise table presentation (display only) ─── */
@@ -2860,6 +2927,35 @@ body {
 .md-table .md-total-row td { background: #D9DCE1; font-weight: 700; border-bottom: 0; }
 .md-table .md-warn-row td { background: var(--amber-soft); color: var(--text); }
 .md-table .md-delta { display: inline-flex; margin-top: 0; }
+
+/* Retail metrics: single-store current period versus month-on-month view. */
+.md-metrics-view { display: flex; flex-direction: column; gap: var(--space-4); }
+.md-metric-kpis { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--space-3); }
+.md-metric-kpi { display: block; width: 100%; border: 1px solid var(--border); text-align: left; cursor: pointer; color: var(--text); font: inherit; }
+.md-metric-kpi:hover, .md-metric-kpi.selected { border-color: var(--green); box-shadow: 0 0 0 1px var(--green-line); }
+.md-metric-kpi .md-kpi-value { display: block; }
+.md-metric-delta { display: inline-flex; align-items: center; gap: 3px; margin-top: 6px; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.md-metric-delta svg { width: 12px; height: 12px; }
+.md-metric-delta.good { color: var(--positive); }
+.md-metric-delta.bad { color: var(--negative); }
+.md-metric-delta.flat { color: var(--text-muted); }
+.md-metric-legend { display: flex; gap: var(--space-5); color: var(--text-muted); font-size: 11px; }
+.md-metric-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.md-metric-legend i { width: 10px; height: 10px; display: inline-block; border-radius: 2px; background: var(--green); }
+.md-metric-legend i.previous { background: #B4B2A8; }
+.md-metric-store-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: var(--space-4); align-items: center; padding: var(--space-4) 0; border-top: 1px solid var(--border); }
+.md-metric-store-row > span { font-weight: 700; color: var(--text); }
+.md-metric-bars { display: flex; flex-direction: column; gap: 10px; }
+.md-metric-bar-row { display: grid; grid-template-columns: 70px minmax(0, 1fr) 90px; gap: 10px; align-items: center; font-size: 11px; color: var(--text-muted); }
+.md-metric-bar-row > div { height: 12px; background: var(--bg-subtle); border-radius: 3px; overflow: hidden; }
+.md-metric-bar-row i { display: block; height: 100%; min-width: 2px; border-radius: inherit; background: var(--green); }
+.md-metric-bar-row i.previous { background: #C9D3DE; }
+.md-metric-bar-row strong { padding: 2px 4px; border-radius: 3px; text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+.md-metric-table td { vertical-align: top; }
+.md-metric-table td .md-metric-delta { display: flex; }
+.md-metric-value-chip { display: inline-block; padding: 2px 0; border-bottom: 2px solid transparent; color: var(--text) !important; font-variant-numeric: tabular-nums; }
+@media (max-width: 1000px) { .md-metric-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .md-metric-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .md-metric-store-row { grid-template-columns: 1fr; } }
 
 /* Master Dashboard: filter bar (Phase 4) */
 .md-filters-stack { flex-direction: column; align-items: stretch; gap: 0; padding: 0; }

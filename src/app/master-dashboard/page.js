@@ -12,8 +12,10 @@ import {
   resolveRange, compareWindows,
 } from '@/lib/masterDashboardShared';
 import RequireAuth from '@/components/RequireAuth';
+import { apiFetch } from '@/lib/api';
 import MasterDashboardFilters from '@/components/MasterDashboardFilters';
 import { Sparkline, TrendCard, DivisionSplitCard, PaymentCard, WeeklyCard, DivisionTableCard } from '@/components/MasterDashboardCharts';
+import MasterDashboardMetrics from '@/components/MasterDashboardMetrics';
 
 // Overview tab. Data: gold.reebok_master_dashboard and gold.reebok_master_dashboard_payments.
 // Filters (Phase 4): quick range, week, month, half-year, quarter, financial/calendar, custom dates,
@@ -60,7 +62,7 @@ function MasterDashboardPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/reports/master-dashboard?meta=1');
+        const res = await apiFetch('/api/reports/master-dashboard?meta=1');
         const json = await res.json();
         if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
         if (cancelled) return;
@@ -103,7 +105,7 @@ function MasterDashboardPage() {
     try {
       const params = new URLSearchParams({ startDate: resolved.start, endDate: resolved.end });
       if (resolved.compare) { params.set('compareStart', resolved.compare.start); params.set('compareEnd', resolved.compare.end); }
-      const res = await fetch(`/api/reports/master-dashboard?${params.toString()}`);
+      const res = await apiFetch(`/api/reports/master-dashboard?${params.toString()}`);
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
       setData(json);
@@ -112,7 +114,7 @@ function MasterDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [resolved?.start, resolved?.end, resolved?.empty, resolved?.compare?.start, resolved?.compare?.end]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [resolved, selectedDivision]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -216,8 +218,8 @@ function MasterDashboardPage() {
         <button type="button" role="tab" aria-selected={activeTab === 'overview'} className={`md-tab ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>
           <LayoutDashboard />Overview
         </button>
-        <button type="button" role="tab" className="md-tab" disabled>
-          <ChartColumn />Retail metrics <span className="md-soon">Soon</span>
+        <button type="button" role="tab" aria-selected={activeTab === 'metrics'} className={`md-tab ${activeTab === 'metrics' ? 'active' : ''}`} onClick={() => setActiveTab('metrics')}>
+          <ChartColumn />Retail metrics
         </button>
         <button type="button" role="tab" className="md-tab" disabled>
           <Layers />Category drill-down <span className="md-soon">Soon</span>
@@ -267,6 +269,16 @@ function MasterDashboardPage() {
 
           <DivisionTableCard table={view.table} compareLabel={compareLabel} />
         </>
+      )}
+
+      {activeTab === 'metrics' && data && !resolved?.empty && (
+        <MasterDashboardMetrics
+          days={data.retailMetricsDays || []}
+          prevDays={data.retailMetricsPrevDays || []}
+          ssrDays={data.days || []}
+          ssrPrevDays={data.prevDays || []}
+          rangeText={rangeText}
+        />
       )}
     </div>
   );

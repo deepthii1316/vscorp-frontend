@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireAuth } from '@/middleware/auth';
 import { loadDataBounds, loadOverview } from '@/lib/masterDashboardData';
 
 // GET /api/reports/master-dashboard?meta=1                 -> { firstDate, latestDate }
@@ -15,6 +16,9 @@ export const dynamic = 'force-dynamic';
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(request) {
+  const auth = await requireAuth(request);
+  if (auth.response) return auth.response;
+
   const { searchParams } = new URL(request.url);
   try {
     const supabase = createServerClient();

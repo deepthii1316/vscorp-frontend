@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireAuth } from '@/middleware/auth';
 import { buildKpiSectionHtml } from '@/lib/email/buildKpiDashboard';
 import { buildDataQualityAlert } from '@/lib/email/buildDataQualityAlert';
 
@@ -37,11 +38,12 @@ const mtdLabel = (iso) => {
 };
 
 export async function POST(req) {
+  const auth = await requireAuth(req);
+  if (auth.response) return auth.response;
+
   const supabase = await createServerClient();
 
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
+  const { data: profile } = await supabase.from('users').select('role').eq('id', auth.user.id).single();
   if (!profile || profile.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = (await req.json().catch(() => ({})));

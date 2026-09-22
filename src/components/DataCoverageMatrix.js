@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { apiFetch } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import {
   RefreshCw,
@@ -46,7 +47,7 @@ export default function DataCoverageMatrix({ initialReportType = 'sales' }) {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`/api/reports/upload-coverage?month=${month}&year=${year}&reportType=${reportType}`);
+      const res = await apiFetch(`/api/reports/upload-coverage?month=${month}&year=${year}&reportType=${reportType}`);
       const json = await res.json();
 
       if (!res.ok || !json.success) {

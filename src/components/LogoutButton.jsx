@@ -5,11 +5,11 @@ import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 
 export default function LogoutButton() {
-  const { logout } = useAuth();
+  const { signOut } = useAuth();
   const router = useRouter();
 
-  const onClick = () => {
-    logout();
+  const onClick = async () => {
+    await signOut();
     router.push('/login');
   };
 

@@ -4,12 +4,14 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import Image from 'next/image';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
-  const { login, isAuthenticated } = useAuth();
+  const { signIn, isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -19,14 +21,14 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, router]);
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
     setErr('');
     setBusy(true);
-    const res = login(username, password);
+    const { error } = await signIn(email, password);
     setBusy(false);
-    if (!res.ok) {
-      setErr(res.error || 'Login failed');
+    if (error) {
+      setErr(error.message || 'Login failed');
       return;
     }
     router.replace('/upload');
@@ -43,38 +45,48 @@ export default function LoginPage() {
 
         <form onSubmit={onSubmit} className="login-form">
           <label className="login-label">
-            <span>Username</span>
+            <span>Email</span>
             <input
-              type="text"
-              autoComplete="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="admin"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
               required
             />
           </label>
           <label className="login-label">
             <span>Password</span>
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-            />
+            <span className="login-password-field">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+              />
+              <button
+                type="button"
+                className="login-password-toggle"
+                onClick={() => setShowPassword((visible) => !visible)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff /> : <Eye />}
+              </button>
+            </span>
           </label>
 
           {err && <div className="login-err">{err}</div>}
 
-          <button type="submit" className="login-submit" disabled={busy}>
-            {busy ? 'Signing in…' : 'Sign in'}
+          <button type="submit" className="login-submit" disabled={busy || authLoading}>
+            {busy || authLoading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
 
         <div className="login-hint">
           <strong>Internal access only</strong>
-          {/* <div>admin / vscorp2026 · manager / reebok2026 · merch / merch2026</div> */}
         </div>
       </div>
     </div>

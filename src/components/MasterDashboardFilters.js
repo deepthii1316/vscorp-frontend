@@ -51,7 +51,7 @@ export default function MasterDashboardFilters({
       <div className="md-filter-row">
         <div className="md-filter-group">
           <div className="md-seg" role="group" aria-label="Comparison mode">
-            <button type="button" className={mode === 'm2m' ? 'active' : ''} onClick={() => onMode('m2m')}>Month on month</button>
+            <button type="button" className={mode === 'm2m' ? 'active' : ''} onClick={() => onMode('m2m')}>M2M</button>
             <button type="button" className={mode === 'compare' ? 'active' : ''} onClick={() => onMode('compare')}>Compare</button>
           </div>
           {mode === 'm2m' && (

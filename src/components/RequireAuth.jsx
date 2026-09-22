@@ -5,16 +5,16 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 
 export default function RequireAuth({ children }) {
-  const { isAuthenticated, ready } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (ready && !isAuthenticated) {
+    if (!loading && !isAuthenticated) {
       router.replace('/login');
     }
-  }, [ready, isAuthenticated, router]);
+  }, [loading, isAuthenticated, router]);
 
-  if (!ready) return <FullPageLoader />;
+  if (loading) return <FullPageLoader />;
   if (!isAuthenticated) return <FullPageLoader />;
 
   return children;
