@@ -25,10 +25,10 @@ export const SendMode = {
 };
 
 /** Test recipients. */
-export const TEST_RECIPIENTS = ['deepthialter@gmail.com', 'adityapappu@gmail.com'];
+export const TEST_RECIPIENTS = ['deepthialter@gmail.com', 'adityapappu@vscorp.in'];
 
 /** Full distribution list (temporarily the same two addresses as test). */
-export const ALL_RECIPIENTS = ['deepthialter@gmail.com', 'adityapappu@gmail.com'];
+export const ALL_RECIPIENTS = ['deepthialter@gmail.com', 'adityapappu@vscorp.in'];
 
 /**
  * Get recipients for the specified send mode.
