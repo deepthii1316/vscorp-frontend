@@ -5,15 +5,19 @@
 //   browser captures each table with html2canvas → POSTs the PNGs here (multipart)
 //   → this route builds the Excel (same builder as the download) → sends one email.
 //
-// POST multipart/form-data: images[] (png), date (YYYY-MM-DD), mode ('test' | 'all')
-// GET → { test: <count>, all: <count> }   (recipient COUNTS only, never addresses)
+// POST multipart/form-data: images[] (png), date (YYYY-MM-DD), mode ('test' | 'all'),
+//   recipients (JSON array, mode 'all' only - the addresses picked in the confirm dialog)
+// GET → { test: <count>, all: <count>, allRecipients: [<address>, ...] }
+//   allRecipients feeds the Send to All picker; the test list is never sent to the client.
 //
-// Recipients are decided server-side from lib/email/config.js; the client only picks the mode.
+// mode 'test' always goes to config.js's fixed TEST_RECIPIENTS, no picker. mode 'all' sends
+// only to whichever of ALL_RECIPIENTS the client selected - `recipients` is validated as a
+// subset of that list server-side, so a request can never target an address outside it.
 
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { createServerClient } from '@/lib/supabase';
-import { EMAIL_FROM, recipientsFor } from '@/lib/email/config';
+import { EMAIL_FROM, recipientsFor, ALL_RECIPIENTS } from '@/lib/email/config';
 import { buildReebokWorkbook } from '@/lib/email/reebokExcel';
 
 export const runtime = 'nodejs';
@@ -47,7 +51,7 @@ function fmtDate(dateStr) {
 }
 
 export async function GET() {
-  return NextResponse.json({ test: recipientsFor('test').length, all: recipientsFor('all').length });
+  return NextResponse.json({ test: recipientsFor('test').length, all: recipientsFor('all').length, allRecipients: ALL_RECIPIENTS });
 }
 
 export async function POST(req) {
@@ -63,6 +67,28 @@ export async function POST(req) {
     if (files.length === 0) return NextResponse.json({ error: 'Missing report image(s).' }, { status: 400 });
     const mode = form.get('mode') === 'all' ? 'all' : 'test';
     const dateParam = /^\d{4}-\d{2}-\d{2}$/.test(String(form.get('date') || '')) ? String(form.get('date')) : null;
+
+    // mode 'all': the client picks a subset of ALL_RECIPIENTS in the confirm dialog. Whatever
+    // it sends is filtered down to addresses actually in that list - never an arbitrary one.
+    // No `recipients` field at all (an older/other caller) -> full list, same as before this
+    // picker existed. An explicitly empty selection is rejected, not silently sent to everyone.
+    let selectedRecipients = null;
+    if (mode === 'all') {
+      const raw = form.get('recipients');
+      if (raw == null) {
+        selectedRecipients = ALL_RECIPIENTS;
+      } else {
+        let picked;
+        try { picked = JSON.parse(String(raw)); } catch { picked = null; }
+        if (!Array.isArray(picked)) {
+          return NextResponse.json({ error: 'Invalid recipients list.' }, { status: 400 });
+        }
+        selectedRecipients = ALL_RECIPIENTS.filter((r) => picked.includes(r));
+        if (selectedRecipients.length === 0) {
+          return NextResponse.json({ error: 'Select at least one recipient.' }, { status: 400 });
+        }
+      }
+    }
 
     // Images → inline (CID) attachments, in the order the tables were captured.
     let totalBytes = 0;
@@ -103,7 +129,7 @@ export async function POST(req) {
         ${imgTags}
       </div>`;
 
-    const recipients = recipientsFor(mode);
+    const recipients = mode === 'all' ? selectedRecipients : recipientsFor('test');
     const info = await getTransporter(smtpUser, smtpPass).sendMail({
       from: EMAIL_FROM,
       to: recipients.join(', '),

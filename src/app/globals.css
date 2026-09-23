@@ -2831,6 +2831,14 @@ body {
 .reebok-modal p { margin: 0 0 18px; font-size: 13.5px; line-height: 1.5; color: var(--text); }
 .reebok-modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
 .reebok-modal .reebok-send-btn { box-shadow: none; }
+.reebok-modal .reebok-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.reebok-recipient-list { display: flex; flex-direction: column; gap: 2px; margin: 0 0 18px; max-height: 220px; overflow-y: auto; }
+.reebok-recipient-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--r-md);
+  font-size: 13px; color: var(--text); cursor: pointer;
+}
+.reebok-recipient-item:hover { background: var(--bg-subtle); }
+.reebok-recipient-item input { accent-color: var(--green); width: 15px; height: 15px; cursor: pointer; }
 
 /* ─── Master Dashboard (uses only real app tokens) ─────────────────────── */
 .md-page { display: flex; flex-direction: column; gap: var(--space-5); }

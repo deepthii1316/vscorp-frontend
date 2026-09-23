@@ -27,8 +27,14 @@ export const SendMode = {
 /** Test recipients. */
 export const TEST_RECIPIENTS = ['deepthialter@gmail.com', 'adityapappu@vscorp.in'];
 
-/** Full distribution list (temporarily the same two addresses as test). */
-export const ALL_RECIPIENTS = ['deepthialter@gmail.com', 'adityapappu@vscorp.in'];
+/** Full distribution list. The Send to All picker lets the sender choose a subset of these. */
+export const ALL_RECIPIENTS = [
+  'uppal.reebok@gmail.com',
+  'Srinivas.narsin@gmail.com',
+  'Srijabollam@gmail.com',
+  'sr323865@ablbl.adityabirla.com',
+  'virata.acctsnew@gmail.com',
+];
 
 /**
  * Get recipients for the specified send mode.

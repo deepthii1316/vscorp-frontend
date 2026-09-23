@@ -53,7 +53,8 @@ function ReebokReportsInner() {
   const [capturing, setCapturing]   = useState(false);
   const [sendState, setSendState]   = useState({ status: 'idle', message: '' });
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [counts, setCounts]         = useState({ test: null, all: null });
+  const [counts, setCounts]         = useState({ test: null, all: null, allRecipients: [] });
+  const [selectedRecipients, setSelectedRecipients] = useState([]);
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
@@ -96,10 +97,17 @@ function ReebokReportsInner() {
     }
   }, [loading, report]);
 
-  // Recipient counts for the confirmation dialog (counts only, never addresses)
+  // Recipient list for the Send to All picker (Send Test has no picker, stays as-is).
   useEffect(() => {
-    fetch('/api/reports/reebok-send').then((r) => r.json()).then(setCounts).catch(() => {});
+    fetch('/api/reports/reebok-send').then((r) => r.json()).then((json) => {
+      setCounts(json);
+      setSelectedRecipients(json.allRecipients || []); // everyone checked by default
+    }).catch(() => {});
   }, []);
+
+  const toggleRecipient = (addr) => {
+    setSelectedRecipients((prev) => prev.includes(addr) ? prev.filter((r) => r !== addr) : [...prev, addr]);
+  };
 
   // Capture every table as a PNG in the background so a click only has to send.
   useEffect(() => {
@@ -146,6 +154,7 @@ function ReebokReportsInner() {
       images.forEach((b, i) => fd.append('images', b, 'report-' + (i + 1) + '.png'));
       fd.append('date', reportDate || date);
       fd.append('mode', mode);
+      if (mode === 'all') fd.append('recipients', JSON.stringify(selectedRecipients));
       const res = await fetch('/api/reports/reebok-send', { method: 'POST', body: fd });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'HTTP ' + res.status);
@@ -170,22 +179,43 @@ function ReebokReportsInner() {
   const reportKeyForPart = (p) => p.key || null;
 
   // No horizontal scrolling: shrink each table (text included) to fit its column instead.
-  // A table's rendered box size is unaffected by `transform`, so scrollWidth still reflects
-  // the natural, unscaled width on every re-run - safe to remeasure without resetting first.
+  // table.scrollWidth is NOT enough to detect the overflow here: .report-section table has
+  // width:auto + min-width:100% (CSS), so a table-layout:auto table is pinned to the
+  // container's width even when its nowrap cells need more - the excess text just bleeds
+  // out of each <td> via that cell's default overflow:visible, which never shows up in any
+  // ancestor's scrollWidth/clientWidth. So the table's TRUE natural width is measured by
+  // cloning it into an off-screen, unconstrained probe (still classed .report-section, so
+  // the nowrap rule still applies to the clone - only the width/min-width pin is escaped).
+  const measureNatural = (table) => {
+    const probe = document.createElement('div');
+    probe.className = 'report-section';
+    probe.style.cssText = 'position:fixed; left:-99999px; top:0; visibility:hidden; width:max-content; padding:0; border:0; margin:0;';
+    const clone = table.cloneNode(true);
+    clone.style.width = 'max-content';
+    clone.style.transform = 'none';
+    probe.appendChild(clone);
+    document.body.appendChild(probe);
+    const width = clone.scrollWidth;
+    const height = clone.scrollHeight;
+    document.body.removeChild(probe);
+    return { width, height };
+  };
+
   const fitTables = useCallback(() => {
     const container = partsContainerRef.current;
     if (!container) return;
     container.querySelectorAll('.report-table-fit').forEach((wrap) => {
       const table = wrap.querySelector('table');
       if (!table) return;
-      const naturalWidth = table.scrollWidth;
-      const naturalHeight = table.scrollHeight;
+      const { width: naturalWidth, height: naturalHeight } = measureNatural(table);
       const availWidth = wrap.clientWidth;
       if (availWidth > 0 && naturalWidth > availWidth) {
         const scale = availWidth / naturalWidth;
+        table.style.width = `${naturalWidth}px`;
         table.style.transform = `scale(${scale})`;
         wrap.style.height = `${naturalHeight * scale}px`;
       } else {
+        table.style.width = '';
         table.style.transform = 'none';
         wrap.style.height = 'auto';
       }
@@ -332,14 +362,24 @@ function ReebokReportsInner() {
       {confirmOpen && (
         <div className="reebok-modal-backdrop" onClick={() => setConfirmOpen(false)}>
           <div className="reebok-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-            <h3>Send report to everyone?</h3>
+            <h3>Send report to whom?</h3>
             <p>
               This will email the <strong>{reportDate || date}</strong> Uppal Reebok report ({images.length} tables as images + the Excel file)
-              to <strong>{counts.all ?? '…'}</strong> recipient{counts.all === 1 ? '' : 's'}.
+              to whichever recipients are checked below.
             </p>
+            <div className="reebok-recipient-list">
+              {(counts.allRecipients || []).map((addr) => (
+                <label key={addr} className="reebok-recipient-item">
+                  <input type="checkbox" checked={selectedRecipients.includes(addr)} onChange={() => toggleRecipient(addr)} />
+                  <span>{addr}</span>
+                </label>
+              ))}
+            </div>
             <div className="reebok-modal-actions">
               <button type="button" className="reebok-send-btn secondary" onClick={() => setConfirmOpen(false)}>Cancel</button>
-              <button type="button" className="reebok-send-btn" onClick={() => sendReport('all')}><Send /> Send to All</button>
+              <button type="button" className="reebok-send-btn" disabled={selectedRecipients.length === 0} onClick={() => sendReport('all')}>
+                <Send /> Send to {selectedRecipients.length} recipient{selectedRecipients.length === 1 ? '' : 's'}
+              </button>
             </div>
           </div>
         </div>
