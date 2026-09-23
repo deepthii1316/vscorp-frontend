@@ -178,43 +178,42 @@ function ReebokReportsInner() {
   const visibleParts = report ? parts.filter((p) => p.key === report) : parts;
   const reportKeyForPart = (p) => p.key || null;
 
-  // No horizontal scrolling: shrink each table (text included) to fit its column instead.
-  // table.scrollWidth is NOT enough to detect the overflow here: .report-section table has
-  // width:auto + min-width:100% (CSS), so a table-layout:auto table is pinned to the
-  // container's width even when its nowrap cells need more - the excess text just bleeds
-  // out of each <td> via that cell's default overflow:visible, which never shows up in any
-  // ancestor's scrollWidth/clientWidth. So the table's TRUE natural width is measured by
-  // cloning it into an off-screen, unconstrained probe (still classed .report-section, so
-  // the nowrap rule still applies to the clone - only the width/min-width pin is escaped).
-  const measureNatural = (table) => {
-    const probe = document.createElement('div');
-    probe.className = 'report-section';
-    probe.style.cssText = 'position:fixed; left:-99999px; top:0; visibility:hidden; width:max-content; padding:0; border:0; margin:0;';
-    const clone = table.cloneNode(true);
-    clone.style.width = 'max-content';
-    clone.style.transform = 'none';
-    probe.appendChild(clone);
-    document.body.appendChild(probe);
-    const width = clone.scrollWidth;
-    const height = clone.scrollHeight;
-    document.body.removeChild(probe);
-    return { width, height };
-  };
-
+  // No horizontal scrolling: shrink each table (text included) to fit its column instead,
+  // the same technique as the KPI dashboard's FitPreview.
+  //   1. Let the table size to its true natural width: .report-section table sets
+  //      width:auto + min-width:100% in CSS, which pins a table-layout:auto table to the
+  //      container even when its nowrap cells need more room (the excess text just bleeds
+  //      out of each <td>, invisible to scrollWidth). Inline width:max-content overrides
+  //      that width, but min-width still wins over it unless also overridden - so both are
+  //      set inline here, on the live table (not a clone; simpler), just for measuring.
+  //      If it turns out to already fit, both are cleared again so the table goes back to
+  //      its normal CSS (stretched to fill the card) instead of shrink-wrapping and
+  //      left-aligning at its own natural width.
+  //   2. scale = available width / natural width (never upscale past 1).
+  //   3. transform: scale() shrinks the whole table - text included - as one image; the
+  //      wrapper's height is set to natural height * scale so no blank gap is left, since a
+  //      transform doesn't change the space an element takes up in the page's layout.
   const fitTables = useCallback(() => {
     const container = partsContainerRef.current;
     if (!container) return;
     container.querySelectorAll('.report-table-fit').forEach((wrap) => {
       const table = wrap.querySelector('table');
       if (!table) return;
-      const { width: naturalWidth, height: naturalHeight } = measureNatural(table);
+      // Measure the true natural width (see comment above): override the CSS pin first.
+      table.style.minWidth = '0';
+      table.style.width = 'max-content';
+      table.style.transform = 'none';
+      const naturalWidth = table.scrollWidth;
+      const naturalHeight = table.scrollHeight;
       const availWidth = wrap.clientWidth;
       if (availWidth > 0 && naturalWidth > availWidth) {
         const scale = availWidth / naturalWidth;
-        table.style.width = `${naturalWidth}px`;
         table.style.transform = `scale(${scale})`;
         wrap.style.height = `${naturalHeight * scale}px`;
       } else {
+        // Already fits: let it go back to the normal CSS (stretched to fill the card),
+        // instead of staying pinned to its own natural width, left-aligned with a gap.
+        table.style.minWidth = '';
         table.style.width = '';
         table.style.transform = 'none';
         wrap.style.height = 'auto';
@@ -224,6 +223,8 @@ function ReebokReportsInner() {
 
   useLayoutEffect(() => {
     fitTables();
+    const t = setTimeout(fitTables, 120); // refit once web fonts/layout settle
+    return () => clearTimeout(t);
   }, [parts, report, loading, fitTables]);
 
   useEffect(() => {
@@ -316,7 +317,6 @@ function ReebokReportsInner() {
                 <div
                   key={p.title}
                   ref={(el) => { if (rk && el && !refs.current[rk]?.isConnected) refs.current[rk] = el; }}
-                  className="report-section"
                   dangerouslySetInnerHTML={{ __html: p.html }}
                 />
               );

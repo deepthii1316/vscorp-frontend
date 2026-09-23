@@ -2414,7 +2414,13 @@ body {
 
 .report-section-highlight {
   animation: reportHighlight 1.4s ease-out forwards;
+}
+/* The card's border/background live on the .report-section div the report HTML renders
+   (renderTable() in reebok-sales/route.js) - the ref/highlight wrapper around it in
+   page.js is unstyled on purpose, so the two don't double up into a nested card. */
+.report-section-highlight > .report-section {
   border-color: var(--green);
+  transition: border-color 200ms var(--ease);
 }
 
 @keyframes reportHighlight {
