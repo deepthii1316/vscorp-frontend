@@ -9,6 +9,7 @@
 //         Division Wise, Gender Division Split.
 
 import { buildReportModel, heatColor, ZEBRA, TOTAL_BG } from './reebokReportModel';
+import { ordinalDate } from './reebokHelpers';
 
 const STORE     = 'R1157';
 const STORE_NM = 'Uppal Reebok';
@@ -109,7 +110,7 @@ function addCoverSheet(wb, reportDate) {
   ws.columns = [{ width: 34 }, { width: 60 }];
   ws.getCell(1, 1).value = `Virata Retail  ·  ${STORE_NM} (${STORE})`;
   ws.getCell(1, 1).font = font(true, 14, '1F2A44');
-  ws.getCell(2, 1).value = `Report Date: ${reportDate}  ·  Generated: ${new Date().toLocaleString('en-IN')}`;
+  ws.getCell(2, 1).value = `Report Date: ${ordinalDate(reportDate)}  ·  Generated: ${new Date().toLocaleString('en-IN')}`;
   ws.getCell(2, 1).font = font(false, 10, '6B6B66');
 
   const index = [

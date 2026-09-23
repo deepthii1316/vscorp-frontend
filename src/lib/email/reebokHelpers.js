@@ -117,6 +117,23 @@ function parseYMD(dateStr) {
   return { year: +m[1], month: +m[2], day: +m[3] };
 }
 
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * 'YYYY-MM-DD' -> '22nd Sep 2026' (ordinal day + short month + year).
+ * Used for the daily email subject and the Excel cover sheet - always the date the
+ * report covers, not the date it was sent (client decision, 23-Sep-2026).
+ */
+export function ordinalDate(dateStr) {
+  const p = parseYMD(dateStr);
+  if (!p) return String(dateStr || '');
+  const day = p.day;
+  const suffix = (day % 10 === 1 && day !== 11) ? 'st'
+    : (day % 10 === 2 && day !== 12) ? 'nd'
+    : (day % 10 === 3 && day !== 13) ? 'rd' : 'th';
+  return `${day}${suffix} ${MONTH_SHORT[p.month - 1]} ${p.year}`;
+}
+
 /** Number of days in the month of the given date (28 / 29 / 30 / 31). */
 export function daysInMonth(dateStr) {
   const p = parseYMD(dateStr);

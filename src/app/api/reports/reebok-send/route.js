@@ -19,6 +19,7 @@ import nodemailer from 'nodemailer';
 import { createServerClient } from '@/lib/supabase';
 import { requireAuth } from '@/middleware/auth';
 import { EMAIL_FROM, recipientsFor, ALL_RECIPIENTS } from '@/lib/email/config';
+import { ordinalDate } from '@/lib/email/reebokHelpers';
 import { buildReebokWorkbook } from '@/lib/email/reebokExcel';
 
 export const runtime = 'nodejs';
@@ -44,11 +45,6 @@ function getTransporter(user, pass) {
     });
   }
   return transporter;
-}
-
-function fmtDate(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export async function GET(req) {
@@ -122,8 +118,11 @@ export async function POST(req) {
       contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
 
-    const displayDate = fmtDate(reportDate);
-    const subject = `${mode === 'test' ? '[TEST] ' : ''}Uppal Reebok Sales Report — ${displayDate}`;
+    // The date the report covers (reportDate, resolved above to the latest date with data),
+    // not the date it's being sent - e.g. sending Sunday sends Saturday's report, subject
+    // still reads Saturday's date. Client decision, 23-Sep-2026.
+    const displayDate = ordinalDate(reportDate);
+    const subject = `${mode === 'test' ? '[TEST] ' : ''}Daily Reports ${displayDate}`;
     const imgTags = attachments
       .filter((a) => a.cid)
       .map((a) => `<img src="cid:${a.cid}" alt="Uppal Reebok report" style="display:block;max-width:100%;height:auto;margin-bottom:16px;" />`)

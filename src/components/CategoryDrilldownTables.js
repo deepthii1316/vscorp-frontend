@@ -90,7 +90,7 @@ function DrillTable({ title, icon: Icon, note, tree, compareLabel }) {
             <thead>
               <tr>
                 <th>Category</th><th>Qty</th><th>{compareLabel} Qty</th><th>Qty growth</th>
-                <th>RSV</th><th>{compareLabel} RSV</th><th>RSV growth</th><th>Contribution</th><th>MD %</th>
+                <th>NSV</th><th>{compareLabel} NSV</th><th>NSV growth</th><th>Contribution</th><th>MD %</th>
               </tr>
             </thead>
             <tbody>
@@ -122,7 +122,7 @@ export default function CategoryDrilldownTables({ categoryTree, footwearTree, co
       <DrillTable
         title="Category drill-down"
         icon={Layers}
-        note="Division › Section › Article Type. RSV = Taxable Amount (NSV). MD % = (MRP - RSV) / MRP."
+        note="Division › Section › Article Type. NSV = Taxable Amount. MD % = (MRP - NSV) / MRP."
         tree={categoryTree}
         compareLabel={compareLabel}
       />
