@@ -197,13 +197,13 @@ export function PaymentCard({ payments, grossSales }) {
 
 // ─── Month on month (weekly NSV) ───────────────────────────────────────────
 
-export function WeeklyCard({ weeks, hasComparison, compareLabel = 'last month' }) {
+export function WeeklyCard({ weeks, hasComparison, compareLabel = 'last month', title = 'M2M' }) {
   const hasData = weeks.some((w) => w.cur > 0);
   return (
     <div className="card">
       <div className="card-header">
         <ChartColumn className="card-header-icon-svg" />
-        <h3>M2M</h3>
+        <h3>{title}</h3>
       </div>
       <p className="md-note">
         NSV by week of the selected range{hasComparison ? `, against ${compareLabel === 'last month' ? 'the same weeks one month earlier' : compareLabel}.` : '. No comparison period is available for this selection.'}
@@ -239,12 +239,13 @@ export function WeeklyCard({ weeks, hasComparison, compareLabel = 'last month' }
 
 // ─── Division performance table ────────────────────────────────────────────
 
-function ChangeCell({ value }) {
+function ChangeCell({ value, kind = 'pct' }) {
   if (value === null || value === undefined) return <span>-</span>;
   const up = value > 0;
   const Icon = Math.abs(value) < 0.05 ? Minus : up ? ArrowUpRight : ArrowDownRight;
   const tone = Math.abs(value) < 0.05 ? 'flat' : up ? 'good' : 'bad';
-  return <span className={`md-delta ${tone}`}><Icon />{Math.abs(value).toFixed(1)}%</span>;
+  const unit = kind === 'points' ? ' pts' : '%';
+  return <span className={`md-delta ${tone}`}><Icon />{Math.abs(value).toFixed(1)}{unit}</span>;
 }
 
 export function DivisionTableCard({ table, compareLabel = 'last month' }) {
@@ -258,7 +259,10 @@ export function DivisionTableCard({ table, compareLabel = 'last month' }) {
       <div className="md-table-wrap">
         <table className="md-table">
           <thead>
-            <tr><th>Division</th><th>NSV</th><th>Contribution</th><th>Qty</th><th>Bills</th><th>MD %</th><th>NSV vs {compareLabel}</th></tr>
+            <tr>
+              <th>Division</th><th>NSV</th><th>Contribution</th><th>Qty</th><th>Bills</th><th>MD %</th>
+              <th>NSV vs {compareLabel}</th><th>Qty vs {compareLabel}</th><th>Bills vs {compareLabel}</th><th>MD % vs {compareLabel}</th>
+            </tr>
           </thead>
           <tbody>
             {table.rows.map((r) => (
@@ -270,6 +274,9 @@ export function DivisionTableCard({ table, compareLabel = 'last month' }) {
                 <td>{r.bills === null ? '-' : formatNumber(r.bills)}</td>
                 <td>{formatPercent(r.mdPct)}</td>
                 <td><ChangeCell value={r.nsvChange} /></td>
+                <td><ChangeCell value={r.qtyChange} /></td>
+                <td><ChangeCell value={r.billsChange} /></td>
+                <td><ChangeCell value={r.mdPctChange} kind="points" /></td>
               </tr>
             ))}
             <tr className="md-total-row">
@@ -280,6 +287,9 @@ export function DivisionTableCard({ table, compareLabel = 'last month' }) {
               <td>{formatNumber(table.total.bills)}</td>
               <td>{formatPercent(table.total.mdPct)}</td>
               <td><ChangeCell value={table.total.nsvChange} /></td>
+              <td><ChangeCell value={table.total.qtyChange} /></td>
+              <td><ChangeCell value={table.total.billsChange} /></td>
+              <td><ChangeCell value={table.total.mdPctChange} kind="points" /></td>
             </tr>
           </tbody>
         </table>

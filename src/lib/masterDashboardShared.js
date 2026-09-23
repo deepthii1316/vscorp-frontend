@@ -250,19 +250,28 @@ export function unclassifiedOf(days) {
 export function divisionTable(days, prevDays, hasPrev) {
   const total = sumDays(days, 'ALL');
   const totalPrev = hasPrev ? sumDays(prevDays, 'ALL') : null;
-  const line = (name, division, t, tp) => ({
-    name,
-    nsv: t.nsv,
-    contribution: total.nsv > 0 ? (t.nsv / total.nsv) * 100 : null,
-    qty: t.qty,
-    bills: t.bills,
-    mdPct: t.mrp > 0 ? ((t.mrp - t.nsv) / t.mrp) * 100 : null,
-    nsvChange: tp ? change(t.nsv, tp.nsv, 'pct') : null,
-  });
+  const line = (name, division, t, tp) => {
+    const mdPct = t.mrp > 0 ? ((t.mrp - t.nsv) / t.mrp) * 100 : null;
+    const tpMdPct = tp && tp.mrp > 0 ? ((tp.mrp - tp.nsv) / tp.mrp) * 100 : null;
+    return {
+      name,
+      nsv: t.nsv,
+      contribution: total.nsv > 0 ? (t.nsv / total.nsv) * 100 : null,
+      qty: t.qty,
+      bills: t.bills,
+      mdPct,
+      nsvChange: tp ? change(t.nsv, tp.nsv, 'pct') : null,
+      qtyChange: tp ? change(t.qty, tp.qty, 'pct') : null,
+      billsChange: tp ? change(t.bills, tp.bills, 'pct') : null,
+      // MD% is already a percentage, so its own change is expressed in percentage points
+      // (e.g. 32% -> 35% is "+3 pts"), never as a percent-of-a-percent.
+      mdPctChange: tp ? change(mdPct, tpMdPct, 'points') : null,
+    };
+  };
   const rows = DIVISION_LIST.map((d) => line(d, d, sumDays(days, d), hasPrev ? sumDays(prevDays, d) : null));
   const un = unclassifiedOf(days);
   if (un) {
-    rows.push({ name: 'Unclassified', nsv: un.nsv, contribution: total.nsv > 0 ? (un.nsv / total.nsv) * 100 : null, qty: un.qty, bills: null, mdPct: null, nsvChange: null, warning: true });
+    rows.push({ name: 'Unclassified', nsv: un.nsv, contribution: total.nsv > 0 ? (un.nsv / total.nsv) * 100 : null, qty: un.qty, bills: null, mdPct: null, nsvChange: null, qtyChange: null, billsChange: null, mdPctChange: null, warning: true });
   }
   return { rows, total: line('Total', 'ALL', total, totalPrev) };
 }

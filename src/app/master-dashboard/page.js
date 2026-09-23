@@ -26,6 +26,11 @@ import CategoryDrilldownTables from '@/components/CategoryDrilldownTables';
 
 const shortDate = (s) => new Date(s + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
 const periodLabel = (p) => `${MONTH_NAMES[p.month - 1].slice(0, 3)} ${p.year}${p.week ? ` week ${p.week}` : ''}`;
+const monthLabel = (iso) => {
+  if (!iso) return null;
+  const d = new Date(iso + 'T00:00:00Z');
+  return `${MONTH_NAMES[d.getUTCMonth()].slice(0, 3)} ${d.getUTCFullYear()}`;
+};
 const DEFAULT_SEL = { group: 'quick', quick: 'MTD', week: null, month: null, halves: [], quarters: [], fiscal: 'financial' };
 
 /** Change chip: arrow + value, coloured green (good) or red (bad). goodWhen says which direction is good. */
@@ -192,7 +197,12 @@ function MasterDashboardPage() {
     };
   }, [data, selectedDivision]);
 
-  const compareLabel = resolved?.compareLabel || 'last month';
+  // Real month names instead of a generic "M2M" label, taken from the actual date ranges
+  // the API used - accurate in both M2M and Compare mode. Falls back to resolved's own
+  // label (or the fixed default) before the first fetch has returned data.
+  const compareLabel = monthLabel(data?.comparison?.start) || resolved?.compareLabel || 'last month';
+  const monthVsLabel = monthLabel(data?.range?.start) && data?.comparison?.start
+    ? `${monthLabel(data.range.start)} vs ${compareLabel}` : 'M2M';
   const pick = (key, kind) => (view && view.prev ? change(view.cur[key], view.prev[key], kind) : null);
 
   const tiles = view ? [
@@ -261,6 +271,9 @@ function MasterDashboardPage() {
         <button type="button" role="tab" aria-selected={activeTab === 'categories'} className={`md-tab ${activeTab === 'categories' ? 'active' : ''}`} onClick={() => setActiveTab('categories')}>
           <Layers />Category drill-down
         </button>
+        <button type="button" className="md-tab" disabled>
+          <Percent />Discount vs Fresh <span className="md-soon">Soon</span>
+        </button>
       </div>
 
       {error && <div className="reebok-error">Could not load the dashboard: {error}</div>}
@@ -302,7 +315,7 @@ function MasterDashboardPage() {
 
           <div className="md-row md-row-even">
             <PaymentCard payments={view.payments} grossSales={view.grossSales} />
-            <WeeklyCard weeks={view.weeks} hasComparison={view.hasPrev} compareLabel={compareLabel} />
+            <WeeklyCard weeks={view.weeks} hasComparison={view.hasPrev} compareLabel={compareLabel} title={monthVsLabel} />
           </div>
 
           <DivisionTableCard table={view.table} compareLabel={compareLabel} />
@@ -318,6 +331,7 @@ function MasterDashboardPage() {
           ssrDays={data.days || []}
           ssrPrevDays={data.prevDays || []}
           rangeText={rangeText}
+          compareLabel={compareLabel}
         />
         )
       )}
