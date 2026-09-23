@@ -5,7 +5,7 @@ import RequireAuth from '@/components/RequireAuth';
 
 export default function DataCoveragePage() {
   return (
-    <RequireAuth>
+    <RequireAuth roles={['admin']}>
       <div className="page-content">
         <DataCoverageMatrix initialReportType="sales" />
       </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/lib/auth';
 import {
   LayoutDashboard,
   Box,
@@ -15,28 +16,34 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 
+// roles omitted -> visible to every logged-in role. Master Dashboard and the
+// Admin-only pages need an explicit ['admin'] since store_manager can't reach them
+// (each route/page also re-checks this server-side - this list is only what's shown).
 const navItems = [
   {
     section: 'Analytics',
     items: [
-      { href: '/master-dashboard', label: 'Master Dashboard', icon: LayoutDashboard },
-      { href: '/assets', label: 'Assets', icon: Box, disabled: true },
+      { href: '/master-dashboard', label: 'Master Dashboard', icon: LayoutDashboard, roles: ['admin'] },
+      { href: '/assets', label: 'Assets', icon: Box, disabled: true, roles: ['admin'] },
     ],
   },
   {
     section: 'Admin',
     items: [
-      { href: '/upload',          label: 'Data Upload',    icon: UploadCloud },
-      { href: '/upload-history',  label: 'Upload History', icon: History },
-      { href: '/data-coverage',   label: 'Data Coverage',  icon: FileCheck },
+      { href: '/upload',          label: 'Data Upload',    icon: UploadCloud, roles: ['admin'] },
+      { href: '/upload-history',  label: 'Upload History', icon: History, roles: ['admin'] },
+      { href: '/data-coverage',   label: 'Data Coverage',  icon: FileCheck, roles: ['admin'] },
       { href: '/reebok-reports',  label: 'Sales Reports',  icon: FileSpreadsheet },
     ],
   },
 ];
 
+const ROLE_LABEL = { admin: 'Administrator', store_manager: 'Store Manager' };
+
 export default function Sidebar() {
   const pathname = usePathname();
   const [report, setReport] = useState(null);
+  const { user, role } = useAuth();
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -45,6 +52,10 @@ export default function Sidebar() {
   }, [pathname]);
 
   if (pathname === '/login') return null;
+
+  const visibleGroups = navItems
+    .map((group) => ({ ...group, items: group.items.filter((item) => !item.roles || item.roles.includes(role)) }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <aside className="sidebar">
@@ -62,7 +73,7 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="sidebar-nav">
-        {navItems.map((group) => (
+        {visibleGroups.map((group) => (
           <div key={group.section} className="sidebar-section">
             <span className="sidebar-section-label">{group.section}</span>
             <ul className="sidebar-menu">
@@ -132,10 +143,10 @@ export default function Sidebar() {
       {/* Footer */}
       <div className="sidebar-footer">
         <div className="sidebar-user">
-          <div className="sidebar-user-avatar">A</div>
+          <div className="sidebar-user-avatar">{(user?.email || '?')[0].toUpperCase()}</div>
           <div>
-            <div className="sidebar-user-name">Admin</div>
-            <div className="sidebar-user-role">Administrator</div>
+            <div className="sidebar-user-name">{user?.email || '—'}</div>
+            <div className="sidebar-user-role">{ROLE_LABEL[role] || '…'}</div>
           </div>
         </div>
       </div>

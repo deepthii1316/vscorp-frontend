@@ -60,7 +60,7 @@ function ReebokReportsInner() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/reports/reebok-sales', {
+      const res = await apiFetch('/api/reports/reebok-sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date }),
@@ -99,7 +99,7 @@ function ReebokReportsInner() {
 
   // Recipient list for the Send to All picker (Send Test has no picker, stays as-is).
   useEffect(() => {
-    fetch('/api/reports/reebok-send').then((r) => r.json()).then((json) => {
+    apiFetch('/api/reports/reebok-send').then((r) => r.json()).then((json) => {
       setCounts(json);
       setSelectedRecipients(json.allRecipients || []); // everyone checked by default
     }).catch(() => {});
@@ -155,7 +155,7 @@ function ReebokReportsInner() {
       fd.append('date', reportDate || date);
       fd.append('mode', mode);
       if (mode === 'all') fd.append('recipients', JSON.stringify(selectedRecipients));
-      const res = await fetch('/api/reports/reebok-send', { method: 'POST', body: fd });
+      const res = await apiFetch('/api/reports/reebok-send', { method: 'POST', body: fd });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'HTTP ' + res.status);
       setSendState({
@@ -390,7 +390,7 @@ function ReebokReportsInner() {
 
 export default function ReebokReportsPage() {
   return (
-    <RequireAuth>
+    <RequireAuth roles={['admin', 'store_manager']}>
       <Suspense fallback={
         <div style={{ padding: 'var(--space-8)', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
           Loading…

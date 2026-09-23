@@ -17,6 +17,7 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { createServerClient } from '@/lib/supabase';
+import { requireAuth } from '@/middleware/auth';
 import { EMAIL_FROM, recipientsFor, ALL_RECIPIENTS } from '@/lib/email/config';
 import { buildReebokWorkbook } from '@/lib/email/reebokExcel';
 
@@ -50,11 +51,17 @@ function fmtDate(dateStr) {
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-export async function GET() {
+export async function GET(req) {
+  const auth = await requireAuth(req, ['admin', 'store_manager']);
+  if (auth.response) return auth.response;
+
   return NextResponse.json({ test: recipientsFor('test').length, all: recipientsFor('all').length, allRecipients: ALL_RECIPIENTS });
 }
 
 export async function POST(req) {
+  const auth = await requireAuth(req, ['admin', 'store_manager']);
+  if (auth.response) return auth.response;
+
   const smtpUser = process.env.SMTP_USER;
   const smtpPass = process.env.SMTP_PASS;
   if (!smtpUser || !smtpPass) {

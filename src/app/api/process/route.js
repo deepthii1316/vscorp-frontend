@@ -74,7 +74,7 @@ async function legacyPOST() {
 }
 
 export async function POST(request) {
-  const auth = await requireAuth(request);
+  const auth = await requireAuth(request, ['admin']);
   if (auth.response) return auth.response;
 
   try {
@@ -152,7 +152,7 @@ export async function POST(request) {
 }
 
 export async function GET(request) {
-  const auth = await requireAuth(request);
+  const auth = await requireAuth(request, ['admin']);
   if (auth.response) return auth.response;
 
   let runId = new URL(request.url).searchParams.get('runId');

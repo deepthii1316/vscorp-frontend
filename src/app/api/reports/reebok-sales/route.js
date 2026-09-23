@@ -9,6 +9,7 @@
 
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireAuth } from '@/middleware/auth';
 import { n, fmtINR, fmtPct, fmtNum, fmtDec, achColor } from '@/lib/email/reebokHelpers';
 import { buildReportModel, formatCell, heatColor, ZEBRA, TOTAL_BG } from '@/lib/email/reebokReportModel';
 
@@ -471,6 +472,9 @@ function buildGenderPeriodTables(gdRows) {
 // ─── POST handler ────────────────────────────────────────────────────────
 
 export async function POST(req) {
+  const auth = await requireAuth(req, ['admin', 'store_manager']);
+  if (auth.response) return auth.response;
+
   try {
     const supabase = createServerClient();
     const body = await req.json().catch(() => ({}));

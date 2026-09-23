@@ -6,9 +6,11 @@ import Sidebar from '@/components/Sidebar';
 import LogoutButton from '@/components/LogoutButton';
 import { Bell } from 'lucide-react';
 
+const ROLE_LABEL = { admin: 'Administrator', store_manager: 'Store Manager' };
+
 function TopBar() {
-  const { user } = useAuth();
-  const initials = (user?.name || 'U').split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase();
+  const { user, role } = useAuth();
+  const initials = (user?.email || 'U').slice(0, 2).toUpperCase();
   return (
     <div className="top-bar">
       <div className="top-bar-left">
@@ -23,8 +25,8 @@ function TopBar() {
         <div className="user-badge">
           <div className="user-avatar">{initials}</div>
           <div>
-            <div className="user-name">{user?.name || 'User'}</div>
-            <div className="user-role">{user?.role || ''}</div>
+            <div className="user-name">{user?.email || 'User'}</div>
+            <div className="user-role">{ROLE_LABEL[role] || ''}</div>
           </div>
         </div>
         <LogoutButton />

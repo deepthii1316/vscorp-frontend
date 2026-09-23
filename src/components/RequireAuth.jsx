@@ -4,18 +4,35 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 
-export default function RequireAuth({ children }) {
-  const { isAuthenticated, loading } = useAuth();
+/**
+ * Wrap a page with this. Pass roles=['admin'] or ['admin','store_manager'] to
+ * also gate by role (UI-only - every route that returns data re-checks the
+ * role server-side via requireAuth, so this can never be the real barrier).
+ * Omit roles for auth-only pages (any logged-in user).
+ */
+export default function RequireAuth({ children, roles }) {
+  const { isAuthenticated, loading, role, roleLoading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.replace('/login');
-    }
-  }, [loading, isAuthenticated, router]);
+  const roleChecked = !roles || !roleLoading;
+  const roleMismatch = roles && role && !roles.includes(role);
 
-  if (loading) return <FullPageLoader />;
+  useEffect(() => {
+    if (loading || !roleChecked) return;
+    if (!isAuthenticated) { router.replace('/login'); return; }
+    if (roleMismatch) router.replace('/reebok-reports'); // the one page every role can reach
+  }, [loading, isAuthenticated, roleChecked, roleMismatch, router]);
+
+  if (loading || !roleChecked) return <FullPageLoader />;
   if (!isAuthenticated) return <FullPageLoader />;
+  if (roleMismatch) return <FullPageLoader />; // about to redirect
+  if (roles && !role) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+        Your account has no role assigned yet. Ask an admin to set one up.
+      </div>
+    );
+  }
 
   return children;
 }

@@ -156,7 +156,7 @@ async function legacyPOST(request) {
 }
 
 export async function POST(request) {
-  const auth = await requireAuth(request);
+  const auth = await requireAuth(request, ['admin']);
   if (auth.response) return auth.response;
 
   let storagePath = null;

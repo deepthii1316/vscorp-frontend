@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import UploadHistory from '@/components/UploadHistory';
 import RequireAuth from '@/components/RequireAuth';
+import { apiFetch } from '@/lib/api';
 
 function UploadHistoryPage() {
   const [uploads, setUploads] = useState([]);
@@ -15,7 +16,7 @@ function UploadHistoryPage() {
   const loadUploads = async () => {
     try {
       setUploadsLoading(true);
-      const response = await fetch('/api/upload-history');
+      const response = await apiFetch('/api/upload-history');
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
       setUploads(result.uploads || []);
@@ -36,7 +37,7 @@ function UploadHistoryPage() {
 
 export default function UploadHistoryPageWrapped() {
   return (
-    <RequireAuth>
+    <RequireAuth roles={['admin']}>
       <UploadHistoryPage />
     </RequireAuth>
   );

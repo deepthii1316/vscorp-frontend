@@ -540,7 +540,7 @@ function addGenderDivisionDetailSheet(wb, gdRows) {
 import { buildReebokWorkbook } from '@/lib/email/reebokExcel';
 
 export async function GET(req) {
-  const auth = await requireAuth(req);
+  const auth = await requireAuth(req, ['admin', 'store_manager']);
   if (auth.response) return auth.response;
 
   try {

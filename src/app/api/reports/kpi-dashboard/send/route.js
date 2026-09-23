@@ -28,13 +28,10 @@ function getTransporter(user, pass) {
 }
 
 export async function POST(req) {
-  const auth = await requireAuth(req);
+  const auth = await requireAuth(req, ['admin']);
   if (auth.response) return auth.response;
 
   const supabase = await createServerClient();
-
-  const { data: profile } = await supabase.from('users').select('role').eq('id', auth.user.id).single();
-  if (!profile || profile.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const smtpUser = process.env.SMTP_USER;
   const smtpPass = process.env.SMTP_PASS;

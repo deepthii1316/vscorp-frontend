@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic';
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(request) {
-  const auth = await requireAuth(request);
+  const auth = await requireAuth(request, ['admin']);
   if (auth.response) return auth.response;
 
   const { searchParams } = new URL(request.url);

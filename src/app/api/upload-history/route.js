@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireAuth } from '@/middleware/auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request) {
+  const auth = await requireAuth(request, ['admin']);
+  if (auth.response) return auth.response;
+
   try {
     const { data, error } = await createServerClient()
       .from('upload_audit_log')

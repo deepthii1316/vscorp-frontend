@@ -3,7 +3,7 @@ import { createServerClient } from '@/lib/supabase';
 import { requireAuth } from '@/middleware/auth';
 
 export async function GET(request) {
-  const auth = await requireAuth(request);
+  const auth = await requireAuth(request, ['admin']);
   if (auth.response) return auth.response;
 
   const { searchParams } = new URL(request.url);

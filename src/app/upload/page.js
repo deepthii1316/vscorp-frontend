@@ -585,7 +585,7 @@ function UploadPageContent() {
 
 export default function UploadPage() {
   return (
-    <RequireAuth>
+    <RequireAuth roles={['admin']}>
       <UploadPageContent />
     </RequireAuth>
   );

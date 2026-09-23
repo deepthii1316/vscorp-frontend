@@ -355,7 +355,7 @@ function MasterDashboardPage() {
 
 export default function MasterDashboardPageWrapped() {
   return (
-    <RequireAuth>
+    <RequireAuth roles={['admin']}>
       <MasterDashboardPage />
     </RequireAuth>
   );

@@ -8,21 +8,42 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Role/store are UI-only conveniences (which nav items and pages to show).
+  // Every route that actually returns data re-checks the role server-side.
+  const [role, setRole] = useState(null);
+  const [storeSiteShortName, setStoreSiteShortName] = useState(null);
+  const [roleLoading, setRoleLoading] = useState(true);
 
   useEffect(() => {
     const supabase = createBrowserClient();
     let active = true;
+
+    const loadRole = async (currentSession) => {
+      if (!currentSession) {
+        if (active) { setRole(null); setStoreSiteShortName(null); setRoleLoading(false); }
+        return;
+      }
+      const { data } = await supabase.from('users').select('role, store_site_short_name').eq('id', currentSession.user.id).single();
+      if (active) {
+        setRole(data?.role || null);
+        setStoreSiteShortName(data?.store_site_short_name || null);
+        setRoleLoading(false);
+      }
+    };
 
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       if (active) {
         setSession(currentSession);
         setLoading(false);
       }
+      loadRole(currentSession);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       setLoading(false);
+      setRoleLoading(true);
+      loadRole(nextSession);
     });
 
     return () => {
@@ -47,6 +68,9 @@ export function AuthProvider({ children }) {
       signOut,
       ready: !loading,
       isAuthenticated: !!session,
+      role,
+      storeSiteShortName,
+      roleLoading,
     }}>
       {children}
     </AuthContext.Provider>
