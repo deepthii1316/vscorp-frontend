@@ -132,30 +132,32 @@ function staffKpiTable(period, staffRows, daywiseRows, reportDate) {
 
   const people = ASSOCS.map((name) => {
     const r = staffRows.find((x) => x.period_type === period && x.salesperson_name === name) || {};
-    return { name, role: r.role || 'Sales Associate', nsv: n(r.nsv), bills: n(r.bills), qty: n(r.qty), sfr: n(r.sfr) * 100, afr: n(r.afr) * 100 };
+    return { name, role: r.role || 'Sales Associate', nsv: n(r.nsv), bills: n(r.bills), qty: n(r.qty), footwear: n(r.footwear_qty), sfr: n(r.sfr) * 100, afr: n(r.afr) * 100 };
   });
 
-  const kpiCells = (nsv, bills, qty, target, sfr, afr) => [
+  const kpiCells = (nsv, bills, qty, target, footwear, sfr, afr) => [
     cell(target, 'inr'),
     cell(nsv, 'inr'),
     cell(calcAchievement(nsv, target), 'ach'),
     cell(bills, 'int'),
     cell(qty, 'int'),
-    cell(bills ? nsv / bills : 0, 'inr'),   // ATV = NSV / Bills
-    cell(bills ? qty / bills : 0, 'dec'),   // UPT = Qty / Bills
-    cell(qty ? nsv / qty : 0, 'inr'),       // ASP = NSV / Qty
+    cell(bills ? nsv / bills : 0, 'inr'),      // ATV = NSV / Bills
+    cell(bills ? qty / bills : 0, 'dec'),      // UPT = Qty / Bills
+    cell(qty ? nsv / qty : 0, 'inr'),          // ASP = NSV / Qty
+    cell(bills ? footwear / bills : 0, 'dec'), // FUPT = Footwear Qty / Bills
     cell(sfr, 'pct'),
     cell(afr, 'pct'),
   ];
 
   const rows = people.map((p) => ({
-    cells: [cell(titleName(p.name)), cell(p.role), ...kpiCells(p.nsv, p.bills, p.qty, perStaffTarget, p.sfr, p.afr)],
+    cells: [cell(titleName(p.name)), cell(p.role), ...kpiCells(p.nsv, p.bills, p.qty, perStaffTarget, p.footwear, p.sfr, p.afr)],
   }));
   const tNsv = people.reduce((s, p) => s + p.nsv, 0);
   const tBills = people.reduce((s, p) => s + p.bills, 0);
   const tQty = people.reduce((s, p) => s + p.qty, 0);
+  const tFootwear = people.reduce((s, p) => s + p.footwear, 0);
   // SFR / AFR are ratios: taken from the store-level row (recalculated from totals), never summed.
-  rows.push({ kind: 'total', cells: [cell('STORE TOTAL'), cell(''), ...kpiCells(tNsv, tBills, tQty, storeTarget, n(store.sfr) * 100, n(store.afr) * 100)] });
+  rows.push({ kind: 'total', cells: [cell('STORE TOTAL'), cell(''), ...kpiCells(tNsv, tBills, tQty, storeTarget, tFootwear, n(store.sfr) * 100, n(store.afr) * 100)] });
 
   return {
     key: 'staff',
@@ -164,7 +166,7 @@ function staffKpiTable(period, staffRows, daywiseRows, reportDate) {
       col('Salesperson', 'navy', 'l'), col('Role', 'navy', 'l'),
       col('Target', 'blue'), col('NSV (Achieved)', 'green'), col('ACH%', 'orange'),
       col('Bills', 'purple'), col('Qty', 'purple'),
-      col('ATV', 'teal'), col('UPT', 'teal'), col('ASP', 'teal'),
+      col('ATV', 'teal'), col('UPT', 'teal'), col('ASP', 'teal'), col('FUPT', 'teal'),
       col('SFR', 'amber'), col('AFR', 'amber'),
     ],
     rows,

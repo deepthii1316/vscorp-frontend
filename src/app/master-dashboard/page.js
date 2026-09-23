@@ -272,7 +272,8 @@ function MasterDashboardPage() {
       )}
 
       {/* Overview */}
-      {activeTab === 'overview' && view && !resolved?.empty && (
+      {activeTab === 'overview' && !resolved?.empty && (
+        loading ? <div className="md-empty card">Loading...</div> : view && (
         <>
           {data.days.length === 0 && <div className="md-empty card">No sales data in this date range.</div>}
 
@@ -306,9 +307,11 @@ function MasterDashboardPage() {
 
           <DivisionTableCard table={view.table} compareLabel={compareLabel} />
         </>
+        )
       )}
 
-      {activeTab === 'metrics' && data && !resolved?.empty && (
+      {activeTab === 'metrics' && !resolved?.empty && (
+        loading ? <div className="md-empty card">Loading...</div> : data && (
         <MasterDashboardMetrics
           days={data.retailMetricsDays || []}
           prevDays={data.retailMetricsPrevDays || []}
@@ -316,14 +319,14 @@ function MasterDashboardPage() {
           ssrPrevDays={data.prevDays || []}
           rangeText={rangeText}
         />
+        )
       )}
 
       {/* Category drill-down */}
       {activeTab === 'categories' && !resolved?.empty && (
         <>
           {catError && <div className="reebok-error">Could not load the category drill-down: {catError}</div>}
-          {catLoading && !catView && <div className="md-empty card">Loading...</div>}
-          {catView && (
+          {catLoading ? <div className="md-empty card">Loading...</div> : catView && (
             <CategoryDrilldownTables
               categoryTree={catView.categoryTree}
               footwearTree={catView.footwearTree}

@@ -182,7 +182,7 @@ export async function buildReebokWorkbook(supabase, dateParam = null) {
 
   addCoverSheet(wb, reportDate);
   addSheet(wb, 'Daywise MTD YTD',       [daywise],                { first: 26, rest: 22, count: 4 });
-  addSheet(wb, 'Staff KPI',             [staffToday, staffMtd],   { first: 24, rest: 15, count: 12 });
+  addSheet(wb, 'Staff KPI',             [staffToday, staffMtd],   { first: 24, rest: 15, count: 13 });
   addSheet(wb, 'Staff FW APP ACC',      [catToday, catMtd],       { first: 24, rest: 16, count: 8 });
   addSheet(wb, 'Gender Wise',           [genderWise],             { first: 20, rest: 15, count: 7 });
   addSheet(wb, 'Division Wise',         [divisionWise],           { first: 20, rest: 15, count: 7 });

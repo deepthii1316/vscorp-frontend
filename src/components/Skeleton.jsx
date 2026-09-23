@@ -50,13 +50,7 @@ export function SkeletonCard({ rows = 4 }) {
 export function SkeletonTable({ rows = 6, columns = 4 }) {
   return (
     <div className="report-section" style={{ background: 'var(--bg-elevated)' }}>
-      <div style={{
-        background: 'linear-gradient(135deg,#1e40af,#3730a3)',
-        borderRadius: 6,
-        height: 28,
-        marginBottom: 12,
-        opacity: 0.7,
-      }} />
+      <Skeleton height={28} radius={6} style={{ marginBottom: 12 }} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {Array.from({ length: rows }).map((_, r) => (
           <div key={r} style={{
