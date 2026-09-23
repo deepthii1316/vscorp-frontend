@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Download, RefreshCw, Calendar, CalendarDays, Users, Layers, VenusAndMars, LayoutList, Mail, FlaskConical, Send, X } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -45,6 +45,7 @@ function ReebokReportsInner() {
   const [subject, setSubject]    = useState('');
   const refs = useRef({});
   const stageRef = useRef(null);
+  const partsContainerRef = useRef(null);
 
   // Email: captured table images, send status, "send to all" confirmation
   const [reportDate, setReportDate] = useState(null);
@@ -168,6 +169,41 @@ function ReebokReportsInner() {
   const visibleParts = report ? parts.filter((p) => p.key === report) : parts;
   const reportKeyForPart = (p) => p.key || null;
 
+  // No horizontal scrolling: shrink each table (text included) to fit its column instead.
+  // A table's rendered box size is unaffected by `transform`, so scrollWidth still reflects
+  // the natural, unscaled width on every re-run - safe to remeasure without resetting first.
+  const fitTables = useCallback(() => {
+    const container = partsContainerRef.current;
+    if (!container) return;
+    container.querySelectorAll('.report-table-fit').forEach((wrap) => {
+      const table = wrap.querySelector('table');
+      if (!table) return;
+      const naturalWidth = table.scrollWidth;
+      const naturalHeight = table.scrollHeight;
+      const availWidth = wrap.clientWidth;
+      if (availWidth > 0 && naturalWidth > availWidth) {
+        const scale = availWidth / naturalWidth;
+        table.style.transform = `scale(${scale})`;
+        wrap.style.height = `${naturalHeight * scale}px`;
+      } else {
+        table.style.transform = 'none';
+        wrap.style.height = 'auto';
+      }
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    fitTables();
+  }, [parts, report, loading, fitTables]);
+
+  useEffect(() => {
+    const container = partsContainerRef.current;
+    if (!container) return undefined;
+    const observer = new ResizeObserver(() => fitTables());
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [fitTables]);
+
   return (
     <div className="reebok-page-wrapper">
       <div className="reebok-layout">
@@ -243,7 +279,7 @@ function ReebokReportsInner() {
             <SkeletonTable rows={5} columns={6} />
           </>
         ) : (
-          <>
+          <div ref={partsContainerRef}>
             {visibleParts.map((p) => {
               const rk = reportKeyForPart(p);
               return (
@@ -258,7 +294,7 @@ function ReebokReportsInner() {
             {!loading && visibleParts.length === 0 && !error && (
               <div className="reebok-empty">No report parts to display.</div>
             )}
-          </>
+          </div>
         )}
       </div>
       <button type="button" className="reebok-send-fab" title="Send this report to an email address">

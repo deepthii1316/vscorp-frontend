@@ -2673,6 +2673,11 @@ body {
 
 /* ─── Sales report: enterprise table presentation (display only) ─── */
 .report-section table { width: auto; min-width: 100%; }
+/* Scale-to-fit (no horizontal scroll): JS measures the table's natural width against
+   report-table-fit's box and sets a transform: scale(...) + this wrapper's height, so a
+   wide table (many columns) shrinks uniformly - text included - instead of scrolling. */
+.report-table-fit { overflow: hidden; width: 100%; }
+.report-table-fit table { transform-origin: top left; }
 .report-section table tbody tr:nth-child(even) td { background: #f7f8fa; }
 .report-section table tbody tr:hover td { background: #eef2f7; }
 .report-section table td:not(:first-child) { white-space: nowrap; }

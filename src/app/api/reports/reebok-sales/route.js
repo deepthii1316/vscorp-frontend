@@ -73,7 +73,7 @@ function renderTable(table) {
 
   return `<div class="report-section" style="${FONT}margin-bottom:24px;">
     <div style="${TITLE_BAR}">${table.title}</div>
-    <div style="overflow-x:auto;"><table style="border-collapse:collapse;width:100%;max-width:${Math.min(1200, Math.max(520, table.columns.length * 120))}px;">
+    <div class="report-table-fit"><table style="border-collapse:collapse;">
       <thead><tr>${headers}</tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
