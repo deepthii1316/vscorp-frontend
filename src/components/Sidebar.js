@@ -14,6 +14,8 @@ import {
   Grid3x3,
   PieChart,
   FileSpreadsheet,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 // roles omitted -> visible to every logged-in role. Master Dashboard and the
@@ -40,7 +42,7 @@ const navItems = [
 
 const ROLE_LABEL = { admin: 'Administrator', store_manager: 'Store Manager' };
 
-export default function Sidebar() {
+export default function Sidebar({ collapsed = false, onToggleCollapsed }) {
   const pathname = usePathname();
   const [report, setReport] = useState(null);
   const { user, role } = useAuth();
@@ -58,7 +60,7 @@ export default function Sidebar() {
     .filter((group) => group.items.length > 0);
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       {/* Brand */}
       <div className="sidebar-brand">
         <div className="sidebar-logo">
@@ -69,6 +71,15 @@ export default function Sidebar() {
           <br />
           <span className="sidebar-brand-sub">Retail Operations</span>
         </div>
+        <button
+          type="button"
+          className="sidebar-toggle"
+          onClick={onToggleCollapsed}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? <ChevronRight /> : <ChevronLeft />}
+        </button>
       </div>
 
       {/* Navigation */}

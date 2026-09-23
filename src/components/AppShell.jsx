@@ -1,10 +1,13 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import Sidebar from '@/components/Sidebar';
 import LogoutButton from '@/components/LogoutButton';
 import { Bell } from 'lucide-react';
+
+const SIDEBAR_COLLAPSED_KEY = 'sidebar-collapsed';
 
 const ROLE_LABEL = { admin: 'Administrator', store_manager: 'Store Manager' };
 
@@ -38,14 +41,28 @@ function TopBar() {
 export default function AppShell({ children }) {
   const pathname = usePathname();
   const isLogin = pathname === '/login';
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Remembered per browser only (a per-viewer UI convenience, not app state).
+  useEffect(() => {
+    try { setCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'); } catch { /* ignore */ }
+  }, []);
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? '1' : '0'); } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   return (
     <AuthProvider>
       {isLogin ? (
         children
       ) : (
-        <div className="app-layout">
-          <Sidebar />
+        <div className="app-layout" style={collapsed ? { '--sidebar-w': '72px' } : undefined}>
+          <Sidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
           <main className="main-content">
             <TopBar />
             <div className="page-content">{children}</div>

@@ -72,9 +72,13 @@ function renderTable(table) {
     return `<tr>${cells}</tr>`;
   }).join('');
 
+  // The daywise table (Metric, Daywise, MTD, YTD - 4 columns) looks stretched-out thin at
+  // full card width; keep it narrower. Every other table still fills the card as before.
+  const narrowStyle = table.key === 'daywise' ? 'max-width:680px;' : '';
+
   return `<div class="report-section" style="${FONT}margin-bottom:24px;">
     <div style="${TITLE_BAR}">${table.title}</div>
-    <div class="report-table-fit"><table style="border-collapse:collapse;">
+    <div class="report-table-fit" style="${narrowStyle}"><table style="border-collapse:collapse;">
       <thead><tr>${headers}</tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
