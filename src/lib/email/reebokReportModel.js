@@ -123,10 +123,12 @@ function daywiseTable(daywiseRows, reportDate) {
   };
 }
 
-// ─── Tables 2 & 3: Staffwise KPI (Today / MTD) ────────────────────────────
+// ─── Tables 2, 3 & 3b: Staffwise KPI (Today / MTD / YTD) ──────────────────
+const PERIOD_LABEL = { today: 'Daywise', mtd: 'MTD', ytd: 'YTD' };
+const PERIOD_TARGET_FN = { today: calcTarget, mtd: MTD_TARGET, ytd: YTD_TARGET };
+
 function staffKpiTable(period, staffRows, daywiseRows, reportDate) {
-  const isToday = period === 'today';
-  const storeTarget = isToday ? calcTarget(reportDate) : MTD_TARGET(reportDate);
+  const storeTarget = PERIOD_TARGET_FN[period](reportDate);
   const perStaffTarget = storeTarget == null ? null : storeTarget / STAFF_COUNT;
   const store = daywiseRows.find((r) => r.period_type === period) || {};
 
@@ -161,7 +163,7 @@ function staffKpiTable(period, staffRows, daywiseRows, reportDate) {
 
   return {
     key: 'staff',
-    title: isToday ? 'Uppal Reebok — Staffwise KPI — Daywise' : 'Uppal Reebok — Staffwise KPI — MTD',
+    title: `Uppal Reebok — Staffwise KPI — ${PERIOD_LABEL[period]}`,
     columns: [
       col('Salesperson', 'navy', 'l'), col('Role', 'navy', 'l'),
       col('Target', 'blue'), col('NSV (Achieved)', 'green'), col('ACH%', 'orange'),
@@ -170,15 +172,12 @@ function staffKpiTable(period, staffRows, daywiseRows, reportDate) {
       col('SFR', 'amber'), col('AFR', 'amber'),
     ],
     rows,
-    footnotes: [isToday
-      ? 'Per-staff target = day target ÷ 3. Store total ratios are recalculated from totals.'
-      : 'Per-staff target = MTD target ÷ 3. Store total ratios are recalculated from totals.'],
+    footnotes: [`Per-staff target = ${PERIOD_LABEL[period]} target ÷ 3. Store total ratios are recalculated from totals.`],
   };
 }
 
-// ─── Table 4: Staffwise Footwear / Apparel / Accessories (Today / MTD) ────
+// ─── Table 4: Staffwise Footwear / Apparel / Accessories (Today / MTD / YTD) ─
 function staffCategoryTable(period, staffRows, reportDate) {
-  const isToday = period === 'today';
   const people = ASSOCS.map((name) => {
     const r = staffRows.find((x) => x.period_type === period && x.salesperson_name === name) || {};
     return { name, role: r.role || 'Sales Associate', r };
@@ -194,7 +193,7 @@ function staffCategoryTable(period, staffRows, reportDate) {
   });
   return {
     key: 'category',
-    title: isToday ? 'Uppal Reebok — Staffwise FW / APP / ACC — Daywise' : 'Uppal Reebok — Staffwise FW / APP / ACC — MTD',
+    title: `Uppal Reebok — Staffwise FW / APP / ACC — ${PERIOD_LABEL[period]}`,
     columns: [
       col('Salesperson', 'navy', 'l'), col('Role', 'navy', 'l'),
       col('FW Qty', 'blue'), col('FW NSV', 'blue'),
@@ -206,15 +205,17 @@ function staffCategoryTable(period, staffRows, reportDate) {
 }
 
 // ─── Table 5: Gender Wise / Table 6: Division Wise ────────────────────────
-function mixTable({ key, title, firstLabel, labels, todayMap, mtdMap }) {
+function mixTable({ key, title, firstLabel, labels, todayMap, mtdMap, ytdMap }) {
   const totals = (map) => ({ qty: labels.reduce((s, [k]) => s + n(map[k]?.qty), 0), nsv: labels.reduce((s, [k]) => s + n(map[k]?.nsv), 0) });
   const tt = totals(todayMap);
   const mt = totals(mtdMap);
+  const yt = totals(ytdMap);
   const rows = labels.map(([k, label]) => ({
     cells: [
       cell(label),
       cell(n(todayMap[k]?.qty), 'int'), cell(n(todayMap[k]?.nsv), 'inr'), cell(pctOf(n(todayMap[k]?.nsv), tt.nsv), 'pct'),
       cell(n(mtdMap[k]?.qty), 'int'), cell(n(mtdMap[k]?.nsv), 'inr'), cell(pctOf(n(mtdMap[k]?.nsv), mt.nsv), 'pct'),
+      cell(n(ytdMap[k]?.qty), 'int'), cell(n(ytdMap[k]?.nsv), 'inr'), cell(pctOf(n(ytdMap[k]?.nsv), yt.nsv), 'pct'),
     ],
   }));
   rows.push({
@@ -223,6 +224,7 @@ function mixTable({ key, title, firstLabel, labels, todayMap, mtdMap }) {
       cell('TOTAL'),
       cell(tt.qty, 'int'), cell(tt.nsv, 'inr'), cell(tt.nsv ? 100 : null, 'pct'),
       cell(mt.qty, 'int'), cell(mt.nsv, 'inr'), cell(mt.nsv ? 100 : null, 'pct'),
+      cell(yt.qty, 'int'), cell(yt.nsv, 'inr'), cell(yt.nsv ? 100 : null, 'pct'),
     ],
   });
   return {
@@ -232,9 +234,10 @@ function mixTable({ key, title, firstLabel, labels, todayMap, mtdMap }) {
       col(firstLabel, 'navy', 'l'),
       col('Today Qty', 'orange'), col('Today NSV', 'orange'), col('Today % Mix', 'orange'),
       col('MTD Qty', 'blue'), col('MTD NSV', 'blue'), col('MTD % Mix', 'blue'),
+      col('YTD Qty', 'purple'), col('YTD NSV', 'purple'), col('YTD % Mix', 'purple'),
     ],
     rows,
-    footnotes: ['% Mix = share of total NSV.'],
+    footnotes: ['% Mix = share of total NSV, within its own period (Today / MTD / YTD).'],
   };
 }
 
@@ -256,6 +259,7 @@ function genderWiseTable(gdRows) {
     labels: [['men', 'Men'], ['women', 'Women'], ['unisex', 'Unisex']],
     todayMap: build('today'),
     mtdMap: build('mtd'),
+    ytdMap: build('ytd'),
   });
 }
 
@@ -272,6 +276,7 @@ function divisionWiseTable(catRows) {
     labels: [['footwear', 'Footwear'], ['apparel', 'Apparel'], ['accessories', 'Accessories']],
     todayMap: build('today'),
     mtdMap: build('mtd'),
+    ytdMap: build('ytd'),
   });
 }
 
@@ -288,6 +293,7 @@ function divisionSplitTable(gdRows) {
 
   for (const [g, gLabel, divs] of genders) {
     const mtdTotalNsv = divs.reduce((s, d) => s + n(get('mtd', g, d).nsv), 0);
+    const ytdTotalNsv = divs.reduce((s, d) => s + n(get('ytd', g, d).nsv), 0);
     const sum = (period, key) => divs.reduce((s, d) => s + n(get(period, g, d)[key]), 0);
     divs.forEach((d, i) => {
       rows.push({
@@ -297,6 +303,8 @@ function divisionSplitTable(gdRows) {
           cell(n(get('today', g, d).qty), 'int'), cell(n(get('today', g, d).nsv), 'inr'),
           cell(n(get('mtd', g, d).qty), 'int'), cell(n(get('mtd', g, d).nsv), 'inr'),
           cell(pctOf(n(get('mtd', g, d).nsv), mtdTotalNsv), 'pct'),
+          cell(n(get('ytd', g, d).qty), 'int'), cell(n(get('ytd', g, d).nsv), 'inr'),
+          cell(pctOf(n(get('ytd', g, d).nsv), ytdTotalNsv), 'pct'),
         ],
       });
     });
@@ -308,6 +316,8 @@ function divisionSplitTable(gdRows) {
         cell(sum('today', 'qty'), 'int'), cell(sum('today', 'nsv'), 'inr'),
         cell(sum('mtd', 'qty'), 'int'), cell(sum('mtd', 'nsv'), 'inr'),
         cell(mtdTotalNsv ? 100 : null, 'pct'),
+        cell(sum('ytd', 'qty'), 'int'), cell(sum('ytd', 'nsv'), 'inr'),
+        cell(ytdTotalNsv ? 100 : null, 'pct'),
       ],
     });
   }
@@ -320,9 +330,11 @@ function divisionSplitTable(gdRows) {
       col('Today Qty', 'orange'), col('Today NSV', 'orange'),
       col('MTD Qty', 'blue'), col('MTD NSV', 'blue'),
       col('MTD % within Gender', 'purple'),
+      col('YTD Qty', 'teal'), col('YTD NSV', 'teal'),
+      col('YTD % within Gender', 'teal'),
     ],
     rows,
-    footnotes: ['% within Gender = division MTD NSV ÷ that gender\'s total MTD NSV.'],
+    footnotes: ['% within Gender = division NSV ÷ that gender\'s total NSV, for the same period (MTD or YTD).'],
   };
 }
 
@@ -334,8 +346,10 @@ export function buildReportModel({ reportDate, daywiseRows = [], staffRows = [],
     daywiseTable(daywiseRows, reportDate),
     staffKpiTable('today', staffRows, daywiseRows, reportDate),
     staffKpiTable('mtd', staffRows, daywiseRows, reportDate),
+    staffKpiTable('ytd', staffRows, daywiseRows, reportDate),
     staffCategoryTable('today', staffRows, reportDate),
     staffCategoryTable('mtd', staffRows, reportDate),
+    staffCategoryTable('ytd', staffRows, reportDate),
     genderWiseTable(gdRows),
     divisionWiseTable(catRows),
     divisionSplitTable(gdRows),

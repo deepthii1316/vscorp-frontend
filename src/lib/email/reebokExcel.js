@@ -114,11 +114,11 @@ function addCoverSheet(wb, reportDate) {
 
   const index = [
     ['Daywise MTD YTD', 'Target, NSV, Achievement %, Bills, Qty — daywise, MTD, YTD'],
-    ['Staff KPI', 'Staffwise KPIs — Daywise and MTD, with store total'],
-    ['Staff FW APP ACC', 'Per-salesperson footwear / apparel / accessories — Daywise and MTD'],
-    ['Gender Wise', 'Qty, NSV and % Mix by gender — Today and MTD'],
-    ['Division Wise', 'Qty, NSV and % Mix by division — Today and MTD'],
-    ['Gender Division Split', 'Division split within each gender — Today and MTD'],
+    ['Staff KPI', 'Staffwise KPIs — Daywise, MTD and YTD, with store total'],
+    ['Staff FW APP ACC', 'Per-salesperson footwear / apparel / accessories — Daywise, MTD and YTD'],
+    ['Gender Wise', 'Qty, NSV and % Mix by gender — Today, MTD and YTD'],
+    ['Division Wise', 'Qty, NSV and % Mix by division — Today, MTD and YTD'],
+    ['Gender Division Split', 'Division split within each gender — Today, MTD and YTD'],
   ];
   ws.getCell(4, 1).value = 'SHEET';       ws.getCell(4, 2).value = 'CONTENTS';
   [1, 2].forEach((c) => { const ref = ws.getCell(4, c); ref.font = font(true, 11, 'FFFFFF'); ref.fill = fill('1F2A44'); ref.border = BORDER; });
@@ -166,7 +166,7 @@ export async function buildReebokWorkbook(supabase, dateParam = null) {
     ]);
 
   // Same table models as the on-screen report.
-  const [daywise, staffToday, staffMtd, catToday, catMtd, genderWise, divisionWise, split] = buildReportModel({
+  const [daywise, staffToday, staffMtd, staffYtd, catToday, catMtd, catYtd, genderWise, divisionWise, split] = buildReportModel({
     reportDate,
     daywiseRows: daywiseRows || [],
     staffRows: staffRows || [],
@@ -181,12 +181,12 @@ export async function buildReebokWorkbook(supabase, dateParam = null) {
   wb.modified = new Date();
 
   addCoverSheet(wb, reportDate);
-  addSheet(wb, 'Daywise MTD YTD',       [daywise],                { first: 26, rest: 22, count: 4 });
-  addSheet(wb, 'Staff KPI',             [staffToday, staffMtd],   { first: 24, rest: 15, count: 13 });
-  addSheet(wb, 'Staff FW APP ACC',      [catToday, catMtd],       { first: 24, rest: 16, count: 8 });
-  addSheet(wb, 'Gender Wise',           [genderWise],             { first: 20, rest: 15, count: 7 });
-  addSheet(wb, 'Division Wise',         [divisionWise],           { first: 20, rest: 15, count: 7 });
-  addSheet(wb, 'Gender Division Split', [split],                  { first: 16, rest: 18, count: 7 });
+  addSheet(wb, 'Daywise MTD YTD',       [daywise],                          { first: 26, rest: 22, count: 4 });
+  addSheet(wb, 'Staff KPI',             [staffToday, staffMtd, staffYtd],   { first: 24, rest: 15, count: 13 });
+  addSheet(wb, 'Staff FW APP ACC',      [catToday, catMtd, catYtd],         { first: 24, rest: 16, count: 8 });
+  addSheet(wb, 'Gender Wise',           [genderWise],                       { first: 20, rest: 15, count: 10 });
+  addSheet(wb, 'Division Wise',         [divisionWise],                     { first: 20, rest: 15, count: 10 });
+  addSheet(wb, 'Gender Division Split', [split],                            { first: 16, rest: 18, count: 10 });
 
   const buffer = Buffer.from(await wb.xlsx.writeBuffer());
   return { buffer, reportDate, filename: `Virata_Retail_Reebok_Sales_${reportDate}.xlsx` };
