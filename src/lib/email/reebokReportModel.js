@@ -97,7 +97,9 @@ function daywiseTable(daywiseRows, reportDate) {
   const ytdRow = daywiseRows.find((r) => r.period_type === 'ytd');
   const ytd = ytdRow ? { nsv: n(ytdRow.nsv), bills: n(ytdRow.bills), qty: n(ytdRow.qty_sold), target: YTD_TARGET(reportDate) } : null;
   const tTarget = calcTarget(reportDate);
-  const mTarget = MTD_TARGET(reportDate);
+  // MTD target for this table only: the full month's target, not prorated by day-of-month
+  // (client decision, 23-Sep-2026 — every other table/use of MTD_TARGET is unaffected).
+  const mTarget = monthlyTarget(reportDate);
 
   return {
     key: 'daywise',
@@ -116,7 +118,7 @@ function daywiseTable(daywiseRows, reportDate) {
       { cells: [cell('Qty Sold'), cell(n(today.qty_sold), 'int'), cell(n(mtd.qty_sold), 'int'), ytd ? cell(ytd.qty, 'int') : cell(null, 'empty')] },
     ],
     footnotes: [
-      `Target = ₹${monthlyTarget(reportDate).toLocaleString('en-IN')} (this month's target) ÷ days in month (daywise); MTD target = sum of daywise targets; YTD (from 1 July) target = each completed month's target since 1 July + current MTD target.  ACH% = NSV ÷ Target × 100.`,
+      `Target = ₹${monthlyTarget(reportDate).toLocaleString('en-IN')} (this month's target) ÷ days in month (daywise); MTD target = the full month's target, not prorated by day (client decision, 23-Sep-2026); YTD (from 1 July) target = each completed month's target since 1 July + current MTD target.  ACH% = NSV ÷ Target × 100.`,
     ],
   };
 }
