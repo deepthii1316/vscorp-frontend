@@ -126,7 +126,109 @@ body {
   --sidebar-w: 232px;
   --topbar-h: 64px;
   --content-max: 1280px;
+
+  /* Theme-dependent extras (light values; dark values in :root[data-theme="dark"] below) */
+  color-scheme: light;
+  --on-accent: #FFFFFF;          /* text on a filled green / blue control */
+  --row-total: #D9DCE1;
+  --chart-green: #1F6B45;
+  --chart-blue: #2563EB;
+  --chart-teal: #0D9488;
+  --chart-amber: #C97A1D;
+  --chart-rose: #B33A3A;
+  --chart-neutral: #8A8A82;
+  --chart-previous: #B4B2A8;
+  --chart-previous-alt: #C9D3DE;
+  --bucket-healthy: #2E9958;     /* stock health (status) colours, validated with the dataviz checker */
+  --bucket-slow: #DBA820;
+  --bucket-risk: #D65A2A;
+  --bucket-dead: #962538;
+  --notice-line: #E8D2A8;
+  --notice-text: #7A4B0E;
+  --ok-line: #63BE7B;
+  --ok-bg: #eefaf1;
+  --ok-text: #14532d;
+  --err-line: #F8696B;
+  --err-bg: #fdeeee;
+  --err-text: #7a1212;
+  --overlay: rgba(15, 23, 42, 0.45);
 }
+
+/* ─── Dark theme ─────────────────────────────────────────────
+   Set by data-theme on <html> (src/lib/theme.js: saved choice, else the OS setting).
+   Same token names, so every component follows without per-component dark rules.
+   Chart colours are the light hues re-stepped for a dark surface and re-validated
+   (dataviz checker, dark band L 0.48-0.67); health buckets use the reference status steps. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111311;
+  --bg-elevated: #191C19;
+  --bg-subtle: #222622;
+  --bg-inset: #1D201D;
+  --border: #2C312C;
+  --border-strong: #3E443E;
+  --border-emphasis: #E6E6E0;
+  --text: #E9E9E3;
+  --text-secondary: #B9B9B1;
+  --text-muted: #8E8E86;
+  --text-faint: #5E5E58;
+  --text-inverse: #111311;
+  --green: #4FB283;
+  --green-hover: #66C495;
+  --green-soft: #17291F;
+  --green-line: #2D5240;
+  --green-deep: #A6DDBF;
+  --blue: #6F9DF6;
+  --blue-hover: #8AB0F8;
+  --blue-soft: #172139;
+  --blue-line: #2E4270;
+  --teal: #3BB5A8;
+  --teal-soft: #142B29;
+  --amber: #E0A04A;
+  --amber-soft: #2D2416;
+  --rose: #E57373;
+  --rose-soft: #351C1C;
+  --gradient-brand: linear-gradient(135deg, #2E7D57 0%, #3B6FD8 100%);
+  --gradient-soft: linear-gradient(135deg, #17291F 0%, #172139 100%);
+  --on-accent: #0F1A14;
+  --row-total: #2C312C;
+  --chart-green: #3E9E6C;
+  --chart-blue: #5B8BE6;
+  --chart-teal: #2E9C9A;
+  --chart-amber: #B9802A;
+  --chart-rose: #C9585E;
+  --chart-neutral: #7E7E77;
+  --chart-previous: #5C605A;
+  --chart-previous-alt: #3D4654;
+  --bucket-healthy: #0CA30C;
+  --bucket-slow: #FAB219;
+  --bucket-risk: #EC835A;
+  --bucket-dead: #D03B3B;
+  --notice-line: #5A4620;
+  --notice-text: #E8C58A;
+  --ok-line: #2F6B44;
+  --ok-bg: #15261B;
+  --ok-text: #9AD9AE;
+  --err-line: #7A3434;
+  --err-bg: #2E1818;
+  --err-text: #F0A9A9;
+  --overlay: rgba(0, 0, 0, 0.6);
+}
+
+/* The Sales Report preview is the emailed HTML (inline light colours), so it stays a white
+   sheet of paper in dark mode: re-declare the light surface tokens on it. */
+:root[data-theme="dark"] .report-section {
+  color-scheme: light;
+  --bg-elevated: #FFFFFF; --bg-subtle: #F4F3EE; --bg-inset: #F8F7F2;
+  --border: #E8E5DC; --border-strong: #D4D0C2;
+  --text: #1A1A1A; --text-secondary: #555550; --text-muted: #8A8A82;
+  --green: #1F6B45; --row-total: #D9DCE1;
+  background: #FFFFFF; color: #1A1A1A;
+}
+
+/* Recharts' default tooltip box is hard-coded white. */
+.recharts-default-tooltip { background: var(--bg-elevated) !important; border-color: var(--border) !important; color: var(--text); }
+.recharts-tooltip-label { color: var(--text) !important; }
 
 /* ─── App Layout ─────────────────────────────────────────── */
 .app-layout {
@@ -720,7 +822,7 @@ body {
 
 .report-type-card.selected .report-type-icon-wrapper {
   background: var(--green);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .report-type-icon-svg {
@@ -1451,7 +1553,7 @@ body {
   border: 1px solid var(--blue);
   border-radius: var(--r-md);
   background: var(--blue);
-  color: #fff;
+  color: var(--on-accent);
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
@@ -2855,12 +2957,12 @@ body {
   padding: 10px 14px; border-radius: 8px; font-size: 13px;
   background: var(--bg-elevated); border: 1px solid var(--border); box-shadow: 0 4px 14px rgba(0,0,0,0.12);
 }
-.reebok-send-status.success { border-color: #63BE7B; background: #eefaf1; color: #14532d; }
-.reebok-send-status.error   { border-color: #F8696B; background: #fdeeee; color: #7a1212; }
+.reebok-send-status.success { border-color: var(--ok-line); background: var(--ok-bg); color: var(--ok-text); }
+.reebok-send-status.error   { border-color: var(--err-line); background: var(--err-bg); color: var(--err-text); }
 .reebok-send-status button { border: 0; background: transparent; cursor: pointer; color: inherit; display: inline-flex; padding: 0; }
 .reebok-send-status button svg { width: 15px; height: 15px; }
 .reebok-modal-backdrop {
-  position: fixed; inset: 0; z-index: 100; background: rgba(15,23,42,0.45);
+  position: fixed; inset: 0; z-index: 100; background: var(--overlay);
   display: flex; align-items: center; justify-content: center;
 }
 .reebok-modal {
@@ -2977,7 +3079,7 @@ body {
 .md-table th:first-child, .md-table td:first-child { text-align: left; }
 .md-table-compact td, .md-table-compact th { padding: 7px 10px; }
 .md-table tbody tr:nth-child(even):not(.md-total-row) td { background: var(--bg-inset); }
-.md-table .md-total-row td { background: #D9DCE1; font-weight: 700; border-bottom: 0; }
+.md-table .md-total-row td { background: var(--row-total); font-weight: 700; border-bottom: 0; }
 .md-table .md-warn-row td { background: var(--amber-soft); color: var(--text); }
 .md-table .md-delta { display: inline-flex; margin-top: 0; }
 
@@ -2995,14 +3097,14 @@ body {
 .md-metric-legend { display: flex; gap: var(--space-5); color: var(--text-muted); font-size: 11px; }
 .md-metric-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .md-metric-legend i { width: 10px; height: 10px; display: inline-block; border-radius: 2px; background: var(--green); }
-.md-metric-legend i.previous { background: #B4B2A8; }
+.md-metric-legend i.previous { background: var(--chart-previous); }
 .md-metric-store-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: var(--space-4); align-items: center; padding: var(--space-4) 0; border-top: 1px solid var(--border); }
 .md-metric-store-row > span { font-weight: 700; color: var(--text); }
 .md-metric-bars { display: flex; flex-direction: column; gap: 10px; }
 .md-metric-bar-row { display: grid; grid-template-columns: 70px minmax(0, 1fr) 90px; gap: 10px; align-items: center; font-size: 11px; color: var(--text-muted); }
 .md-metric-bar-row > div { height: 12px; background: var(--bg-subtle); border-radius: 3px; overflow: hidden; }
 .md-metric-bar-row i { display: block; height: 100%; min-width: 2px; border-radius: inherit; background: var(--green); }
-.md-metric-bar-row i.previous { background: #C9D3DE; }
+.md-metric-bar-row i.previous { background: var(--chart-previous-alt); }
 .md-metric-bar-row strong { padding: 2px 4px; border-radius: 3px; text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
 .md-metric-table td { vertical-align: top; }
 .md-metric-table td .md-metric-delta { display: flex; }
@@ -3049,8 +3151,8 @@ body {
 .md-seg button:disabled { color: var(--text-faint); cursor: not-allowed; }
 .md-vs { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
 .md-notice {
-  padding: 9px 14px; border-radius: var(--r-md); background: var(--amber-soft); border: 1px solid #E8D2A8;
-  color: #7A4B0E; font-size: 12.5px;
+  padding: 9px 14px; border-radius: var(--r-md); background: var(--amber-soft); border: 1px solid var(--notice-line);
+  color: var(--notice-text); font-size: 12.5px;
 }
 
 /* ─── Merchandiser Dashboard (mx-*; builds on md-* and app tokens) ────────── */
@@ -3109,7 +3211,7 @@ body {
 .mx-pager span { margin-right: auto; }
 
 /* Barcode drawer */
-.mx-overlay { position: fixed; inset: 0; z-index: 90; display: flex; justify-content: flex-end; background: rgba(26, 26, 26, 0.32); }
+.mx-overlay { position: fixed; inset: 0; z-index: 90; display: flex; justify-content: flex-end; background: var(--overlay); }
 .mx-drawer { width: min(720px, 100vw); height: 100%; overflow-y: auto; border-radius: 0; border-width: 0 0 0 1px; }
 .mx-drawer-head { display: flex; align-items: flex-start; gap: var(--space-3); margin-bottom: var(--space-4); }
 .mx-drawer-head h2 { margin: 4px 0 2px; font-size: 18px; font-weight: 700; color: var(--text); }
@@ -3128,3 +3230,26 @@ body {
   .mx-hbar-row { grid-template-columns: 80px minmax(0, 1fr) 84px; }
   .mx-hbar-row em { display: none; }
 }
+
+/* ─── P&L Tracker / Import (pn-*; builds on md-* / mx-*) ─────────────────── */
+.pn-pos { color: var(--positive) !important; }
+.pn-neg { color: var(--negative) !important; }
+.pn-months { flex-wrap: wrap; }
+.pn-updated { margin: 0; }
+.pn-tip { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--r-md); font-size: 12px; color: var(--text); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12); }
+.pn-tip span { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.pn-exp-row { grid-template-columns: 150px minmax(0, 1fr) 100px; }
+.pn-exp-total { padding-top: 8px; border-top: 1px solid var(--border); font-weight: 700; color: var(--text); }
+.pn-row-strong td { font-weight: 700; }
+.md-table th.pn-col-sel { color: var(--green); }
+.md-table td.pn-indent { padding-left: 26px; color: var(--text-secondary); }
+.pn-drop { display: flex; align-items: center; gap: var(--space-4); border-style: dashed; border-width: 2px; }
+.pn-drop > svg { width: 28px; height: 28px; color: var(--green); flex: none; }
+.pn-drop > div { flex: 1; min-width: 0; }
+.pn-drop .md-note { margin: 4px 0 0; }
+.pn-warn { display: flex; gap: var(--space-3); margin-bottom: var(--space-4); }
+.pn-warn > svg { width: 16px; height: 16px; flex: none; margin-top: 2px; }
+.pn-warn ul { margin: 4px 0 0 16px; }
+.pn-result { display: flex; align-items: center; gap: 8px; margin-bottom: var(--space-4); padding: 9px 14px; border: 1px solid; border-radius: var(--r-md); font-size: 12.5px; }
+.pn-result svg { width: 16px; height: 16px; flex: none; }
+@media (max-width: 640px) { .pn-drop { flex-direction: column; align-items: flex-start; } .pn-exp-row { grid-template-columns: 110px minmax(0, 1fr) 84px; } }

@@ -13,7 +13,7 @@ import {
   formatINR, formatINRFull, formatNumber, formatPercent,
 } from '@/lib/masterDashboardShared';
 
-const UNCLASSIFIED_COLOR = '#8A8A82';
+const UNCLASSIFIED_COLOR = 'var(--chart-neutral)';
 
 function formatBy(kind, value, compact = false) {
   if (value === null || value === undefined || Number.isNaN(value)) return '-';
@@ -220,16 +220,16 @@ export function WeeklyCard({ weeks, hasComparison, compareLabel = 'last month', 
                   formatter={(value, name) => [formatINRFull(value), name === 'cur' ? 'This period' : cap(compareLabel)]}
                   labelFormatter={(label, payload) => `${label} (${payload && payload[0] ? payload[0].payload.sub : ''})`}
                   contentStyle={{ borderRadius: 6, border: `1px solid ${CHART_COLORS.grid}`, fontSize: 12 }}
-                  cursor={{ fill: 'rgba(0,0,0,0.04)' }}
+                  cursor={{ fill: 'var(--text-muted)', fillOpacity: 0.08 }}
                 />
-                {hasComparison && <Bar dataKey="prev" fill="#B4B2A8" radius={[3, 3, 0, 0]} isAnimationActive={false} />}
+                {hasComparison && <Bar dataKey="prev" fill="var(--chart-previous)" radius={[3, 3, 0, 0]} isAnimationActive={false} />}
                 <Bar dataKey="cur" fill={CHART_COLORS.green} radius={[3, 3, 0, 0]} isAnimationActive={false} />
               </BarChart>
             </ResponsiveContainer>
           </div>
           <div className="md-legend">
             <span><i className="md-dot" style={{ background: CHART_COLORS.green }} />This period</span>
-            {hasComparison && <span><i className="md-dot" style={{ background: '#B4B2A8' }} />{compareLabel === 'last month' ? 'Same days last month' : cap(compareLabel)}</span>}
+            {hasComparison && <span><i className="md-dot" style={{ background: 'var(--chart-previous)' }} />{compareLabel === 'last month' ? 'Same days last month' : cap(compareLabel)}</span>}
           </div>
         </>
       ) : <Empty>No sales in the selected range.</Empty>}

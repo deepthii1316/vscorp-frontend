@@ -15,6 +15,7 @@ import {
   Grid3x3,
   PieChart,
   FileSpreadsheet,
+  TrendingUp,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -28,6 +29,7 @@ const navItems = [
     items: [
       { href: '/master-dashboard', label: 'Master Dashboard', icon: LayoutDashboard, roles: ['admin'] },
       { href: '/merchandiser-dashboard', label: 'Merchandiser', icon: Boxes, roles: ['admin'] },
+      { href: '/pnl-tracker', label: 'P&L Tracker', icon: TrendingUp, roles: ['admin'] },
       { href: '/assets', label: 'Assets', icon: Box, disabled: true, roles: ['admin'] },
     ],
   },
@@ -37,6 +39,7 @@ const navItems = [
       { href: '/upload',          label: 'Data Upload',    icon: UploadCloud, roles: ['admin'] },
       { href: '/upload-history',  label: 'Upload History', icon: History, roles: ['admin'] },
       { href: '/data-coverage',   label: 'Data Coverage',  icon: FileCheck, roles: ['admin'] },
+      { href: '/pnl-import',      label: 'Import P&L',     icon: FileSpreadsheet, roles: ['admin'] },
       { href: '/reebok-reports',  label: 'Sales Reports',  icon: FileSpreadsheet },
     ],
   },

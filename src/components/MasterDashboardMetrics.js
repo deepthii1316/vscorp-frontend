@@ -70,10 +70,8 @@ function relativeColor(value, dataset) {
   const min = Math.min(...values);
   const max = Math.max(...values);
   const ratio = max === min ? 0.5 : (value - min) / (max - min);
-  const lightGreen = [218, 242, 227];
-  const green = [31, 107, 69];
-  const rgb = lightGreen.map((channel, index) => Math.round(channel + (green[index] - channel) * ratio));
-  return `rgb(${rgb.join(', ')})`;
+  // Soft green -> brand green, from the theme tokens so it reads in light and dark mode.
+  return `color-mix(in srgb, var(--green) ${Math.round(ratio * 100)}%, var(--green-soft))`;
 }
 
 function Delta({ value, unavailableText, compareLabel = 'M2M' }) {

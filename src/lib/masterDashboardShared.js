@@ -139,12 +139,12 @@ export function change(cur, prev, kind = 'pct') {
 // ─── Payments ──────────────────────────────────────────────────────────────
 
 export const PAYMENT_MODES = [
-  { key: 'upi_amount',    label: 'UPI / QR',     color: '#1F6B45' },
-  { key: 'card_amount',   label: 'Card',         color: '#2563EB' },
-  { key: 'cash_amount',   label: 'Cash',         color: '#0D9488' },
-  { key: 'amex_amount',   label: 'AMEX',         color: '#C97A1D' },
-  { key: 'zomato_amount', label: 'Zomato',       color: '#B33A3A' },
-  { key: 'gv_amount',     label: 'Gift voucher', color: '#8A8A82' },
+  { key: 'upi_amount',    label: 'UPI / QR',     color: 'var(--chart-green)' },
+  { key: 'card_amount',   label: 'Card',         color: 'var(--chart-blue)' },
+  { key: 'cash_amount',   label: 'Cash',         color: 'var(--chart-teal)' },
+  { key: 'amex_amount',   label: 'AMEX',         color: 'var(--chart-amber)' },
+  { key: 'zomato_amount', label: 'Zomato',       color: 'var(--chart-rose)' },
+  { key: 'gv_amount',     label: 'Gift voucher', color: 'var(--chart-neutral)' },
 ];
 
 /** Sum the daily payment rows. total = sum of the six modes; shares are of that total. */
@@ -168,11 +168,12 @@ export function sumPayments(rows) {
 
 /** Fixed chart colours (same hues as the app tokens; literal hex so charts also render in screenshots). */
 export const CHART_COLORS = {
-  green: '#1F6B45', blue: '#2563EB', teal: '#0D9488', amber: '#C97A1D', rose: '#B33A3A',
-  grid: '#E8E5DC', axis: '#8A8A82', previous: '#8A8A82',
+  // CSS variables so charts follow the light / dark theme (values in globals.css).
+  green: 'var(--chart-green)', blue: 'var(--chart-blue)', teal: 'var(--chart-teal)', amber: 'var(--chart-amber)', rose: 'var(--chart-rose)',
+  grid: 'var(--border)', axis: 'var(--text-muted)', previous: 'var(--chart-neutral)',
 };
 export const DIVISION_LIST = ['Footwear', 'Apparel', 'Accessories'];
-export const DIVISION_COLORS = { Footwear: '#1F6B45', Apparel: '#2563EB', Accessories: '#C97A1D' };
+export const DIVISION_COLORS = { Footwear: 'var(--chart-green)', Apparel: 'var(--chart-blue)', Accessories: 'var(--chart-amber)' };
 
 export const TREND_METRICS = [
   { key: 'nsv',    label: 'NSV',      kind: 'inr' },
