@@ -21,7 +21,6 @@ import RequireAuth from '@/components/RequireAuth';
 import { SkeletonCard } from '@/components/Skeleton';
 import { hashFile } from '@/lib/hashFile';
 import { generateFileName } from '@/lib/fileRename';
-import { createBrowserClient } from '@/lib/supabase';
 import { apiFetch } from '@/lib/api';
 
 const PIPELINE_STEPS = [
@@ -129,17 +128,10 @@ function UploadPageContent() {
   const loadRecentUploads = async (showLoading = true) => {
     try {
       if (showLoading) setUploadsLoading(true);
-      const supabase = createBrowserClient();
-      const { data, error } = await supabase
-        .from('upload_audit_log')
-        .select('*')
-        .order('uploaded_at', { ascending: false });
-
-      if (error) {
-        setUploads([]);
-      } else {
-        setUploads(data || []);
-      }
+      // Read through the server: upload_audit_log has RLS on and no browser read policy.
+      const res = await apiFetch('/api/upload-history');
+      const json = await res.json();
+      setUploads(res.ok ? json.uploads || [] : []);
     } catch {
       setUploads([]);
     } finally {
@@ -165,12 +157,8 @@ function UploadPageContent() {
       const hash = await hashFile(selectedFile);
       setSha256(hash);
 
-      const supabase = createBrowserClient();
-      const { data } = await supabase
-        .from('upload_audit_log')
-        .select('*')
-        .eq('file_sha256', hash)
-        .single();
+      const res = await apiFetch(`/api/upload-history?sha256=${encodeURIComponent(hash)}`);
+      const { duplicate: data } = res.ok ? await res.json() : {};
 
       if (data) {
         setIsDuplicate(true);
