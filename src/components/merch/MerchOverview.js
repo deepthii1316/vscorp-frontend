@@ -15,10 +15,10 @@ function stCls(v, stock) {
   return '';
 }
 
-function Row({ node, expanded, onToggle, valueKey, total }) {
+function Row({ node, expanded, onToggle, total }) {
   const hasKids = node.children.length > 0;
   const open = expanded.has(node.path);
-  const value = valueOf(node, valueKey);
+  const value = valueOf(node);
   const share = total > 0 ? (value / total) * 100 : 0;
   return (
     <>
@@ -45,22 +45,22 @@ function Row({ node, expanded, onToggle, valueKey, total }) {
         <td>{formatDays(node.cover)}</td>
       </tr>
       {open && node.children.map((c) => (
-        <Row key={c.path} node={c} expanded={expanded} onToggle={onToggle} valueKey={valueKey} total={total} />
+        <Row key={c.path} node={c} expanded={expanded} onToggle={onToggle} total={total} />
       ))}
     </>
   );
 }
 
-export default function MerchOverview({ rows, summary, rateDays, valueKey, asOfLabel }) {
+export default function MerchOverview({ rows, summary, rateDays, asOfLabel }) {
   const [expanded, setExpanded] = useState(() => new Set());
-  const tree = useMemo(() => categoryTree(rows, null, rateDays, valueKey), [rows, rateDays, valueKey]);
+  const tree = useMemo(() => categoryTree(rows, null, rateDays), [rows, rateDays]);
   const onToggle = (path) => setExpanded((prev) => {
     const next = new Set(prev);
     next.has(path) ? next.delete(path) : next.add(path);
     return next;
   });
-  const total = valueOf(summary, valueKey);
-  const valueName = valueKey === 'cost' ? 'Stock value (cost)' : 'Stock value (MRP)';
+  const total = valueOf(summary);
+  const valueName = 'Stock value (MRP)';
 
   const doExport = () => {
     const flat = [];
@@ -69,7 +69,7 @@ export default function MerchOverview({ rows, summary, rateDays, valueKey, asOfL
       if (n.depth === 3) {
         flat.push({
           Division: path[0], Department: path[1], Section: path[2], 'Article type': path[3],
-          'Stock qty': n.stockQty, 'Stock value (MRP)': Math.round(n.mrpValue), 'Stock value (cost)': Math.round(n.costValue),
+          'Stock qty': n.stockQty, 'Stock value (MRP)': Math.round(n.mrpValue),
           'Sales qty MTD': n.qtyMtd, 'NSV MTD': Math.round(n.nsvMtd), 'Sales qty 30d': n.qty30,
           'Sell-through 30d %': n.sellThrough == null ? null : +n.sellThrough.toFixed(1),
           'Cover (days)': n.cover == null ? null : Math.round(n.cover),
@@ -79,7 +79,7 @@ export default function MerchOverview({ rows, summary, rateDays, valueKey, asOfL
     });
     walk(tree, []);
     exportSheets(`merchandiser-overview-${asOfLabel}.xlsx`, [
-      { name: 'By Division', rows: tree.map((n) => ({ Division: n.label, 'Stock qty': n.stockQty, 'Stock value (MRP)': Math.round(n.mrpValue), 'Stock value (cost)': Math.round(n.costValue), 'Sales qty MTD': n.qtyMtd, 'NSV MTD': Math.round(n.nsvMtd), 'Sales qty 30d': n.qty30, 'Sell-through 30d %': n.sellThrough == null ? null : +n.sellThrough.toFixed(1), 'Cover (days)': n.cover == null ? null : Math.round(n.cover) })) },
+      { name: 'By Division', rows: tree.map((n) => ({ Division: n.label, 'Stock qty': n.stockQty, 'Stock value (MRP)': Math.round(n.mrpValue), 'Sales qty MTD': n.qtyMtd, 'NSV MTD': Math.round(n.nsvMtd), 'Sales qty 30d': n.qty30, 'Sell-through 30d %': n.sellThrough == null ? null : +n.sellThrough.toFixed(1), 'Cover (days)': n.cover == null ? null : Math.round(n.cover) })) },
       { name: 'Detail', rows: flat },
     ]);
   };
@@ -88,8 +88,7 @@ export default function MerchOverview({ rows, summary, rateDays, valueKey, asOfL
     <>
       <div className="md-kpis">
         <Kpi label="Stock units" icon={Package} value={formatNumber(summary.stockQty)} foot={`${formatNumber(summary.stockLines)} barcodes in stock`} />
-        <Kpi label={valueName} icon={IndianRupee} value={formatINRFull(total)}
-          foot={valueKey === 'cost' ? `MRP ${formatINRFull(summary.mrpValue)}` : `Cost ${formatINRFull(summary.costValue)}`} />
+        <Kpi label={valueName} icon={IndianRupee} value={formatINRFull(total)} foot="Stock qty × MRP" />
         <Kpi label="Sales units MTD" icon={ShoppingBag} value={formatNumber(summary.qtyMtd)} foot={`${formatNumber(summary.qty30)} in last 30 days`} />
         <Kpi label="NSV MTD" icon={Receipt} value={formatINRFull(summary.nsvMtd)} foot="Taxable amount" />
         <Kpi label="Sell-through 30d" icon={Percent} value={formatPercent(summary.sellThrough)} foot="Sold ÷ (sold + on hand)"
@@ -116,7 +115,7 @@ export default function MerchOverview({ rows, summary, rateDays, valueKey, asOfL
                 </tr>
               </thead>
               <tbody>
-                {tree.map((n) => <Row key={n.path} node={n} expanded={expanded} onToggle={onToggle} valueKey={valueKey} total={total} />)}
+                {tree.map((n) => <Row key={n.path} node={n} expanded={expanded} onToggle={onToggle} total={total} />)}
                 <tr className="md-total-row">
                   <td>Total</td>
                   <td>{formatNumber(summary.stockQty)}</td>

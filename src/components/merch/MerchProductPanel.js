@@ -68,7 +68,6 @@ export default function MerchProductPanel({ barcode, row, thresholds, rateDays, 
             <Fact label="Stock now" value={formatNumber(row.stock_qty)} />
             <Fact label="MRP" value={row.mrp ? formatINRFull(row.mrp) : '—'} />
             <Fact label="Stock value (MRP)" value={formatINRFull(row.stock_mrp_value)} />
-            <Fact label="Stock value (cost)" value={formatINRFull(row.stock_cost_value)} />
             <Fact label="Last inward" value={shortDate(row.last_inward_date)} />
             <Fact label="Age" value={formatDays(row.age_days)} title="Days since the last inward" />
             <Fact label="Last sale" value={row.last_sale_date ? shortDate(row.last_sale_date) : 'Never'} />

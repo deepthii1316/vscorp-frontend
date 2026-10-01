@@ -41,7 +41,6 @@ function MerchandiserDashboard() {
   const [error, setError] = useState(null);
   const [tab, setTab] = useState('overview');
   const [filter, setFilter] = useState(EMPTY_FILTER);
-  const [valueKey, setValueKey] = useState('mrp');
   const [thresholds, setThresholds] = useState(DEFAULT_THRESHOLDS);
   const [scan, setScan] = useState('');
   const [lookup, setLookup] = useState(null);
@@ -89,7 +88,7 @@ function MerchandiserDashboard() {
   };
 
   const asOfLabel = data?.asOf || 'latest';
-  const common = { rows, rateDays: data?.rateDays || 0, valueKey, asOfLabel };
+  const common = { rows, rateDays: data?.rateDays || 0, asOfLabel };
 
   return (
     <div className="md-page">
@@ -127,13 +126,6 @@ function MerchandiserDashboard() {
             </label>
           ))}
           {isFiltered && <button type="button" className="reebok-btn secondary mx-btn-sm" onClick={() => setFilter(EMPTY_FILTER)}>Clear</button>}
-        </div>
-        <div className="md-filter-group">
-          <span className="md-label">Stock value</span>
-          <div className="md-seg" role="group" aria-label="Stock value basis">
-            <button type="button" className={valueKey === 'mrp' ? 'active' : ''} onClick={() => setValueKey('mrp')}>MRP</button>
-            <button type="button" className={valueKey === 'cost' ? 'active' : ''} onClick={() => setValueKey('cost')}>Cost</button>
-          </div>
         </div>
       </div>
 

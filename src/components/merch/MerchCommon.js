@@ -34,13 +34,13 @@ export function CardHead({ icon: Icon, title, children }) {
  * Stacked bar of the four health buckets for one row. Segments are separated by a 2px gap;
  * each has a hover tooltip (bucket, value, share) so colour is never the only carrier.
  */
-export function MixBar({ buckets, valueKey, total, height = 10 }) {
+export function MixBar({ buckets, total, height = 10 }) {
   if (!(total > 0)) return <div className="mx-mix mx-mix-empty" style={{ height }} />;
   return (
     <div className="mx-mix" style={{ height }} role="img"
-      aria-label={BUCKETS.map((b) => `${b.label} ${formatPercent((bucketValueOf(buckets[b.key], valueKey) / total) * 100)}`).join(', ')}>
+      aria-label={BUCKETS.map((b) => `${b.label} ${formatPercent((bucketValueOf(buckets[b.key]) / total) * 100)}`).join(', ')}>
       {BUCKETS.map((b) => {
-        const v = bucketValueOf(buckets[b.key], valueKey);
+        const v = bucketValueOf(buckets[b.key]);
         if (!(v > 0)) return null;
         const pct = (v / total) * 100;
         return (

@@ -17,13 +17,13 @@ export function clampThresholds(t) {
   return { slow, risk, dead };
 }
 
-// Status colours, validated with the dataviz palette checker (CVD + normal-vision separation pass;
-// Slow's yellow is low-contrast on white, so every use is paired with a text label or a table).
+// Status colours (CSS variables, light/dark values in globals.css), validated with the dataviz palette
+// checker. Slow's yellow is low-contrast on white, so every use is paired with a text label or a table.
 export const BUCKETS = [
-  { key: 'healthy', label: 'Healthy', color: '#2E9958' },
-  { key: 'slow',    label: 'Slow',    color: '#DBA820' },
-  { key: 'risk',    label: 'At Risk', color: '#D65A2A' },
-  { key: 'dead',    label: 'Dead',    color: '#962538' },
+  { key: 'healthy', label: 'Healthy', color: 'var(--bucket-healthy)' },
+  { key: 'slow',    label: 'Slow',    color: 'var(--bucket-slow)' },
+  { key: 'risk',    label: 'At Risk', color: 'var(--bucket-risk)' },
+  { key: 'dead',    label: 'Dead',    color: 'var(--bucket-dead)' },
 ];
 export const BUCKET_BY_KEY = Object.fromEntries(BUCKETS.map((b) => [b.key, b]));
 
@@ -123,9 +123,9 @@ export function filterOptions(rows, f) {
 // ─── Aggregation ───────────────────────────────────────────────────────────
 function emptyAgg() {
   return {
-    lines: 0, stockLines: 0, stockQty: 0, mrpValue: 0, costValue: 0,
+    lines: 0, stockLines: 0, stockQty: 0, mrpValue: 0,
     qty30: 0, nsv30: 0, qtyMtd: 0, nsvMtd: 0, qtyRate: 0, ageQty: 0, ageUnits: 0,
-    buckets: Object.fromEntries(BUCKETS.map((b) => [b.key, { qty: 0, mrp: 0, cost: 0, lines: 0 }])),
+    buckets: Object.fromEntries(BUCKETS.map((b) => [b.key, { qty: 0, mrp: 0, lines: 0 }])),
   };
 }
 
@@ -134,7 +134,6 @@ function addRow(a, r, t) {
   if (r.stock_qty > 0) a.stockLines += 1;
   a.stockQty += r.stock_qty;
   a.mrpValue += r.stock_mrp_value;
-  a.costValue += r.stock_cost_value;
   a.qty30 += r.sales_qty_30d;
   a.nsv30 += r.nsv_30d;
   a.qtyMtd += r.sales_qty_mtd;
@@ -144,7 +143,7 @@ function addRow(a, r, t) {
   const b = t ? bucketOf(r, t) : null;
   if (b) {
     const s = a.buckets[b];
-    s.qty += r.stock_qty; s.mrp += r.stock_mrp_value; s.cost += r.stock_cost_value; s.lines += 1;
+    s.qty += r.stock_qty; s.mrp += r.stock_mrp_value; s.lines += 1;
   }
   return a;
 }
@@ -161,15 +160,15 @@ export function summarize(rows, t, rateDays) {
   return finish(rows.reduce((a, r) => addRow(a, r, t), emptyAgg()), rateDays);
 }
 
-/** valueKey: 'mrp' | 'cost' — which stock value the page shows. */
-export const valueOf = (a, valueKey) => (valueKey === 'cost' ? a.costValue : a.mrpValue);
-export const bucketValueOf = (b, valueKey) => (valueKey === 'cost' ? b.cost : b.mrp);
+// Stock value is always MRP value (qty x MRP), the basis every Virata report uses; cost is not shown.
+export const valueOf = (a) => a.mrpValue;
+export const bucketValueOf = (b) => b.mrp;
 
 /**
  * Division › Department › Section › Article type tree. Siblings sorted by stock value (desc).
  * Each node: { path, label, depth, children, ...aggregate }.
  */
-export function categoryTree(rows, t, rateDays, valueKey = 'mrp') {
+export function categoryTree(rows, t, rateDays) {
   const levels = LEVELS.map((l) => l.key);
   const build = (subset, depth, prefix) => {
     if (depth >= levels.length) return [];
@@ -190,19 +189,19 @@ export function categoryTree(rows, t, rateDays, valueKey = 'mrp') {
         children: build(g, depth + 1, path),
       };
     });
-    return nodes.sort((x, y) => valueOf(y, valueKey) - valueOf(x, valueKey) || y.stockQty - x.stockQty);
+    return nodes.sort((x, y) => valueOf(y) - valueOf(x) || y.stockQty - x.stockQty);
   };
   return build(rows, 0, '');
 }
 
 /** Age profile: stock qty / value per age band. */
 export function ageProfile(rows) {
-  const bands = [...AGE_BANDS, { key: 'unknown', label: 'Unknown' }].map((b) => ({ ...b, qty: 0, mrp: 0, cost: 0 }));
+  const bands = [...AGE_BANDS, { key: 'unknown', label: 'Unknown' }].map((b) => ({ ...b, qty: 0, mrp: 0 }));
   const byKey = Object.fromEntries(bands.map((b) => [b.key, b]));
   rows.forEach((r) => {
     if (!(r.stock_qty > 0)) return;
     const b = byKey[ageBandOf(r.age_days)];
-    b.qty += r.stock_qty; b.mrp += r.stock_mrp_value; b.cost += r.stock_cost_value;
+    b.qty += r.stock_qty; b.mrp += r.stock_mrp_value;
   });
   return bands.filter((b) => b.key !== 'unknown' || b.qty > 0);
 }

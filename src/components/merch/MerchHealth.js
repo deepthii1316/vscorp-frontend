@@ -18,11 +18,11 @@ function deadCls(pct) {
   return '';
 }
 
-function Row({ node, expanded, onToggle, valueKey }) {
+function Row({ node, expanded, onToggle }) {
   const hasKids = node.children.length > 0;
   const open = expanded.has(node.path);
-  const total = valueOf(node, valueKey);
-  const deadPct = total > 0 ? (bucketValueOf(node.buckets.dead, valueKey) / total) * 100 : null;
+  const total = valueOf(node);
+  const deadPct = total > 0 ? (bucketValueOf(node.buckets.dead) / total) * 100 : null;
   return (
     <>
       <tr className={`md-drill-row${hasKids ? ' has-children' : ''}`} data-depth={Math.min(node.depth, 3)}
@@ -35,20 +35,20 @@ function Row({ node, expanded, onToggle, valueKey }) {
         </td>
         <td>{formatNumber(node.stockQty)}</td>
         <td>{formatINRFull(total)}</td>
-        <td className="mx-mix-cell"><MixBar buckets={node.buckets} valueKey={valueKey} total={total} /></td>
-        {BUCKETS.map((b) => <td key={b.key}>{formatINRFull(bucketValueOf(node.buckets[b.key], valueKey))}</td>)}
+        <td className="mx-mix-cell"><MixBar buckets={node.buckets} total={total} /></td>
+        {BUCKETS.map((b) => <td key={b.key}>{formatINRFull(bucketValueOf(node.buckets[b.key]))}</td>)}
         <td className={deadCls(deadPct)}>{formatPercent(deadPct)}</td>
         <td>{formatDays(node.avgAge)}</td>
       </tr>
-      {open && node.children.map((c) => <Row key={c.path} node={c} expanded={expanded} onToggle={onToggle} valueKey={valueKey} />)}
+      {open && node.children.map((c) => <Row key={c.path} node={c} expanded={expanded} onToggle={onToggle} />)}
     </>
   );
 }
 
-export default function MerchHealth({ rows, summary, rateDays, valueKey, thresholds, onThresholds, asOfLabel }) {
+export default function MerchHealth({ rows, summary, rateDays, thresholds, onThresholds, asOfLabel }) {
   const [expanded, setExpanded] = useState(() => new Set());
   const stockRows = useMemo(() => rows.filter((r) => r.stock_qty > 0), [rows]);
-  const tree = useMemo(() => categoryTree(stockRows, thresholds, rateDays, valueKey), [stockRows, thresholds, rateDays, valueKey]);
+  const tree = useMemo(() => categoryTree(stockRows, thresholds, rateDays), [stockRows, thresholds, rateDays]);
   const ages = useMemo(() => ageProfile(stockRows), [stockRows]);
   const onToggle = (path) => setExpanded((prev) => {
     const next = new Set(prev);
@@ -56,16 +56,16 @@ export default function MerchHealth({ rows, summary, rateDays, valueKey, thresho
     return next;
   });
 
-  const total = valueOf(summary, valueKey);
-  const ageMax = Math.max(1, ...ages.map((a) => (valueKey === 'cost' ? a.cost : a.mrp)));
-  const valueName = valueKey === 'cost' ? 'cost' : 'MRP';
+  const total = valueOf(summary);
+  const ageMax = Math.max(1, ...ages.map((a) => a.mrp));
+  const valueName = 'MRP';
 
   const doExport = () => {
     const flat = [];
     const walk = (nodes, names) => nodes.forEach((n) => {
       const path = [...names, n.label];
-      const row = { Level: ['Division', 'Department', 'Section', 'Article type'][n.depth], Category: path.join(' › '), 'Stock qty': n.stockQty, [`Stock value (${valueName})`]: Math.round(valueOf(n, valueKey)) };
-      BUCKETS.forEach((b) => { row[`${b.label} value`] = Math.round(bucketValueOf(n.buckets[b.key], valueKey)); row[`${b.label} qty`] = n.buckets[b.key].qty; });
+      const row = { Level: ['Division', 'Department', 'Section', 'Article type'][n.depth], Category: path.join(' › '), 'Stock qty': n.stockQty, [`Stock value (${valueName})`]: Math.round(valueOf(n)) };
+      BUCKETS.forEach((b) => { row[`${b.label} value`] = Math.round(bucketValueOf(n.buckets[b.key])); row[`${b.label} qty`] = n.buckets[b.key].qty; });
       row['Avg age (days)'] = n.avgAge == null ? null : Math.round(n.avgAge);
       flat.push(row);
       walk(n.children, path);
@@ -73,7 +73,7 @@ export default function MerchHealth({ rows, summary, rateDays, valueKey, thresho
     walk(tree, []);
     exportSheets(`merchandiser-health-${asOfLabel}.xlsx`, [
       { name: 'By Category', rows: flat },
-      { name: 'Age Profile', rows: ages.map((a) => ({ Age: a.label, 'Stock qty': a.qty, 'Value (MRP)': Math.round(a.mrp), 'Value (cost)': Math.round(a.cost) })) },
+      { name: 'Age Profile', rows: ages.map((a) => ({ Age: a.label, 'Stock qty': a.qty, 'Value (MRP)': Math.round(a.mrp) })) },
       { name: 'Thresholds', rows: BUCKETS.map((b) => ({ Bucket: b.label, Rule: bucketRange(b.key, thresholds) })) },
     ]);
   };
@@ -88,7 +88,7 @@ export default function MerchHealth({ rows, summary, rateDays, valueKey, thresho
       <div className="mx-buckets">
         {BUCKETS.map((b) => {
           const s = summary.buckets[b.key];
-          const v = bucketValueOf(s, valueKey);
+          const v = bucketValueOf(s);
           return (
             <div key={b.key} className="card md-kpi mx-bucket" style={{ borderTopColor: b.color }}>
               <div className="md-kpi-top"><span className="md-label">{b.label}</span><span className="mx-bucket-rule">{bucketRange(b.key, thresholds)}</span></div>
@@ -102,14 +102,14 @@ export default function MerchHealth({ rows, summary, rateDays, valueKey, thresho
       <div className="md-row md-row-even">
         <div className="card">
           <CardHead icon={HeartPulse} title="Health mix" />
-          <MixBar buckets={summary.buckets} valueKey={valueKey} total={total} height={18} />
+          <MixBar buckets={summary.buckets} total={total} height={18} />
           <MixLegend />
           <table className="md-table md-table-compact mx-mt">
             <thead><tr><th>Bucket</th><th>Units</th><th>Value ({valueName})</th><th>Share</th></tr></thead>
             <tbody>
               {BUCKETS.map((b) => {
                 const s = summary.buckets[b.key];
-                const v = bucketValueOf(s, valueKey);
+                const v = bucketValueOf(s);
                 return (
                   <tr key={b.key}>
                     <td><span className="md-dot" style={{ background: b.color }} />{b.label}</td>
@@ -126,7 +126,7 @@ export default function MerchHealth({ rows, summary, rateDays, valueKey, thresho
           <p className="md-note">Days since the last inward. Average age {formatDays(summary.avgAge)} (unit-weighted).</p>
           <div className="mx-hbars">
             {ages.map((a) => {
-              const v = valueKey === 'cost' ? a.cost : a.mrp;
+              const v = a.mrp;
               return (
                 <div key={a.key} className="mx-hbar-row" title={`${a.label}: ${formatNumber(a.qty)} units, ${formatINRFull(v)}`}>
                   <span>{a.label}</span>
@@ -159,7 +159,7 @@ export default function MerchHealth({ rows, summary, rateDays, valueKey, thresho
                 </tr>
               </thead>
               <tbody>
-                {tree.map((n) => <Row key={n.path} node={n} expanded={expanded} onToggle={onToggle} valueKey={valueKey} />)}
+                {tree.map((n) => <Row key={n.path} node={n} expanded={expanded} onToggle={onToggle} />)}
               </tbody>
             </table>
           </div>

@@ -11,15 +11,15 @@ import { formatINRFull, formatNumber } from '@/lib/masterDashboardShared';
 
 const PAGE = 50;
 
-export default function MerchDeadStock({ rows, valueKey, thresholds, onThresholds, onLookup, asOfLabel }) {
+export default function MerchDeadStock({ rows, thresholds, onThresholds, onLookup, asOfLabel }) {
   const [scope, setScope] = useState('dead');          // 'dead' | 'risk' (= At Risk + Dead)
   const [q, setQ] = useState('');
   const [sort, setSort] = useState({ key: 'value', dir: 'desc' });
   const [page, setPage] = useState(0);
 
   const list = useMemo(() => rows
-    .map((r) => ({ ...r, bucket: bucketOf(r, thresholds), name: cleanName(r.article_name, r.size), value: valueKey === 'cost' ? r.stock_cost_value : r.stock_mrp_value }))
-    .filter((r) => r.bucket === 'dead' || (scope === 'risk' && r.bucket === 'risk')), [rows, thresholds, scope, valueKey]);
+    .map((r) => ({ ...r, bucket: bucketOf(r, thresholds), name: cleanName(r.article_name, r.size), value: r.stock_mrp_value }))
+    .filter((r) => r.bucket === 'dead' || (scope === 'risk' && r.bucket === 'risk')), [rows, thresholds, scope]);
 
   const filtered = useMemo(() => {
     const s = q.trim().toUpperCase();
@@ -27,7 +27,7 @@ export default function MerchDeadStock({ rows, valueKey, thresholds, onThreshold
     return sortRows(hits, sort);
   }, [list, q, sort]);
 
-  useEffect(() => { setPage(0); }, [q, sort, scope, thresholds, rows, valueKey]);
+  useEffect(() => { setPage(0); }, [q, sort, scope, thresholds, rows]);
 
   const totals = filtered.reduce((t, r) => ({ qty: t.qty + r.stock_qty, value: t.value + r.value }), { qty: 0, value: 0 });
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE));
@@ -40,14 +40,14 @@ export default function MerchDeadStock({ rows, valueKey, thresholds, onThreshold
       Barcode: r.barcode, Article: r.name, 'Style code': r.style_code, Size: r.size,
       Division: divisionLabel(r.division), Department: r.department, Section: r.section, 'Article type': r.article_type,
       Bucket: BUCKET_BY_KEY[r.bucket].label, 'Stock qty': r.stock_qty, MRP: r.mrp,
-      'Stock value (MRP)': Math.round(r.stock_mrp_value), 'Stock value (cost)': Math.round(r.stock_cost_value),
+      'Stock value (MRP)': Math.round(r.stock_mrp_value),
       'Last inward': r.last_inward_date, 'Age (days)': r.age_days, 'Last sale': r.last_sale_date || 'Never', 'Idle (days)': r.idle_days,
     }));
     const byType = new Map();
     filtered.forEach((r) => {
       const k = `${divisionLabel(r.division)} › ${r.department} › ${r.article_type}`;
-      const t = byType.get(k) || { Category: k, Barcodes: 0, 'Stock qty': 0, 'Value (MRP)': 0, 'Value (cost)': 0 };
-      t.Barcodes += 1; t['Stock qty'] += r.stock_qty; t['Value (MRP)'] += Math.round(r.stock_mrp_value); t['Value (cost)'] += Math.round(r.stock_cost_value);
+      const t = byType.get(k) || { Category: k, Barcodes: 0, 'Stock qty': 0, 'Value (MRP)': 0 };
+      t.Barcodes += 1; t['Stock qty'] += r.stock_qty; t['Value (MRP)'] += Math.round(r.stock_mrp_value);
       byType.set(k, t);
     });
     exportSheets(`merchandiser-dead-stock-${asOfLabel}.xlsx`, [
@@ -76,7 +76,7 @@ export default function MerchDeadStock({ rows, valueKey, thresholds, onThreshold
             <input type="search" placeholder="Search barcode, article, style, type" value={q} onChange={(e) => setQ(e.target.value)} />
           </label>
           <span className="mx-list-total">
-            <strong>{formatNumber(filtered.length)}</strong> barcodes · <strong>{formatNumber(totals.qty)}</strong> units · <strong>{formatINRFull(totals.value)}</strong> {valueKey === 'cost' ? 'at cost' : 'at MRP'}
+            <strong>{formatNumber(filtered.length)}</strong> barcodes · <strong>{formatNumber(totals.qty)}</strong> units · <strong>{formatINRFull(totals.value)}</strong> at MRP
           </span>
         </div>
         {filtered.length === 0 ? (
@@ -88,7 +88,7 @@ export default function MerchDeadStock({ rows, valueKey, thresholds, onThreshold
                 <thead>
                   <tr>
                     {th('name', 'Article')}{th('barcode', 'Barcode')}<th>Size</th><th>Category</th>
-                    {th('stock_qty', 'Stock qty')}{th('value', valueKey === 'cost' ? 'Value (cost)' : 'Value (MRP)')}
+                    {th('stock_qty', 'Stock qty')}{th('value', 'Value (MRP)')}
                     {th('age_days', 'Age', 'Days since the last inward')}{th('last_sale_date', 'Last sale')}
                     {th('idle_days', 'Idle', 'Days since the later of last sale / last inward')}<th>Bucket</th>
                   </tr>
