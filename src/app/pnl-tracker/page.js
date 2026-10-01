@@ -1,73 +1,56 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Zap, Users, Building2, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Zap, Users, Building2, Calendar, Upload } from 'lucide-react';
+import Link from 'next/link';
+import {
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart
+} from 'recharts';
 import RequireAuth from '@/components/RequireAuth';
+import { apiFetch } from '@/lib/api';
 
-const PNL_DATA = {
-  store: {
-    name: 'REEBOK UPPAL',
-    code: '323865',
-    brand: 'Regular',
-    carpetSqft: 1200,
+// Static fallback data if database is empty
+const FALLBACK_DATA = [
+  {
+    period_month: '2026-07-01',
+    store_name: 'REEBOK UPPAL',
+    store_code: '323865',
+    gross_sale: 880354,
+    income_margin: 369748,
+    depreciation: 88842,
+    funds_cost: 83905,
+    opex_expenses: 822171,
+    operating_profit: -452423,
+    net_profit_opex_dep: -541265,
+    roi: -5.39,
   },
-  months: {
-    'Jul-2026': {
-      month: 'July 2026',
-      sale: 880354,
-      rent: 525000,
-      staffSalaries: 160519,
-      electricity: 48454,
-      telephone: 3536,
-      pettyCash: 75244,
-      houseKeeping: 5000,
-      staffIncentives: 0,
-      bankEDC: 3875,
-      bankUPI: 542,
-      incomeMargin: 369748,
-      depreciation: 88842,
-      fundsCost: 83905,
-      netProfitOpex: -452422,
-      roi: -5.39,
-    },
-    'Aug-2026': {
-      month: 'August 2026',
-      sale: 847984,
-      rent: 210000,
-      staffSalaries: 115906,
-      electricity: 41724,
-      telephone: 0,
-      pettyCash: 28400,
-      houseKeeping: 5000,
-      staffIncentives: 20650,
-      bankEDC: 6083,
-      bankUPI: 0,
-      incomeMargin: 356153,
-      depreciation: 88842,
-      fundsCost: 83905,
-      netProfitOpex: -71610,
-      roi: -0.85,
-    },
-    'Sep-2026': {
-      month: 'September 2026',
-      sale: 528254,
-      rent: 210000,
-      staffSalaries: 0,
-      electricity: 0,
-      telephone: 0,
-      pettyCash: 0,
-      houseKeeping: 5000,
-      staffIncentives: 0,
-      bankEDC: 0,
-      bankUPI: 0,
-      incomeMargin: 221867,
-      depreciation: 88842,
-      fundsCost: 83905,
-      netProfitOpex: 6867,
-      roi: 0.08,
-    },
+  {
+    period_month: '2026-08-01',
+    store_name: 'REEBOK UPPAL',
+    store_code: '323865',
+    gross_sale: 847984,
+    income_margin: 356153,
+    depreciation: 88842,
+    funds_cost: 83905,
+    opex_expenses: 427763,
+    operating_profit: -71610,
+    net_profit_opex_dep: -160452,
+    roi: -0.85,
   },
-};
+  {
+    period_month: '2026-09-01',
+    store_name: 'REEBOK UPPAL',
+    store_code: '323865',
+    gross_sale: 528254,
+    income_margin: 221867,
+    depreciation: 88842,
+    funds_cost: 83905,
+    opex_expenses: 215000,
+    operating_profit: 6867,
+    net_profit_opex_dep: -81975,
+    roi: 0.08,
+  },
+];
 
 function formatINR(value) {
   if (value === null || value === undefined) return '—';
@@ -102,106 +85,49 @@ function StatCard({ label, value, icon: Icon, trend, color = 'var(--green)' }) {
   );
 }
 
-function MonthPanel({ month, data }) {
-  const totalOpex = data.rent + data.staffSalaries + data.electricity + data.telephone +
-                   data.pettyCash + data.houseKeeping + data.staffIncentives +
-                   data.bankEDC + data.bankUPI;
-  const netProfitWithDep = data.netProfitOpex - data.depreciation;
-  const netProfitWithDepFunds = netProfitWithDep - data.fundsCost;
+function PNLTrackerInner() {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedMonthIdx, setSelectedMonthIdx] = useState(0);
 
-  return (
-    <div className="pnl-month-panel">
-      <div className="pnl-month-header">
-        <Calendar style={{ width: 18, height: 18 }} />
-        <h3>{data.month}</h3>
-      </div>
+  useEffect(() => {
+    fetchPnLData();
+  }, []);
 
-      <div className="pnl-metrics-grid">
-        <StatCard
-          label="Gross Sales"
-          value={formatINR(data.sale)}
-          icon={DollarSign}
-          color="var(--green)"
-        />
-        <StatCard
-          label="Income Margin"
-          value={formatINR(data.incomeMargin)}
-          icon={TrendingUp}
-          color="var(--blue)"
-        />
-        <StatCard
-          label="Total Opex"
-          value={formatINR(totalOpex)}
-          icon={Zap}
-          color="var(--amber)"
-        />
-        <StatCard
-          label="Operating Profit"
-          value={formatINR(data.incomeMargin - totalOpex)}
-          icon={DollarSign}
-          color={data.incomeMargin - totalOpex >= 0 ? 'var(--green)' : 'var(--rose)'}
-        />
-        <StatCard
-          label="Depreciation"
-          value={formatINR(data.depreciation)}
-          color="var(--text-muted)"
-        />
-        <StatCard
-          label="Funds Cost"
-          value={formatINR(data.fundsCost)}
-          color="var(--text-muted)"
-        />
-        <StatCard
-          label="Net Profit (Opex + Dep)"
-          value={formatINR(netProfitWithDep)}
-          color={netProfitWithDep >= 0 ? 'var(--green)' : 'var(--rose)'}
-        />
-        <StatCard
-          label="Net Profit (All Costs)"
-          value={formatINR(netProfitWithDepFunds)}
-          color={netProfitWithDepFunds >= 0 ? 'var(--green)' : 'var(--rose)'}
-        />
-        <StatCard
-          label="ROI"
-          value={formatPct(data.roi)}
-          trend={data.roi}
-          color="var(--text-muted)"
-        />
-      </div>
+  const fetchPnLData = async () => {
+    try {
+      const res = await apiFetch('/api/pnl/ingest');
+      if (!res.ok) throw new Error('Failed to fetch data');
+      const json = await res.json();
+      setData(json.data && json.data.length > 0 ? json.data : FALLBACK_DATA);
+    } catch (err) {
+      console.error('Error fetching P&L data:', err);
+      setData(FALLBACK_DATA);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      <div className="pnl-expense-breakdown">
-        <h4>Operating Expense Breakdown</h4>
-        <div className="pnl-expense-list">
-          {[
-            { label: 'Rent + CAM', value: data.rent },
-            { label: 'Staff Salaries', value: data.staffSalaries },
-            { label: 'Electricity Bill', value: data.electricity },
-            { label: 'Telephone & Internet', value: data.telephone },
-            { label: 'Petty Cash', value: data.pettyCash },
-            { label: 'House Keeping', value: data.houseKeeping },
-            { label: 'Staff Incentives', value: data.staffIncentives },
-            { label: 'Bank EDC Charges', value: data.bankEDC },
-            { label: 'Bank UPI Charges', value: data.bankUPI },
-          ].map((item, idx) => (
-            <div key={idx} className="pnl-expense-row">
-              <span className="pnl-expense-label">{item.label}</span>
-              <span className="pnl-expense-value">{formatINR(item.value)}</span>
-            </div>
-          ))}
-          <div className="pnl-expense-total">
-            <span>Total Operating Expenditure</span>
-            <span>{formatINR(totalOpex)}</span>
+  if (loading) {
+    return (
+      <div className="pnl-page-wrapper">
+        <div className="pnl-page-container">
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+            Loading P&L data...
           </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-function PNLTrackerInner() {
-  const [selectedMonth, setSelectedMonth] = useState('Jul-2026');
-  const months = Object.keys(PNL_DATA.months);
-  const currentData = PNL_DATA.months[selectedMonth];
+  const currentData = data[selectedMonthIdx];
+  const chartData = data.map((d) => ({
+    month: new Date(d.period_month).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }),
+    sales: d.gross_sale,
+    margin: d.income_margin,
+    profit: d.net_profit_opex_dep,
+    roi: d.roi,
+  }));
 
   return (
     <div className="pnl-page-wrapper">
@@ -211,92 +137,186 @@ function PNLTrackerInner() {
           <div>
             <h1 className="pnl-page-title">P&L Tracker</h1>
             <p className="pnl-page-subtitle">
-              {PNL_DATA.store.name} • Store {PNL_DATA.store.code}
+              {currentData?.store_name} • Store {data[0]?.store_code || '323865'}
             </p>
           </div>
-          <div className="pnl-store-info">
-            <div className="pnl-info-item">
-              <Building2 style={{ width: 16, height: 16 }} />
-              <span>1,200 sq.ft</span>
-            </div>
-            <div className="pnl-info-item">
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Regular Store</span>
-            </div>
+          <div className="pnl-header-actions">
+            <Link href="/pnl-import" className="pnl-btn-icon">
+              <Upload style={{ width: 16, height: 16 }} />
+              Import Data
+            </Link>
           </div>
         </div>
 
-        {/* Month Selector */}
+        {/* Month Filter */}
         <div className="pnl-month-selector">
-          {months.map((m) => (
+          {data.map((month, idx) => (
             <button
-              key={m}
-              className={`pnl-month-btn ${selectedMonth === m ? 'active' : ''}`}
-              onClick={() => setSelectedMonth(m)}
+              key={idx}
+              className={`pnl-month-btn ${selectedMonthIdx === idx ? 'active' : ''}`}
+              onClick={() => setSelectedMonthIdx(idx)}
             >
-              {PNL_DATA.months[m].month}
+              {new Date(month.period_month).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
             </button>
           ))}
         </div>
 
-        {/* Current Month Panel */}
-        {currentData && <MonthPanel month={selectedMonth} data={currentData} />}
+        {/* Charts Section */}
+        <div className="pnl-charts-section">
+          <div className="pnl-chart-card">
+            <h3>Revenue & Profit Trend</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: `1px solid var(--border)` }} />
+                <Legend />
+                <Bar dataKey="sales" fill="var(--green)" name="Gross Sales" />
+                <Line type="monotone" dataKey="profit" stroke="var(--blue)" name="Net Profit" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
 
-        {/* Comparison Summary */}
-        <div className="pnl-comparison-section">
-          <h2>Monthly Comparison</h2>
-          <div className="pnl-comparison-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Metric</th>
-                  {months.map((m) => (
-                    <th key={m}>{PNL_DATA.months[m].month}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Gross Sales</td>
-                  {months.map((m) => (
-                    <td key={m} className="pnl-table-value">{formatINR(PNL_DATA.months[m].sale)}</td>
-                  ))}
-                </tr>
-                <tr>
-                  <td>Total Opex</td>
-                  {months.map((m) => {
-                    const data = PNL_DATA.months[m];
-                    const total = data.rent + data.staffSalaries + data.electricity + data.telephone +
-                                data.pettyCash + data.houseKeeping + data.staffIncentives +
-                                data.bankEDC + data.bankUPI;
-                    return <td key={m} className="pnl-table-value">{formatINR(total)}</td>;
-                  })}
-                </tr>
-                <tr>
-                  <td>Income Margin</td>
-                  {months.map((m) => (
-                    <td key={m} className="pnl-table-value">{formatINR(PNL_DATA.months[m].incomeMargin)}</td>
-                  ))}
-                </tr>
-                <tr className="pnl-table-highlight">
-                  <td>Net Profit (Opex Only)</td>
-                  {months.map((m) => (
-                    <td key={m} className={`pnl-table-value ${PNL_DATA.months[m].netProfitOpex >= 0 ? 'positive' : 'negative'}`}>
-                      {formatINR(PNL_DATA.months[m].netProfitOpex)}
-                    </td>
-                  ))}
-                </tr>
-                <tr className="pnl-table-highlight">
-                  <td>ROI (%)</td>
-                  {months.map((m) => (
-                    <td key={m} className={`pnl-table-value ${PNL_DATA.months[m].roi >= 0 ? 'positive' : 'negative'}`}>
-                      {formatPct(PNL_DATA.months[m].roi)}
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
+          <div className="pnl-chart-card">
+            <h3>ROI Trend</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: `1px solid var(--border)` }} />
+                <Line
+                  type="monotone"
+                  dataKey="roi"
+                  stroke="var(--amber)"
+                  name="ROI %"
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </div>
+
+        {/* Current Month Details */}
+        {currentData && (
+          <>
+            <h2 style={{ marginTop: 'var(--space-8)', marginBottom: 'var(--space-5)', fontSize: 18, fontWeight: 600, color: 'var(--text)' }}>
+              {new Date(currentData.period_month).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })} Breakdown
+            </h2>
+
+            <div className="pnl-metrics-grid">
+              <StatCard
+                label="Gross Sales"
+                value={formatINR(currentData.gross_sale)}
+                icon={DollarSign}
+                color="var(--green)"
+              />
+              <StatCard
+                label="Income Margin"
+                value={formatINR(currentData.income_margin)}
+                icon={TrendingUp}
+                color="var(--blue)"
+              />
+              <StatCard
+                label="Total Opex"
+                value={formatINR(currentData.opex_expenses)}
+                icon={Zap}
+                color="var(--amber)"
+              />
+              <StatCard
+                label="Operating Profit"
+                value={formatINR(currentData.operating_profit)}
+                color={currentData.operating_profit >= 0 ? 'var(--green)' : 'var(--rose)'}
+              />
+              <StatCard
+                label="Depreciation"
+                value={formatINR(currentData.depreciation)}
+                color="var(--text-muted)"
+              />
+              <StatCard
+                label="Funds Cost"
+                value={formatINR(currentData.funds_cost)}
+                color="var(--text-muted)"
+              />
+              <StatCard
+                label="Net Profit"
+                value={formatINR(currentData.net_profit_opex_dep)}
+                color={currentData.net_profit_opex_dep >= 0 ? 'var(--green)' : 'var(--rose)'}
+              />
+              <StatCard
+                label="ROI"
+                value={formatPct(currentData.roi)}
+                color="var(--text-muted)"
+              />
+            </div>
+          </>
+        )}
+
+        {/* Comparison Table */}
+        {data.length > 0 && (
+          <div className="pnl-comparison-section">
+            <h2>All Months Comparison</h2>
+            <div className="pnl-comparison-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    {data.map((d, idx) => (
+                      <th key={idx}>
+                        {new Date(d.period_month).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Gross Sales</td>
+                    {data.map((d, idx) => (
+                      <td key={idx} className="pnl-table-value">{formatINR(d.gross_sale)}</td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>Total Opex</td>
+                    {data.map((d, idx) => (
+                      <td key={idx} className="pnl-table-value">{formatINR(d.opex_expenses)}</td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>Income Margin</td>
+                    {data.map((d, idx) => (
+                      <td key={idx} className="pnl-table-value">{formatINR(d.income_margin)}</td>
+                    ))}
+                  </tr>
+                  <tr className="pnl-table-highlight">
+                    <td>Operating Profit</td>
+                    {data.map((d, idx) => (
+                      <td key={idx} className={`pnl-table-value ${d.operating_profit >= 0 ? 'positive' : 'negative'}`}>
+                        {formatINR(d.operating_profit)}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="pnl-table-highlight">
+                    <td>Net Profit (with Dep)</td>
+                    {data.map((d, idx) => (
+                      <td key={idx} className={`pnl-table-value ${d.net_profit_opex_dep >= 0 ? 'positive' : 'negative'}`}>
+                        {formatINR(d.net_profit_opex_dep)}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="pnl-table-highlight">
+                    <td>ROI (%)</td>
+                    {data.map((d, idx) => (
+                      <td key={idx} className={`pnl-table-value ${d.roi >= 0 ? 'positive' : 'negative'}`}>
+                        {formatPct(d.roi)}
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

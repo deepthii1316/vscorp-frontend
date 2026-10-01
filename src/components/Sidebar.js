@@ -37,6 +37,7 @@ const navItems = [
       { href: '/upload',          label: 'Data Upload',    icon: UploadCloud, roles: ['admin'] },
       { href: '/upload-history',  label: 'Upload History', icon: History, roles: ['admin'] },
       { href: '/data-coverage',   label: 'Data Coverage',  icon: FileCheck, roles: ['admin'] },
+      { href: '/pnl-import',      label: 'Import P&L Data', icon: UploadCloud, roles: ['admin'] },
       { href: '/reebok-reports',  label: 'Sales Reports',  icon: FileSpreadsheet },
     ],
   },

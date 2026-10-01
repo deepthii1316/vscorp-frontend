@@ -1,0 +1,16 @@
+name: Email Ingestion Poll
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Run every 5 minutes
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Poll for new emails
+        run: |
+          curl -X POST https://your-domain.com/api/email-ingestion/poll \
+            -H "Authorization: Bearer ${{ secrets.ADMIN_JWT_TOKEN }}" \
+            -H "Content-Type: application/json"
