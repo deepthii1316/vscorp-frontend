@@ -90,9 +90,10 @@ const DIVISION_COLUMNS = {
  */
 export function sumDays(rows, division = 'ALL') {
   const c = DIVISION_COLUMNS[division] || DIVISION_COLUMNS.ALL;
-  const t = { nsv: 0, mrp: 0, qty: 0, bills: 0, socks: 0, shoes: 0, days: 0 };
+  const t = { nsv: 0, gsv: 0, mrp: 0, qty: 0, bills: 0, socks: 0, shoes: 0, days: 0 };
   for (const r of rows || []) {
     t.nsv += num(r[c.nsv]);
+    t.gsv += num(r.gross_value);   // store level only (see kpisFrom)
     t.mrp += num(r[c.mrp]);
     t.qty += num(r[c.qty]);
     t.bills += num(r[c.bills]);
@@ -114,6 +115,9 @@ export function kpisFrom(t, rangeDays, division = 'ALL') {
   const ssrApplies = division === 'ALL' || division === 'Footwear';
   return {
     nsv: t.nsv,
+    // GSV = gross sale value incl. GST (gold.reebok_master_dashboard.gross_value). Recorded for the
+    // whole store only, so it is null when a single division is selected.
+    gsv: division === 'ALL' ? t.gsv : null,
     avgPerDay: rangeDays > 0 ? t.nsv / rangeDays : null,
     mdPct: t.mrp > 0 ? ((t.mrp - t.nsv) / t.mrp) * 100 : null,
     qty: t.qty,
@@ -177,6 +181,7 @@ export const DIVISION_COLORS = { Footwear: 'var(--chart-green)', Apparel: 'var(-
 
 export const TREND_METRICS = [
   { key: 'nsv',    label: 'NSV',      kind: 'inr' },
+  { key: 'gsv',    label: 'GSV (incl. GST)', kind: 'inr', storeOnly: true },
   { key: 'qty',    label: 'Qty sold', kind: 'num' },
   { key: 'bills',  label: 'Bills',    kind: 'num' },
   { key: 'atv',    label: 'ATV',      kind: 'inr' },
@@ -261,6 +266,7 @@ export function divisionTable(days, prevDays, hasPrev) {
       qty: t.qty,
       bills: t.bills,
       mdPct,
+      prev: tp ? { nsv: tp.nsv, qty: tp.qty, bills: tp.bills, mdPct: tpMdPct } : null,
       nsvChange: tp ? change(t.nsv, tp.nsv, 'pct') : null,
       qtyChange: tp ? change(t.qty, tp.qty, 'pct') : null,
       billsChange: tp ? change(t.bills, tp.bills, 'pct') : null,
@@ -272,7 +278,7 @@ export function divisionTable(days, prevDays, hasPrev) {
   const rows = DIVISION_LIST.map((d) => line(d, d, sumDays(days, d), hasPrev ? sumDays(prevDays, d) : null));
   const un = unclassifiedOf(days);
   if (un) {
-    rows.push({ name: 'Unclassified', nsv: un.nsv, contribution: total.nsv > 0 ? (un.nsv / total.nsv) * 100 : null, qty: un.qty, bills: null, mdPct: null, nsvChange: null, qtyChange: null, billsChange: null, mdPctChange: null, warning: true });
+    rows.push({ name: 'Unclassified', prev: null, nsv: un.nsv, contribution: total.nsv > 0 ? (un.nsv / total.nsv) * 100 : null, qty: un.qty, bills: null, mdPct: null, nsvChange: null, qtyChange: null, billsChange: null, mdPctChange: null, warning: true });
   }
   return { rows, total: line('Total', 'ALL', total, totalPrev) };
 }

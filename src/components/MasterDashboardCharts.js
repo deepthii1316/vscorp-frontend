@@ -7,7 +7,7 @@ import {
   ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell, BarChart, Bar,
 } from 'recharts';
-import { ChartLine, ChartPie, CreditCard, ChartColumn, Table2, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import { ChartLine, ChartPie, CreditCard, ChartColumn, Table2 } from 'lucide-react';
 import {
   CHART_COLORS, DIVISION_COLORS, TREND_METRICS,
   formatINR, formatINRFull, formatNumber, formatPercent,
@@ -84,7 +84,7 @@ export function TrendCard({ series, metric, onMetric, hasComparison, compareLabe
             </ComposedChart>
           </ResponsiveContainer>
         </div>
-      ) : <Empty>No data for this metric in the selected range.</Empty>}
+      ) : <Empty>{def.storeOnly ? `${def.label} is recorded for the whole store only. Choose All divisions to see it.` : 'No data for this metric in the selected range.'}</Empty>}
     </div>
   );
 }
@@ -239,58 +239,73 @@ export function WeeklyCard({ weeks, hasComparison, compareLabel = 'last month', 
 
 // ─── Division performance table ────────────────────────────────────────────
 
-function ChangeCell({ value, kind = 'pct' }) {
-  if (value === null || value === undefined) return <span>-</span>;
-  const up = value > 0;
-  const Icon = Math.abs(value) < 0.05 ? Minus : up ? ArrowUpRight : ArrowDownRight;
-  const tone = Math.abs(value) < 0.05 ? 'flat' : up ? 'good' : 'bad';
+/**
+ * A value with its comparison underneath:   ₹41,52,513 ▼ 0.1%
+ *                                             LM: ₹41,58,419
+ * Triangle + % in green / red (goodWhen says which direction is good), a dash when there is
+ * nothing to compare (no comparison period, or the comparison value was 0).
+ */
+function CompareCell({ value, prev, change: delta, kind = 'pct', format, goodWhen = 'up', prevLabel }) {
+  const flat = delta === null || delta === undefined || Math.abs(delta) < 0.05;
+  const up = delta > 0;
+  const tone = flat ? 'flat' : (goodWhen === 'up' ? up : !up) ? 'good' : 'bad';
   const unit = kind === 'points' ? ' pts' : '%';
-  return <span className={`md-delta ${tone}`}><Icon />{Math.abs(value).toFixed(1)}{unit}</span>;
+  return (
+    <td className="md-cmp-cell">
+      <div className="md-cmp">
+        <span className="md-cmp-value">{format(value)}</span>
+        {prev !== undefined && (
+          flat
+            ? <span className="md-cmp-delta flat" aria-label="no change">—</span>
+            : <span className={`md-cmp-delta ${tone}`}>{up ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}{unit}</span>
+        )}
+      </div>
+      {prev !== undefined && <div className="md-cmp-prev">{prevLabel}: {prev === null ? '—' : format(prev)}</div>}
+    </td>
+  );
+}
+
+function DivisionRow({ r, prevLabel, total = false }) {
+  const p = r.prev;                       // null -> no comparison period: values only
+  const cmp = (key) => (p ? p[key] : undefined);
+  return (
+    <tr className={total ? 'md-total-row' : r.warning ? 'md-warn-row' : ''}>
+      <td>{r.name}{r.warning ? ' (no division in source data)' : ''}</td>
+      <CompareCell value={r.nsv} prev={cmp('nsv')} change={r.nsvChange} format={formatINRFull} prevLabel={prevLabel} />
+      <td>{formatPercent(r.contribution)}</td>
+      <CompareCell value={r.qty} prev={cmp('qty')} change={r.qtyChange} format={formatNumber} prevLabel={prevLabel} />
+      {r.bills === null
+        ? <td>-</td>
+        : <CompareCell value={r.bills} prev={cmp('bills')} change={r.billsChange} format={formatNumber} prevLabel={prevLabel} />}
+      {/* MD % going up means deeper discounts, so up is shown red. */}
+      <CompareCell value={r.mdPct} prev={cmp('mdPct')} change={r.mdPctChange} kind="points" goodWhen="down" format={formatPercent} prevLabel={prevLabel} />
+    </tr>
+  );
 }
 
 export function DivisionTableCard({ table, compareLabel = 'last month' }) {
+  // "LM" for the normal month-on-month view, the period's own name in Compare mode (e.g. "Aug 2026").
+  const prevLabel = compareLabel === 'last month' ? 'LM' : compareLabel;
   return (
     <div className="card">
       <div className="card-header">
         <Table2 className="card-header-icon-svg" />
         <h3>Division performance</h3>
       </div>
-      <p className="md-note">MD % = (MRP - NSV) / MRP. Ratios are recalculated from sums, never averaged.</p>
+      <p className="md-note">
+        MD % = (MRP - NSV) / MRP. Ratios are recalculated from sums, never averaged.
+        {table.total.prev ? ` ▲ / ▼ compare with ${compareLabel}; ${prevLabel} shows its value.` : ''}
+      </p>
       <div className="md-table-wrap">
         <table className="md-table">
           <thead>
             <tr>
               <th>Division</th><th>NSV</th><th>Contribution</th><th>Qty</th><th>Bills</th><th>MD %</th>
-              <th>NSV vs {compareLabel}</th><th>Qty vs {compareLabel}</th><th>Bills vs {compareLabel}</th><th>MD % vs {compareLabel}</th>
             </tr>
           </thead>
           <tbody>
-            {table.rows.map((r) => (
-              <tr key={r.name} className={r.warning ? 'md-warn-row' : ''}>
-                <td>{r.name}{r.warning ? ' (no division in source data)' : ''}</td>
-                <td>{formatINRFull(r.nsv)}</td>
-                <td>{formatPercent(r.contribution)}</td>
-                <td>{formatNumber(r.qty)}</td>
-                <td>{r.bills === null ? '-' : formatNumber(r.bills)}</td>
-                <td>{formatPercent(r.mdPct)}</td>
-                <td><ChangeCell value={r.nsvChange} /></td>
-                <td><ChangeCell value={r.qtyChange} /></td>
-                <td><ChangeCell value={r.billsChange} /></td>
-                <td><ChangeCell value={r.mdPctChange} kind="points" /></td>
-              </tr>
-            ))}
-            <tr className="md-total-row">
-              <td>{table.total.name}</td>
-              <td>{formatINRFull(table.total.nsv)}</td>
-              <td>{formatPercent(table.total.contribution)}</td>
-              <td>{formatNumber(table.total.qty)}</td>
-              <td>{formatNumber(table.total.bills)}</td>
-              <td>{formatPercent(table.total.mdPct)}</td>
-              <td><ChangeCell value={table.total.nsvChange} /></td>
-              <td><ChangeCell value={table.total.qtyChange} /></td>
-              <td><ChangeCell value={table.total.billsChange} /></td>
-              <td><ChangeCell value={table.total.mdPctChange} kind="points" /></td>
-            </tr>
+            {table.rows.map((r) => <DivisionRow key={r.name} r={r} prevLabel={prevLabel} />)}
+            <DivisionRow r={table.total} prevLabel={prevLabel} total />
           </tbody>
         </table>
       </div>
