@@ -208,11 +208,11 @@ function MasterDashboardPage() {
   const tiles = view ? [
     { label: 'NSV',       icon: IndianRupee, value: formatINRFull(view.cur.nsv),       foot: 'Taxable amount',      delta: pick('nsv', 'pct'), spark: 'nsv' },
     { label: 'Avg / day', icon: TrendingUp,  value: formatINRFull(view.cur.avgPerDay), foot: `${view.cur.days} days`, delta: pick('avgPerDay', 'pct'), spark: 'nsv' },
-    { label: 'MD %',      icon: Percent,     value: formatPercent(view.cur.mdPct),     foot: '(MRP - NSV) / MRP',   delta: pick('mdPct', 'points'), goodWhen: 'down', kind: 'points', spark: 'mdPct' },
+    { label: 'MD %',      icon: Percent,     value: formatPercent(view.cur.mdPct),     foot: '(MRP - NSV) / MRP',   delta: pick('mdPct', 'pct'), goodWhen: 'down', spark: 'mdPct' },
     { label: 'Qty sold',  icon: Package,     value: formatNumber(view.cur.qty),        foot: 'Units',               delta: pick('qty', 'pct'), spark: 'qty' },
     { label: 'Bills',     icon: Receipt,     value: formatNumber(view.cur.bills),      foot: 'Transactions',        delta: pick('bills', 'pct'), spark: 'bills' },
     { label: 'ATV',       icon: Wallet,      value: formatINRFull(view.cur.atv),       foot: 'NSV / bill',          delta: pick('atv', 'pct'), spark: 'atv' },
-    { label: 'SSR',       icon: ShoppingBag, value: formatPercent(view.cur.ssr),       foot: 'Socks / shoes',       delta: pick('ssr', 'points'), kind: 'points', spark: 'ssr' },
+    { label: 'SSR',       icon: ShoppingBag, value: formatPercent(view.cur.ssr),       foot: 'Socks / shoes',       delta: pick('ssr', 'pct'), spark: 'ssr' },
   ] : [];
 
   // Header text: the range, whether it was cut at the latest data date, and what it is compared with.

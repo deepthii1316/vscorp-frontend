@@ -278,7 +278,7 @@ function DivisionRow({ r, prevLabel, total = false }) {
         ? <td>-</td>
         : <CompareCell value={r.bills} prev={cmp('bills')} change={r.billsChange} format={formatNumber} prevLabel={prevLabel} />}
       {/* MD % going up means deeper discounts, so up is shown red. */}
-      <CompareCell value={r.mdPct} prev={cmp('mdPct')} change={r.mdPctChange} kind="points" goodWhen="down" format={formatPercent} prevLabel={prevLabel} />
+      <CompareCell value={r.mdPct} prev={cmp('mdPct')} change={r.mdPctChange} goodWhen="down" format={formatPercent} prevLabel={prevLabel} />
     </tr>
   );
 }

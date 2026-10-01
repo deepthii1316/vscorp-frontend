@@ -131,7 +131,8 @@ export function kpisFrom(t, rangeDays, division = 'ALL') {
 /**
  * Change versus the comparison period.
  *   kind 'pct'    -> growth in percent (cur/prev - 1) x 100
- *   kind 'points' -> difference in percentage points (for ratios such as MD % and SSR)
+ *   kind 'points' -> difference in percentage points (not used on the dashboard since 02-Oct-2026:
+ *                    MD % and SSR changes are shown as relative %, like every other figure)
  * Returns null when there is nothing to compare against (shown as a dash, never as 0).
  */
 export function change(cur, prev, kind = 'pct') {
@@ -270,9 +271,9 @@ export function divisionTable(days, prevDays, hasPrev) {
       nsvChange: tp ? change(t.nsv, tp.nsv, 'pct') : null,
       qtyChange: tp ? change(t.qty, tp.qty, 'pct') : null,
       billsChange: tp ? change(t.bills, tp.bills, 'pct') : null,
-      // MD% is already a percentage, so its own change is expressed in percentage points
-      // (e.g. 32% -> 35% is "+3 pts"), never as a percent-of-a-percent.
-      mdPctChange: tp ? change(mdPct, tpMdPct, 'points') : null,
+      // MD % change is shown as a relative % like every other figure (e.g. 32% -> 35% is +9.4%),
+      // not percentage points (decided 02-Oct-2026).
+      mdPctChange: tp ? change(mdPct, tpMdPct, 'pct') : null,
     };
   };
   const rows = DIVISION_LIST.map((d) => line(d, d, sumDays(days, d), hasPrev ? sumDays(prevDays, d) : null));

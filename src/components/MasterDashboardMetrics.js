@@ -9,10 +9,10 @@ const METRICS = [
   { key: 'upt', label: 'UPT', format: (value) => value == null ? '-' : Number(value).toFixed(2), icon: Gauge, kind: 'number' },
   { key: 'atv', label: 'ATV', format: formatINRFull, icon: IndianRupee, kind: 'number' },
   { key: 'asp', label: 'ASP', format: formatINRFull, icon: IndianRupee, kind: 'number' },
-  { key: 'ssr', label: 'SSR', format: (value) => value == null ? '—' : `${Number(value).toFixed(1)}%`, icon: Percent, kind: 'points' },
+  { key: 'ssr', label: 'SSR', format: (value) => value == null ? '—' : `${Number(value).toFixed(1)}%`, icon: Percent, kind: 'percent' },
   { key: 'fupt', label: 'FUPT', format: (value) => value == null ? '-' : Number(value).toFixed(2), icon: Gauge, kind: 'number' },
-  { key: 'sfr', label: 'SFR', format: formatPercent, icon: Percent, kind: 'points' },
-  { key: 'afr', label: 'AFR', format: formatPercent, icon: Percent, kind: 'points' },
+  { key: 'sfr', label: 'SFR', format: formatPercent, icon: Percent, kind: 'percent' },
+  { key: 'afr', label: 'AFR', format: formatPercent, icon: Percent, kind: 'percent' },
 ];
 
 const num = (value) => Number(value || 0);
