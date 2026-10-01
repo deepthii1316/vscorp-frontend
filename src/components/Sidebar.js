@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth';
 import {
   LayoutDashboard,
   Box,
+  Boxes,
   UploadCloud,
   History,
   FileCheck,
@@ -26,6 +27,7 @@ const navItems = [
     section: 'Analytics',
     items: [
       { href: '/master-dashboard', label: 'Master Dashboard', icon: LayoutDashboard, roles: ['admin'] },
+      { href: '/merchandiser-dashboard', label: 'Merchandiser', icon: Boxes, roles: ['admin'] },
       { href: '/assets', label: 'Assets', icon: Box, disabled: true, roles: ['admin'] },
     ],
   },
