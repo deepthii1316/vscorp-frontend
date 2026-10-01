@@ -155,7 +155,7 @@ body {
 }
 
 /* ─── Dark theme ─────────────────────────────────────────────
-   Set by data-theme on <html> (src/lib/theme.js: saved choice, else the OS setting).
+   Set by data-theme on <html> (src/lib/theme.js): light unless the user picked dark.
    Same token names, so every component follows without per-component dark rules.
    Chart colours are the light hues re-stepped for a dark surface and re-validated
    (dataviz checker, dark band L 0.48-0.67); health buckets use the reference status steps. */
@@ -3155,7 +3155,7 @@ body {
   color: var(--notice-text); font-size: 12.5px;
 }
 
-/* ─── Merchandiser Dashboard (mx-*; builds on md-* and app tokens) ────────── */
+/* ─── Merch Dashboard (mx-*; builds on md-* and app tokens) ────────── */
 .mx-header-actions { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 .mx-scan { display: inline-flex; align-items: center; gap: var(--space-2); padding: 4px 4px 4px 10px; border: 1px solid var(--border-strong); border-radius: var(--r-md); background: var(--bg-elevated); }
 .mx-scan:focus-within { outline: 2px solid var(--green-line); outline-offset: 1px; }

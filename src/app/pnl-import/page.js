@@ -7,7 +7,7 @@
 
 import { useRef, useState } from 'react';
 import Link from 'next/link';
-import { FileSpreadsheet, Upload, AlertTriangle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { FileSpreadsheet, FileUp, Upload, AlertTriangle, CheckCircle2, ArrowLeft } from 'lucide-react';
 import RequireAuth from '@/components/RequireAuth';
 import { apiFetch } from '@/lib/api';
 import { parsePnLWorkbook, opexOf, EXPENSES } from '@/lib/pnlExcelImport';
@@ -61,7 +61,7 @@ function PnLImport() {
   return (
     <div className="md-page">
       <div className="page-header" style={{ marginBottom: 0 }}>
-        <div className="page-header-icon-box"><FileSpreadsheet className="page-header-icon-svg" /></div>
+        <div className="page-header-icon-box"><FileUp className="page-header-icon-svg" /></div>
         <div className="page-header-text">
           <h1>Import P&amp;L Data</h1>
           <p>Upload the monthly P&amp;L Excel. Check the preview, then import. Months already saved are replaced.</p>

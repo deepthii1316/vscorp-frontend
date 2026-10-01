@@ -1,4 +1,4 @@
-// Merchandiser Dashboard shared helpers: the pure calculations behind every tab.
+// Merch Dashboard shared helpers: the pure calculations behind every tab.
 // No React and no database access. Input rows come from public.rpt_merch_sku() — one row per EAN
 // (see backend/database/migrations/2026_10_02_merch_dashboard_rpcs.sql for the definitions).
 // Rule: sum the inputs first, compute every ratio from the sums (never average row ratios).

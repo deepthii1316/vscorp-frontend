@@ -1,6 +1,6 @@
 'use client';
 
-// Small building blocks shared by the Merchandiser Dashboard tabs.
+// Small building blocks shared by the Merch Dashboard tabs.
 
 import { useEffect, useState } from 'react';
 import { Download } from 'lucide-react';

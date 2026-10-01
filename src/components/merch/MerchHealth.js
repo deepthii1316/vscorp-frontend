@@ -71,7 +71,7 @@ export default function MerchHealth({ rows, summary, rateDays, thresholds, onThr
       walk(n.children, path);
     });
     walk(tree, []);
-    exportSheets(`merchandiser-health-${asOfLabel}.xlsx`, [
+    exportSheets(`merch-health-${asOfLabel}.xlsx`, [
       { name: 'By Category', rows: flat },
       { name: 'Age Profile', rows: ages.map((a) => ({ Age: a.label, 'Stock qty': a.qty, 'Value (MRP)': Math.round(a.mrp) })) },
       { name: 'Thresholds', rows: BUCKETS.map((b) => ({ Bucket: b.label, Rule: bucketRange(b.key, thresholds) })) },

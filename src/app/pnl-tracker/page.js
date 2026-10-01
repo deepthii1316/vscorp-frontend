@@ -84,7 +84,7 @@ function PnLTracker() {
   return (
     <div className="md-page">
       <div className="page-header" style={{ marginBottom: 0 }}>
-        <div className="page-header-icon-box"><TrendingUp className="page-header-icon-svg" /></div>
+        <div className="page-header-icon-box"><IndianRupee className="page-header-icon-svg" /></div>
         <div className="page-header-text">
           <h1>P&amp;L Tracker</h1>
           <p>

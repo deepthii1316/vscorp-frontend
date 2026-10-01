@@ -50,7 +50,7 @@ export default function MerchDeadStock({ rows, thresholds, onThresholds, onLooku
       t.Barcodes += 1; t['Stock qty'] += r.stock_qty; t['Value (MRP)'] += Math.round(r.stock_mrp_value);
       byType.set(k, t);
     });
-    exportSheets(`merchandiser-dead-stock-${asOfLabel}.xlsx`, [
+    exportSheets(`merch-dead-stock-${asOfLabel}.xlsx`, [
       { name: 'Dead Stock', rows: lines },
       { name: 'By Category', rows: [...byType.values()].sort((a, b) => b['Value (MRP)'] - a['Value (MRP)']) },
     ]);

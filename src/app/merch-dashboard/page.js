@@ -1,6 +1,6 @@
 'use client';
 
-// Merchandiser Dashboard (Uppal Reebok). Inventory lens: is stock healthy, and is it moving?
+// Merch Dashboard (Uppal Reebok). Inventory lens: is stock healthy, and is it moving?
 // Template: public/docs/MERCHANDISER_DASHBOARD_REFERENCE.md (single store here, so no
 // cluster / store / transfer pages). Data: /api/merchandiser (one row per EAN, latest stock
 // snapshot + sales windows), fetched once; every filter, threshold and rollup runs in the browser
@@ -35,7 +35,7 @@ function loadThresholds() {
   return DEFAULT_THRESHOLDS;
 }
 
-function MerchandiserDashboard() {
+function MerchDashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -95,7 +95,7 @@ function MerchandiserDashboard() {
       <div className="page-header" style={{ marginBottom: 0 }}>
         <div className="page-header-icon-box"><Boxes className="page-header-icon-svg" /></div>
         <div className="page-header-text">
-          <h1>Merchandiser Dashboard</h1>
+          <h1>Merch Dashboard</h1>
           <p>
             Uppal Reebok - stock as of {data?.asOf ? shortDate(data.asOf) : '…'}, sales up to the same day
             {data?.storeFirstSale ? ` (trading since ${shortDate(data.storeFirstSale)})` : ''}
@@ -158,10 +158,10 @@ function MerchandiserDashboard() {
   );
 }
 
-export default function MerchandiserDashboardPage() {
+export default function MerchDashboardPage() {
   return (
     <RequireAuth roles={['admin']}>
-      <MerchandiserDashboard />
+      <MerchDashboard />
     </RequireAuth>
   );
 }

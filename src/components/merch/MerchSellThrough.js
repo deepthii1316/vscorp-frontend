@@ -56,7 +56,7 @@ export default function MerchSellThrough({ rows, rateDays, onLookup, asOfLabel }
 
   const doExport = () => {
     const pct = (v) => (v == null ? null : +v.toFixed(1));
-    exportSheets(`merchandiser-sell-through-${asOfLabel}.xlsx`, [
+    exportSheets(`merch-sell-through-${asOfLabel}.xlsx`, [
       { name: 'Articles', rows: filtered.map((a) => ({
         Article: a.name, 'Style code': a.style, Colour: a.color, Division: divisionLabel(a.division), Department: a.department,
         Section: a.section, 'Article type': a.articleType, MRP: a.mrp, Sizes: a.sizes.length, 'Stock qty': a.stockQty,

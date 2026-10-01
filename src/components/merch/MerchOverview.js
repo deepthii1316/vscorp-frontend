@@ -78,7 +78,7 @@ export default function MerchOverview({ rows, summary, rateDays, asOfLabel }) {
       walk(n.children, path);
     });
     walk(tree, []);
-    exportSheets(`merchandiser-overview-${asOfLabel}.xlsx`, [
+    exportSheets(`merch-overview-${asOfLabel}.xlsx`, [
       { name: 'By Division', rows: tree.map((n) => ({ Division: n.label, 'Stock qty': n.stockQty, 'Stock value (MRP)': Math.round(n.mrpValue), 'Sales qty MTD': n.qtyMtd, 'NSV MTD': Math.round(n.nsvMtd), 'Sales qty 30d': n.qty30, 'Sell-through 30d %': n.sellThrough == null ? null : +n.sellThrough.toFixed(1), 'Cover (days)': n.cover == null ? null : Math.round(n.cover) })) },
       { name: 'Detail', rows: flat },
     ]);
