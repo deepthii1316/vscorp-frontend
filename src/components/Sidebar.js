@@ -14,6 +14,7 @@ import {
   Grid3x3,
   PieChart,
   FileSpreadsheet,
+  TrendingUp,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -27,6 +28,7 @@ const navItems = [
     items: [
       { href: '/master-dashboard', label: 'Master Dashboard', icon: LayoutDashboard, roles: ['admin'] },
       { href: '/assets', label: 'Assets', icon: Box, disabled: true, roles: ['admin'] },
+      { href: '/pnl-tracker', label: 'P&L Tracker', icon: TrendingUp },
     ],
   },
   {
