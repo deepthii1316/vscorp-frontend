@@ -30,16 +30,38 @@ function UploadStep({ onFile, loading }) {
   };
 
   return (
-    <div className="pnl-import-step">
-      <div className="pnl-upload-zone">
-        <Upload style={{ width: 48, height: 48, color: 'var(--text-muted)' }} />
-        <h3>Upload P&L Report</h3>
-        <p>Select an Excel file with P&L data (.xlsx, .xls)</p>
+    <div style={{ background: '#FFFFFF', border: '1px solid #E8E5DC', borderRadius: '6px', padding: '40px' }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '20px',
+        textAlign: 'center',
+        padding: '40px',
+        border: '3px dashed #D4D0C2',
+        borderRadius: '8px',
+        background: '#F4F3EE',
+      }}>
+        <Upload style={{ width: 48, height: 48, color: '#8A8A82' }} />
+        <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#1A1A1A', margin: 0 }}>Upload P&L Report</h3>
+        <p style={{ fontSize: '13px', color: '#8A8A82', margin: 0 }}>Select an Excel file with P&L data (.xlsx, .xls)</p>
         <button
           type="button"
-          className="pnl-btn primary"
+          style={{
+            padding: '10px 20px',
+            background: '#1F6B45',
+            color: '#FAFAF7',
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            opacity: loading ? 0.5 : 1,
+          }}
           onClick={() => fileInputRef.current?.click()}
           disabled={loading}
+          onMouseEnter={(e) => !loading && (e.target.style.background = '#16523A')}
+          onMouseLeave={(e) => !loading && (e.target.style.background = '#1F6B45')}
         >
           {loading ? 'Reading...' : 'Choose File'}
         </button>
@@ -84,7 +106,7 @@ function PreviewStep({ data, fileName, onConfirm, onBack, loading }) {
           <thead>
             <tr>
               <th>Month</th>
-              <th>Gross Sale</th>
+              <th>Sales (NSV)</th>
               <th>Income Margin</th>
               <th>ROI</th>
               <th>Expenses</th>
@@ -104,20 +126,44 @@ function PreviewStep({ data, fileName, onConfirm, onBack, loading }) {
         </table>
       </div>
 
-      <div className="pnl-import-actions">
+      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
         <button
           type="button"
-          className="pnl-btn secondary"
+          style={{
+            padding: '10px 20px',
+            background: '#F4F3EE',
+            color: '#1A1A1A',
+            border: '1px solid #D4D0C2',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            opacity: loading ? 0.5 : 1,
+          }}
           onClick={onBack}
           disabled={loading}
+          onMouseEnter={(e) => !loading && (e.target.style.background = '#F8F7F2')}
+          onMouseLeave={(e) => !loading && (e.target.style.background = '#F4F3EE')}
         >
           Back
         </button>
         <button
           type="button"
-          className="pnl-btn primary"
+          style={{
+            padding: '10px 20px',
+            background: '#1F6B45',
+            color: '#FAFAF7',
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            opacity: loading ? 0.5 : 1,
+          }}
           onClick={onConfirm}
           disabled={loading}
+          onMouseEnter={(e) => !loading && (e.target.style.background = '#16523A')}
+          onMouseLeave={(e) => !loading && (e.target.style.background = '#1F6B45')}
         >
           {loading ? 'Importing...' : 'Import Data'}
         </button>
@@ -236,28 +282,52 @@ function PnLImportInner() {
     setResult(null);
   };
 
+  const stepIndex = Object.values(IMPORT_STEPS).indexOf(step);
+
   return (
-    <div className="pnl-import-wrapper">
-      <div className="pnl-import-container">
-        <div className="pnl-import-header">
-          <h1>Import P&L Data</h1>
-          <p>Upload Excel reports to update store P&L metrics</p>
+    <div style={{ width: '100%', padding: '40px 28px' }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <h1 style={{ fontSize: '32px', fontWeight: 700, color: '#1A1A1A', marginBottom: '12px' }}>Import P&L Data</h1>
+          <p style={{ fontSize: '14px', color: '#8A8A82' }}>Upload Excel reports to update store P&L metrics</p>
         </div>
 
-        <div className="pnl-import-progress">
-          {Object.values(IMPORT_STEPS).map((s, idx) => (
-            <div
-              key={s}
-              className={`pnl-progress-step ${step === s ? 'active' : ''} ${
-                Object.values(IMPORT_STEPS).indexOf(s) < Object.values(IMPORT_STEPS).indexOf(step)
-                  ? 'done'
-                  : ''
-              }`}
-            >
-              <div className="pnl-progress-dot">{idx + 1}</div>
-              <span>{s.charAt(0).toUpperCase() + s.slice(1)}</span>
-            </div>
-          ))}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', paddingBottom: '24px', borderBottom: '1px solid #E8E5DC' }}>
+          {Object.values(IMPORT_STEPS).map((s, idx) => {
+            const isActive = step === s;
+            const isDone = idx < stepIndex;
+            return (
+              <div
+                key={s}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px',
+                  opacity: isActive || isDone ? 1 : 0.4,
+                }}
+              >
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '50%',
+                    border: `2px solid ${isActive ? '#1F6B45' : isDone ? '#1F6B45' : '#D4D0C2'}`,
+                    fontWeight: 700,
+                    fontSize: '16px',
+                    color: isActive ? '#FAFAF7' : isDone ? '#1F6B45' : '#8A8A82',
+                    background: isActive ? '#1F6B45' : isDone ? '#E4F0E8' : '#FFFFFF',
+                  }}
+                >
+                  {idx + 1}
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: 500 }}>{s.charAt(0).toUpperCase() + s.slice(1)}</span>
+              </div>
+            );
+          })}
         </div>
 
         {step === IMPORT_STEPS.UPLOAD && <UploadStep onFile={handleFileSelected} loading={loading} />}

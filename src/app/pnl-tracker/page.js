@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Zap, Users, Building2, Calendar, Upload } from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart
 } from 'recharts';
@@ -85,10 +85,24 @@ function StatCard({ label, value, icon: Icon, trend, color = 'var(--green)' }) {
   );
 }
 
+const METRIC_OPTIONS = [
+  { value: 'gross_sale', label: 'Sales (NSV)' },
+  { value: 'income_margin', label: 'Income Margin' },
+  { value: 'opex_expenses', label: 'Operating Expense' },
+  { value: 'operating_profit', label: 'Operating Profit' },
+  { value: 'net_profit_opex_dep', label: 'Net Profit' },
+  { value: 'roi', label: 'ROI (%)' },
+  { value: 'depreciation', label: 'Depreciation' },
+  { value: 'funds_cost', label: 'Funds Cost' },
+];
+
 function PNLTrackerInner() {
+  const router = useRouter();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonthIdx, setSelectedMonthIdx] = useState(0);
+  const [selectedMetric, setSelectedMetric] = useState('gross_sale');
+  const [selectedMetric2, setSelectedMetric2] = useState('net_profit_opex_dep');
 
   useEffect(() => {
     fetchPnLData();
@@ -97,11 +111,18 @@ function PNLTrackerInner() {
   const fetchPnLData = async () => {
     try {
       const res = await apiFetch('/api/pnl/ingest');
-      if (!res.ok) throw new Error('Failed to fetch data');
-      const json = await res.json();
-      setData(json.data && json.data.length > 0 ? json.data : FALLBACK_DATA);
+      if (res && res.ok) {
+        const json = await res.json();
+        if (json.data && json.data.length > 0) {
+          setData(json.data);
+        } else {
+          setData(FALLBACK_DATA);
+        }
+      } else {
+        setData(FALLBACK_DATA);
+      }
     } catch (err) {
-      console.error('Error fetching P&L data:', err);
+      // API not available yet, use fallback data
       setData(FALLBACK_DATA);
     } finally {
       setLoading(false);
@@ -123,11 +144,12 @@ function PNLTrackerInner() {
   const currentData = data[selectedMonthIdx];
   const chartData = data.map((d) => ({
     month: new Date(d.period_month).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }),
-    sales: d.gross_sale,
-    margin: d.income_margin,
-    profit: d.net_profit_opex_dep,
+    metric1: d[selectedMetric] || 0,
+    metric2: d[selectedMetric2] || 0,
     roi: d.roi,
   }));
+
+  const getMetricLabel = (key) => METRIC_OPTIONS.find(m => m.value === key)?.label || key;
 
   return (
     <div className="pnl-page-wrapper">
@@ -140,11 +162,29 @@ function PNLTrackerInner() {
               {currentData?.store_name} • Store {data[0]?.store_code || '323865'}
             </p>
           </div>
-          <div className="pnl-header-actions">
-            <Link href="/pnl-import" className="pnl-btn-icon">
+          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <button
+              onClick={() => router.push('/pnl-import')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 20px',
+                background: '#1F6B45',
+                color: '#FAFAF7',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 150ms ease',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#16523A'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#1F6B45'}
+            >
               <Upload style={{ width: 16, height: 16 }} />
               Import Data
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -161,40 +201,49 @@ function PNLTrackerInner() {
           ))}
         </div>
 
-        {/* Charts Section */}
-        <div className="pnl-charts-section">
-          <div className="pnl-chart-card">
-            <h3>Revenue & Profit Trend</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <ComposedChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: `1px solid var(--border)` }} />
-                <Legend />
-                <Bar dataKey="sales" fill="var(--green)" name="Gross Sales" />
-                <Line type="monotone" dataKey="profit" stroke="var(--blue)" name="Net Profit" />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="pnl-chart-card">
-            <h3>ROI Trend</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: `1px solid var(--border)` }} />
-                <Line
-                  type="monotone"
-                  dataKey="roi"
-                  stroke="var(--amber)"
-                  name="ROI %"
-                  strokeWidth={2}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+        {/* Chart Section */}
+        <div style={{ marginTop: 'var(--space-8)', marginBottom: 'var(--space-8)' }}>
+          <div style={{ padding: 'var(--space-6)', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text)' }}>Metric Trend</h3>
+              <select
+                value={selectedMetric}
+                onChange={(e) => setSelectedMetric(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--r-md)',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  background: 'var(--bg-elevated)',
+                  cursor: 'pointer',
+                }}
+              >
+                {METRIC_OPTIONS.map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ width: '100%', height: '420px', position: 'relative' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="month" />
+                  <YAxis width={70} />
+                  <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: `1px solid var(--border)`, borderRadius: '4px', padding: '8px' }} />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="metric1"
+                    stroke="var(--green)"
+                    name={getMetricLabel(selectedMetric)}
+                    strokeWidth={3}
+                    dot={{ fill: 'var(--green)', r: 6 }}
+                    activeDot={{ r: 8 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
@@ -207,7 +256,7 @@ function PNLTrackerInner() {
 
             <div className="pnl-metrics-grid">
               <StatCard
-                label="Gross Sales"
+                label="Sales (NSV)"
                 value={formatINR(currentData.gross_sale)}
                 icon={DollarSign}
                 color="var(--green)"
@@ -271,7 +320,7 @@ function PNLTrackerInner() {
                 </thead>
                 <tbody>
                   <tr>
-                    <td>Gross Sales</td>
+                    <td>Sales (NSV)</td>
                     {data.map((d, idx) => (
                       <td key={idx} className="pnl-table-value">{formatINR(d.gross_sale)}</td>
                     ))}

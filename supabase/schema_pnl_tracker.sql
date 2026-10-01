@@ -35,7 +35,7 @@ CREATE TABLE pnl_tracker.monthly_pnl (
   period_month DATE NOT NULL, -- First day of month
 
   -- Revenue
-  gross_sale NUMERIC,
+  gross_sale NUMERIC, -- Sales (NSV)
   discounts NUMERIC,
   gst NUMERIC,
   net_sales NUMERIC,
