@@ -3262,3 +3262,351 @@ body {
 .md-cmp-delta.bad { color: var(--negative); }
 .md-cmp-delta.flat { color: var(--text-muted); font-weight: 400; }
 .md-cmp-prev { margin-top: 3px; font-size: 11.5px; color: var(--text-muted); white-space: nowrap; }
+
+/* ─── P&L Tracker page design (Deeksha, pnl-tracker branch d2a72df; token-based, so it themes) ─── */
+.pnl-page-wrapper {
+  width: 100%;
+}
+
+.pnl-page-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-7);
+}
+
+.pnl-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-8);
+}
+
+.pnl-page-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: var(--space-3);
+  letter-spacing: -0.015em;
+}
+
+.pnl-page-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.pnl-store-info {
+  display: flex;
+  gap: var(--space-5);
+  align-items: center;
+}
+
+.pnl-info-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Month Selector */
+.pnl-month-selector {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-7);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+}
+
+.pnl-month-btn {
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--t-fast) var(--ease);
+}
+
+.pnl-month-btn:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-subtle);
+}
+
+.pnl-month-btn.active {
+  background: var(--green);
+  color: var(--text-inverse);
+  border-color: var(--green);
+}
+
+/* Month Panel */
+.pnl-month-panel {
+  margin-bottom: var(--space-8);
+}
+
+.pnl-month-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.pnl-month-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.pnl-month-header svg {
+  color: var(--text-muted);
+}
+
+/* Metrics Grid */
+.pnl-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-7);
+}
+
+.pnl-stat-card {
+  padding: var(--space-5);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  border-left: 4px solid var(--green);
+  transition: all var(--t-fast) var(--ease);
+}
+
+.pnl-stat-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.pnl-stat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.pnl-stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pnl-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: var(--space-2);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.pnl-stat-trend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.pnl-stat-trend svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Expense Breakdown */
+.pnl-expense-breakdown {
+  padding: var(--space-5);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: var(--space-7);
+}
+
+.pnl-expense-breakdown h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: var(--space-4);
+  margin-top: 0;
+}
+
+.pnl-expense-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.pnl-expense-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--bg-subtle);
+}
+
+.pnl-expense-row:last-child {
+  border-bottom: none;
+}
+
+.pnl-expense-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.pnl-expense-value {
+  color: var(--text);
+  font-weight: 500;
+  font-family: 'JetBrains Mono', monospace;
+  text-align: right;
+}
+
+.pnl-expense-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) 0;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 2px solid var(--border);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.pnl-expense-total span:last-child {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Comparison Section */
+.pnl-comparison-section {
+  margin-top: var(--space-8);
+}
+
+.pnl-comparison-section h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: var(--space-5);
+}
+
+.pnl-comparison-table {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-elevated);
+}
+
+.pnl-comparison-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.pnl-comparison-table thead {
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+}
+
+.pnl-comparison-table th {
+  padding: var(--space-4) var(--space-5);
+  text-align: left;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.pnl-comparison-table td {
+  padding: var(--space-4) var(--space-5);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--bg-subtle);
+}
+
+.pnl-comparison-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.pnl-comparison-table tbody tr:nth-child(even) {
+  background: var(--bg-inset);
+}
+
+.pnl-table-value {
+  font-weight: 500;
+  font-family: 'JetBrains Mono', monospace;
+  text-align: right;
+  color: var(--text);
+}
+
+.pnl-table-highlight td {
+  font-weight: 700;
+  background: color-mix(in srgb, var(--accent) 5%, transparent) !important;
+}
+
+.pnl-table-value.positive {
+  color: var(--green);
+}
+
+.pnl-table-value.negative {
+  color: var(--rose);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .pnl-page-header {
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .pnl-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .pnl-comparison-table {
+    font-size: 12px;
+  }
+
+  .pnl-comparison-table th,
+  .pnl-comparison-table td {
+    padding: var(--space-3) var(--space-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .pnl-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pnl-page-container {
+    padding: var(--space-6) var(--space-4);
+  }
+}
+
+/* P&L Tracker: the bits the branch styled inline, as classes (token colours, so they theme) */
+.pnl-page-container { max-width: 1024px; }
+.pnl-import-btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;
+  background: var(--green); color: var(--text-inverse); border: 0; border-radius: var(--r-md);
+  font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; transition: background var(--t-fast) var(--ease);
+}
+.pnl-import-btn:hover { background: var(--green-hover); }
+.pnl-import-btn svg { width: 16px; height: 16px; }
+.pnl-chart-card { margin-bottom: var(--space-8); padding: var(--space-6); background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--r-md); }
+.pnl-chart-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4); }
+.pnl-chart-head h3 { margin: 0; font-size: 16px; font-weight: 600; color: var(--text); }
+.pnl-select { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--r-md); font: inherit; font-size: 13px; font-weight: 500; background: var(--bg-elevated); color: var(--text); cursor: pointer; }
+.pnl-chart-body { width: 100%; height: 380px; }
+.pnl-section-title { margin: 0 0 var(--space-5); font-size: 18px; font-weight: 600; color: var(--text); }
+.pnl-metrics-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 900px) { .pnl-metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

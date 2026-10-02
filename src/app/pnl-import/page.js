@@ -76,7 +76,7 @@ function PnLImport() {
         <div>
           <strong>{fileName || 'Choose the P&L Excel file'}</strong>
           <p className="md-note">
-            One row per month with a <em>Month</em> column, or one column per month (Jul-2026, Aug-2026, …) with line items down the side.
+            The store P&amp;L sheet: one column per month (Jul-2026, Aug-2026, …) with the line items down the side. Empty future months are skipped.
             Recognised lines: Sales, Income Margin, {Object.keys(EXPENSES).join(', ')}, Depreciation, Funds Cost, ROI.
           </p>
         </div>
@@ -108,6 +108,10 @@ function PnLImport() {
                 {parsed.warnings.length > 12 && <span>…and {parsed.warnings.length - 12} more.</span>}
               </div>
             </div>
+          )}
+
+          {parsed.skipped?.length > 0 && (
+            <p className="md-note">Skipped {parsed.skipped.length} month{parsed.skipped.length === 1 ? '' : 's'} with no figures yet: {parsed.skipped.join(', ')}.</p>
           )}
 
           {result?.ok && (

@@ -1,52 +1,44 @@
 'use client';
 
-// P&L Tracker (Uppal Reebok), admin only. Originally built on the `pnl-tracker` branch (Deeksha,
-// 01-Oct-2026); integrated here on the app's own dashboard styles and a locked-down data path:
-// /api/pnl -> public.pnl_monthly() -> pnl_tracker schema. No sample numbers: an empty database
-// shows an empty state with a link to the import.
+// P&L Tracker (Uppal Reebok), admin only. Layout and styles are Deeksha's design from the
+// `pnl-tracker` branch (d2a72df): month buttons, Metric Trend chart, month breakdown cards,
+// All Months Comparison. The data path is ours: /api/pnl -> public.pnl_monthly() -> pnl_tracker
+// schema. There are no built-in numbers; an empty database shows an empty state with a link
+// to the import (the branch showed hard-coded Jul-Sep figures whenever its API failed).
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import {
-  TrendingUp, RefreshCw, Upload, IndianRupee, Percent, Wallet, Building2, Landmark, Scale, ChartLine, ReceiptText, Table2,
-} from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { TrendingUp, IndianRupee, Zap, Upload } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import RequireAuth from '@/components/RequireAuth';
 import { apiFetch } from '@/lib/api';
-import { formatINR, formatINRFull, formatPercent } from '@/lib/masterDashboardShared';
+import { formatINRFull } from '@/lib/masterDashboardShared';
 
-const METRICS = [
-  { key: 'gross_sale', label: 'Sales (NSV)' },
-  { key: 'income_margin', label: 'Income margin' },
-  { key: 'opex_expenses', label: 'Operating expenses' },
-  { key: 'operating_profit', label: 'Operating profit' },
-  { key: 'net_profit_opex_dep', label: 'Net profit (after depreciation)' },
-  { key: 'net_profit_all_costs', label: 'Net profit (after depreciation + funds cost)' },
-  { key: 'roi', label: 'ROI %', pct: true },
+const METRIC_OPTIONS = [
+  { value: 'gross_sale', label: 'Sales (NSV)' },
+  { value: 'income_margin', label: 'Income Margin' },
+  { value: 'opex_expenses', label: 'Operating Expense' },
+  { value: 'operating_profit', label: 'Operating Profit' },
+  { value: 'net_profit_opex_dep', label: 'Net Profit' },
+  { value: 'roi', label: 'ROI (%)' },
+  { value: 'depreciation', label: 'Depreciation' },
+  { value: 'funds_cost', label: 'Funds Cost' },
 ];
 
 const monthLong = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 const monthShort = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', { month: 'short', year: '2-digit', timeZone: 'UTC' });
-const signCls = (v) => (v == null ? '' : v >= 0 ? 'pn-pos' : 'pn-neg');
-const roiStr = (v) => (v == null ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(2)}%`);
+const formatPct = (v) => (v == null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`);
+const signColor = (v) => (v == null ? 'var(--text-muted)' : v >= 0 ? 'var(--green)' : 'var(--rose)');
+const signCls = (v) => (v == null ? '' : v >= 0 ? 'positive' : 'negative');
 
-function Tile({ label, icon: Icon, value, foot, cls = '' }) {
+function StatCard({ label, value, icon: Icon, color = 'var(--green)' }) {
   return (
-    <div className="card md-kpi">
-      <div className="md-kpi-top"><span className="md-label">{label}</span>{Icon && <Icon />}</div>
-      <div className={`md-kpi-value ${cls}`}>{value}</div>
-      {foot && <div className="md-kpi-foot">{foot}</div>}
-    </div>
-  );
-}
-
-function ChartTip({ active, payload, label, metric }) {
-  if (!active || !payload?.length) return null;
-  const v = payload[0].value;
-  return (
-    <div className="pn-tip">
-      <strong>{label}</strong>
-      <span>{metric.label}: {metric.pct ? roiStr(v) : formatINRFull(v)}</span>
+    <div className="pnl-stat-card" style={{ borderLeftColor: color }}>
+      <div className="pnl-stat-header">
+        <span className="pnl-stat-label">{label}</span>
+        {Icon && <Icon style={{ width: 18, height: 18, color: 'var(--text-muted)' }} />}
+      </div>
+      <div className="pnl-stat-value">{value}</div>
     </div>
   );
 }
@@ -55,7 +47,7 @@ function PnLTracker() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [sel, setSel] = useState(null);           // selected period_month
+  const [sel, setSel] = useState(0);
   const [metricKey, setMetricKey] = useState('gross_sale');
 
   const load = useCallback(async () => {
@@ -64,8 +56,8 @@ function PnLTracker() {
       const res = await apiFetch('/api/pnl');
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
-      setData(json);
-      setSel((s) => (s && json.months.some((m) => m.period_month === s) ? s : json.months.at(-1)?.period_month || null));
+      setData(json.months);
+      setSel((i) => (i < json.months.length ? i : 0));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -74,146 +66,125 @@ function PnLTracker() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  const months = data?.months || [];
-  const cur = months.find((m) => m.period_month === sel) || null;
-  const metric = METRICS.find((m) => m.key === metricKey);
-  const series = useMemo(() => months.map((m) => ({ label: monthShort(m.period_month), value: m[metricKey] })), [months, metricKey]);
-  const anyNegative = series.some((p) => p.value < 0);
-  const expenseMax = cur ? Math.max(1, ...cur.expenses.map((e) => e.amount)) : 1;
+  const months = data || [];
+  const cur = months[sel] || null;
+  const metric = METRIC_OPTIONS.find((m) => m.value === metricKey);
+  const isPct = metricKey === 'roi';
+  const chartData = useMemo(() => months.map((d) => ({ month: monthShort(d.period_month), value: d[metricKey] ?? 0 })), [months, metricKey]);
+  const fmt = (v) => (isPct ? formatPct(v) : formatINRFull(v));
 
   return (
-    <div className="md-page">
-      <div className="page-header" style={{ marginBottom: 0 }}>
-        <div className="page-header-icon-box"><IndianRupee className="page-header-icon-svg" /></div>
-        <div className="page-header-text">
-          <h1>P&amp;L Tracker</h1>
-          <p>
-            {cur ? `${cur.store_name} · store ${cur.store_code}` : 'Uppal Reebok'}
-            {months.length ? ` · ${monthLong(months[0].period_month)} to ${monthLong(months.at(-1).period_month)}` : ''}
-          </p>
-        </div>
-        <div className="md-header-actions mx-header-actions">
-          <Link href="/pnl-import" className="reebok-btn"><Upload />Import P&amp;L</Link>
-          <button type="button" className="reebok-btn secondary" onClick={load} disabled={loading}><RefreshCw />{loading ? 'Loading...' : 'Refresh'}</button>
-        </div>
-      </div>
-
-      {error && <div className="reebok-error">Could not load the P&amp;L: {error}</div>}
-      {loading && !data && <div className="md-empty card">Loading...</div>}
-
-      {data && months.length === 0 && (
-        <div className="md-empty card">
-          No P&amp;L months have been imported yet. <Link href="/pnl-import" className="mx-link">Import the P&amp;L Excel</Link> to fill this page.
-        </div>
-      )}
-
-      {cur && (
-        <>
-          <div className="card md-filters">
-            <div className="md-filter-group">
-              <span className="md-label">Month</span>
-              <div className="md-seg pn-months" role="group" aria-label="Month">
-                {months.map((m) => (
-                  <button key={m.period_month} type="button" className={m.period_month === sel ? 'active' : ''} onClick={() => setSel(m.period_month)}>
-                    {monthShort(m.period_month)}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {cur.updated_at && <span className="md-note pn-updated">Imported {new Date(cur.updated_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>}
+    <div className="pnl-page-wrapper">
+      <div className="pnl-page-container">
+        <div className="pnl-page-header">
+          <div>
+            <h1 className="pnl-page-title">P&amp;L Tracker</h1>
+            <p className="pnl-page-subtitle">{cur ? `${cur.store_name} • Store ${cur.store_code}` : 'REEBOK UPPAL • Store 323865'}</p>
           </div>
+          <Link href="/pnl-import" className="pnl-import-btn"><Upload />Import Data</Link>
+        </div>
 
-          <div className="md-kpis">
-            <Tile label="Sales (NSV)" icon={IndianRupee} value={formatINRFull(cur.gross_sale)}
-              foot={cur.carpet_sqft ? `${formatINRFull(cur.gross_sale / cur.carpet_sqft)} per sq ft` : null} />
-            <Tile label="Income margin" icon={Percent} value={formatINRFull(cur.income_margin)}
-              foot={cur.gross_sale ? `${formatPercent((cur.income_margin / cur.gross_sale) * 100)} of sales` : null} />
-            <Tile label="Operating expenses" icon={Wallet} value={formatINRFull(cur.opex_expenses)}
-              foot={cur.gross_sale ? `${formatPercent((cur.opex_expenses / cur.gross_sale) * 100)} of sales` : null} />
-            <Tile label="Operating profit" icon={Scale} value={formatINRFull(cur.operating_profit)} cls={signCls(cur.operating_profit)} foot="Margin − opex" />
-            <Tile label="Depreciation" icon={Building2} value={formatINRFull(cur.depreciation)} />
-            <Tile label="Funds cost" icon={Landmark} value={formatINRFull(cur.funds_cost)} />
-            <Tile label="Net profit" icon={TrendingUp} value={formatINRFull(cur.net_profit_opex_dep)} cls={signCls(cur.net_profit_opex_dep)}
-              foot={`After funds cost: ${formatINRFull(cur.net_profit_all_costs)}`} />
-            <Tile label="ROI" icon={Percent} value={roiStr(cur.roi)} cls={signCls(cur.roi)} foot="As reported in the P&L file" />
+        {error && <div className="reebok-error">Could not load the P&amp;L: {error}</div>}
+        {loading && !data && <div className="md-empty card">Loading P&amp;L data...</div>}
+        {data && months.length === 0 && (
+          <div className="md-empty card">
+            No P&amp;L months have been imported yet. <Link href="/pnl-import" className="mx-link">Import the P&amp;L Excel</Link> to fill this page.
           </div>
+        )}
 
-          <div className="md-row md-row-trend">
-            <div className="card">
-              <div className="card-header mx-card-head">
-                <ChartLine className="card-header-icon-svg" />
-                <h3>{metric.label} by month</h3>
-                <div className="mx-card-actions">
-                  <select className="md-select-plain" value={metricKey} onChange={(e) => setMetricKey(e.target.value)} aria-label="Metric">
-                    {METRICS.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
-                  </select>
-                </div>
-              </div>
-              {months.length < 2 ? <div className="md-empty">A trend needs at least two months.</div> : (
-                <div className="md-chart">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={series} margin={{ top: 8, right: 16, left: 4, bottom: 0 }}>
-                      <CartesianGrid stroke="var(--border)" vertical={false} />
-                      <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
-                      <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} width={64}
-                        tickFormatter={(v) => (metric.pct ? `${v}%` : formatINR(v))} />
-                      {anyNegative && <ReferenceLine y={0} stroke="var(--border-strong)" />}
-                      <Tooltip content={<ChartTip metric={metric} />} cursor={{ stroke: 'var(--border-strong)' }} />
-                      <Line type="monotone" dataKey="value" stroke="var(--green)" strokeWidth={2} isAnimationActive={false}
-                        dot={{ r: 4, fill: 'var(--green)', stroke: 'var(--bg-elevated)', strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
+        {cur && (
+          <>
+            <div className="pnl-month-selector">
+              {months.map((m, idx) => (
+                <button key={m.period_month} type="button" className={`pnl-month-btn ${sel === idx ? 'active' : ''}`} onClick={() => setSel(idx)}>
+                  {monthLong(m.period_month)}
+                </button>
+              ))}
             </div>
 
-            <div className="card">
-              <div className="card-header"><ReceiptText className="card-header-icon-svg" /><h3>Expenses · {monthLong(cur.period_month)}</h3></div>
-              {cur.expenses.length === 0 ? <div className="md-empty">No expense lines for this month.</div> : (
-                <div className="mx-hbars">
+            <div className="pnl-chart-card">
+              <div className="pnl-chart-head">
+                <h3>Metric Trend</h3>
+                <select className="pnl-select" value={metricKey} onChange={(e) => setMetricKey(e.target.value)} aria-label="Metric">
+                  {METRIC_OPTIONS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+              </div>
+              <div className="pnl-chart-body">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 12 }} stroke="var(--border-strong)" />
+                    <YAxis width={80} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} stroke="var(--border-strong)"
+                      tickFormatter={(v) => (isPct ? `${v}%` : Number(v).toLocaleString('en-IN'))} />
+                    <Tooltip formatter={(v) => [fmt(v), metric.label]}
+                      contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 4, padding: 8, color: 'var(--text)' }} />
+                    <Legend />
+                    <Line type="monotone" dataKey="value" name={metric.label} stroke="var(--green)" strokeWidth={3}
+                      dot={{ fill: 'var(--green)', r: 6 }} activeDot={{ r: 8 }} isAnimationActive={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <h2 className="pnl-section-title">{monthLong(cur.period_month)} Breakdown</h2>
+            <div className="pnl-metrics-grid">
+              <StatCard label="Sales (NSV)" value={formatINRFull(cur.gross_sale)} icon={IndianRupee} color="var(--green)" />
+              <StatCard label="Income Margin" value={formatINRFull(cur.income_margin)} icon={TrendingUp} color="var(--blue)" />
+              <StatCard label="Total Opex" value={formatINRFull(cur.opex_expenses)} icon={Zap} color="var(--amber)" />
+              <StatCard label="Operating Profit" value={formatINRFull(cur.operating_profit)} color={signColor(cur.operating_profit)} />
+              <StatCard label="Depreciation" value={formatINRFull(cur.depreciation)} color="var(--text-muted)" />
+              <StatCard label="Funds Cost" value={formatINRFull(cur.funds_cost)} color="var(--text-muted)" />
+              <StatCard label="Net Profit" value={formatINRFull(cur.net_profit_opex_dep)} color={signColor(cur.net_profit_opex_dep)} />
+              <StatCard label="ROI" value={formatPct(cur.roi)} color="var(--text-muted)" />
+            </div>
+
+            {cur.expenses.length > 0 && (
+              <div className="pnl-expense-breakdown">
+                <h4>Operating expenses · {monthLong(cur.period_month)}</h4>
+                <div className="pnl-expense-list">
                   {cur.expenses.map((e) => (
-                    <div key={e.category} className="mx-hbar-row pn-exp-row" title={`${e.category}: ${formatINRFull(e.amount)}`}>
-                      <span>{e.category}</span>
-                      <div><i style={{ width: `${Math.max(0, (e.amount / expenseMax) * 100)}%` }} /></div>
-                      <strong>{formatINRFull(e.amount)}</strong>
+                    <div key={e.category} className="pnl-expense-row">
+                      <span className="pnl-expense-label">{e.category}</span>
+                      <span className="pnl-expense-value">{formatINRFull(e.amount)}</span>
                     </div>
                   ))}
-                  <div className="mx-hbar-row pn-exp-row pn-exp-total"><span>Total opex</span><div /><strong>{formatINRFull(cur.opex_expenses)}</strong></div>
+                  <div className="pnl-expense-row pnl-expense-total">
+                    <span>Total Opex</span><span>{formatINRFull(cur.opex_expenses)}</span>
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
+            )}
 
-          <div className="card">
-            <div className="card-header"><Table2 className="card-header-icon-svg" /><h3>All months</h3></div>
-            <p className="md-note">Operating profit = income margin − operating expenses. Net profit subtracts depreciation, then funds cost.</p>
-            <div className="md-table-wrap">
-              <table className="md-table">
-                <thead>
-                  <tr><th>Metric</th>{months.map((m) => <th key={m.period_month} className={m.period_month === sel ? 'pn-col-sel' : ''}>{monthShort(m.period_month)}</th>)}</tr>
-                </thead>
-                <tbody>
-                  {[
-                    ['Sales (NSV)', 'gross_sale'], ['Income margin', 'income_margin'], ['Operating expenses', 'opex_expenses'],
-                    ['Operating profit', 'operating_profit', true], ['Depreciation', 'depreciation'],
-                    ['Net profit (after depreciation)', 'net_profit_opex_dep', true], ['Funds cost', 'funds_cost'],
-                    ['Net profit (all costs)', 'net_profit_all_costs', true],
-                  ].map(([label, key, signed]) => (
-                    <tr key={key} className={signed ? 'pn-row-strong' : ''}>
-                      <td>{label}</td>
-                      {months.map((m) => <td key={m.period_month} className={signed ? signCls(m[key]) : ''}>{formatINRFull(m[key])}</td>)}
+            <div className="pnl-comparison-section">
+              <h2>All Months Comparison</h2>
+              <div className="pnl-comparison-table">
+                <table>
+                  <thead>
+                    <tr><th>Metric</th>{months.map((d) => <th key={d.period_month}>{monthShort(d.period_month)}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>Sales (NSV)</td>{months.map((d) => <td key={d.period_month} className="pnl-table-value">{formatINRFull(d.gross_sale)}</td>)}</tr>
+                    <tr><td>Total Opex</td>{months.map((d) => <td key={d.period_month} className="pnl-table-value">{formatINRFull(d.opex_expenses)}</td>)}</tr>
+                    <tr><td>Income Margin</td>{months.map((d) => <td key={d.period_month} className="pnl-table-value">{formatINRFull(d.income_margin)}</td>)}</tr>
+                    <tr className="pnl-table-highlight">
+                      <td>Operating Profit</td>
+                      {months.map((d) => <td key={d.period_month} className={`pnl-table-value ${signCls(d.operating_profit)}`}>{formatINRFull(d.operating_profit)}</td>)}
                     </tr>
-                  ))}
-                  <tr className="pn-row-strong">
-                    <td>ROI</td>
-                    {months.map((m) => <td key={m.period_month} className={signCls(m.roi)}>{roiStr(m.roi)}</td>)}
-                  </tr>
-                </tbody>
-              </table>
+                    <tr className="pnl-table-highlight">
+                      <td>Net Profit (with Dep)</td>
+                      {months.map((d) => <td key={d.period_month} className={`pnl-table-value ${signCls(d.net_profit_opex_dep)}`}>{formatINRFull(d.net_profit_opex_dep)}</td>)}
+                    </tr>
+                    <tr className="pnl-table-highlight">
+                      <td>ROI (%)</td>
+                      {months.map((d) => <td key={d.period_month} className={`pnl-table-value ${signCls(d.roi)}`}>{formatPct(d.roi)}</td>)}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
