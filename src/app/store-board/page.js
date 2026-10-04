@@ -8,14 +8,20 @@ import {
   formatINRFull, formatNumber, formatPercent, MONTH_NAMES,
   sumDays, kpisFrom,
 } from '@/lib/storeBoardShared';
+import { monthlyTarget, monthlyStaffTarget, MTD_TARGET, YTD_TARGET } from '@/lib/email/reebokHelpers';
 import './store-board.css';
 
 const DEFAULT_DATE_MODE = 'mtd';
 const STORE_NAME = 'UPPAL';
 const STORE_ID = 'R1157';
 
-function getDateRangeForMode(mode, latestDate) {
+function getDateRangeForMode(mode, latestDate, customStart, customEnd) {
   if (!latestDate) return null;
+
+  if (mode === 'custom' && customStart && customEnd) {
+    return { start: customStart, end: customEnd };
+  }
+
   const latest = new Date(latestDate + 'T00:00:00Z');
   const year = latest.getUTCFullYear();
   const month = latest.getUTCMonth();
@@ -207,16 +213,21 @@ function WeeklyBusinessPlanPanel({ days, latestDate }) {
 }
 
 /**
- * Individual Performance Panel
+ * Individual Performance Panel - Real salesperson data
  */
-function IndividualPerformancePanel({ days, latestDate }) {
-  const salespeople = [
-    { name: 'A Nagesh Babu', actual: 57150.7, qty: 29 },
-    { name: 'Yusuf Ahamad', actual: 44444.3, qty: 15 },
-    { name: 'Manne Nilish Kumar', actual: 18797, qty: 4 },
-    { name: 'Vibha Kumari', actual: 17997.2, qty: 3 },
-    { name: 'Priyanka Ray', actual: 5249.3, qty: 1 },
-  ];
+function IndividualPerformancePanel({ days, latestDate, salespersonData }) {
+  // Real salespeople: BALRAJ GADDAM, RAMBABU DHARAVATH, ERRI SRIJA
+  const SALESPERSON_NAMES = ['BALRAJ GADDAM', 'RAMBABU DHARAVATH', 'ERRI SRIJA'];
+
+  // Map RPC data to salesperson list
+  const salespeople = SALESPERSON_NAMES.map((name) => {
+    const rpData = (salespersonData || []).find(row => row.salesperson_name === name && row.period_type === 'mtd');
+    return {
+      name,
+      actual: rpData?.nsv || 0,
+      qty: rpData?.qty_sold || 0,
+    };
+  });
 
   // October 2026: ₹4,00,000 per individual salesperson
   const PER_PERSON_TARGET = 400000;
@@ -393,19 +404,14 @@ function FootwearByDepartmentPanel({ days, prevDays }) {
 }
 
 /**
- * Annual Business Plan Panel
+ * Annual Business Plan Panel - Store started July 2026
  */
 function AnnualBusinessPlanPanel({ days, latestDate }) {
   const current = kpisFrom(days);
-  // Real data from database will be populated here
-  // For now using placeholder structure - will be replaced with actual data
+
+  // Store started July 2026, so only show Jul-Oct 2026
+  // Targets: Before Oct = need to fetch; Oct = ₹10L
   const months = [
-    { name: 'Jan', ly: 0, target: 0, actual: 0 },
-    { name: 'Feb', ly: 0, target: 0, actual: 0 },
-    { name: 'Mar', ly: 0, target: 0, actual: 0 },
-    { name: 'Apr', ly: 0, target: 0, actual: 0 },
-    { name: 'May', ly: 0, target: 0, actual: 0 },
-    { name: 'Jun', ly: 0, target: 0, actual: 0 },
     { name: 'Jul', ly: 0, target: 0, actual: 0 },
     { name: 'Aug', ly: 0, target: 0, actual: 0 },
     { name: 'Sep', ly: 0, target: 0, actual: 0 },
@@ -624,6 +630,8 @@ function FilterBar({ dateMode, onDateModeChange, latestDate, isLoading }) {
 
 function StoreBoardContent() {
   const [dateMode, setDateMode] = useState(DEFAULT_DATE_MODE);
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
   const [bounds, setBounds] = useState({ firstDate: null, latestDate: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -662,7 +670,7 @@ function StoreBoardContent() {
     (async () => {
       try {
         setLoading(true);
-        const range = getDateRangeForMode(dateMode, latestDate);
+        const range = getDateRangeForMode(dateMode, latestDate, customStart, customEnd);
         if (!range) return;
 
         const params = new URLSearchParams({
@@ -673,7 +681,8 @@ function StoreBoardContent() {
         const json = await res.json();
         if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
         if (cancelled) return;
-        setData(json);
+        // Store latestDate with data for target calculation
+        setData({ ...json, latestDate });
         setLoading(false);
       } catch (err) {
         if (!cancelled) {
@@ -683,7 +692,7 @@ function StoreBoardContent() {
       }
     })();
     return () => { cancelled = true; };
-  }, [dateMode, latestDate]);
+  }, [dateMode, latestDate, customStart, customEnd]);
 
   if (error) {
     return (
@@ -726,7 +735,7 @@ function StoreBoardContent() {
           <div className="sb-content">
             <TargetVsAchievementPanel days={data.days} prevDays={data.prevDays} latestDate={latestDate} />
             <WeeklyBusinessPlanPanel days={data.days} latestDate={latestDate} />
-            <IndividualPerformancePanel days={data.days} latestDate={latestDate} />
+            <IndividualPerformancePanel days={data.days} latestDate={latestDate} salespersonData={data.salespersonData} />
             <MerchandiseMixPanel days={data.days} prevDays={data.prevDays} />
             <FootwearByDepartmentPanel days={data.days} prevDays={data.prevDays} />
             <AnnualBusinessPlanPanel days={data.days} latestDate={latestDate} />
