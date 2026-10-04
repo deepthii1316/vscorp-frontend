@@ -1,0 +1,380 @@
+/* Store Board — Uppal Store Dashboard */
+
+.store-board-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ─── Filter Bar ──────────────────────────────────────── */
+.sb-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-6);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.sb-filter-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.sb-mode-selector {
+  display: flex;
+  gap: var(--space-2);
+  background: var(--bg-subtle);
+  padding: var(--space-2);
+  border-radius: 6px;
+}
+
+.sb-mode-btn {
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sb-mode-btn:hover {
+  background: var(--bg-inset);
+  color: var(--text);
+}
+
+.sb-mode-btn.active {
+  background: var(--accent);
+  color: white;
+}
+
+.sb-custom-dates {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.sb-date-input {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.sb-apply-btn {
+  padding: var(--space-2) var(--space-4);
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.sb-apply-btn:hover {
+  background: var(--accent-hover);
+}
+
+.sb-filter-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.sb-store-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.sb-store-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.sb-data-through {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.sb-refresh-btn {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  transition: all 0.2s ease;
+}
+
+.sb-refresh-btn:hover:not(:disabled) {
+  background: var(--bg-inset);
+  border-color: var(--border-strong);
+}
+
+.sb-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Loading State ──────────────────────────────────────── */
+.sb-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-10);
+  color: var(--text-muted);
+}
+
+.sb-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Error State ──────────────────────────────────────── */
+.sb-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-10);
+  color: var(--negative, #B33A3A);
+  text-align: center;
+}
+
+.sb-error h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sb-error p {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* ─── Panels Container ──────────────────────────────────────── */
+.sb-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: var(--space-6);
+}
+
+.sb-panel {
+  padding: var(--space-6);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.sb-panel-title {
+  margin: 0 0 var(--space-5) 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.3px;
+}
+
+/* ─── Target vs Achievement Panel ──────────────────────────────────────── */
+.sb-achievement {
+  grid-column: 1 / -1;
+}
+
+.sb-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-4);
+}
+
+.sb-metric-card {
+  padding: var(--space-4);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.sb-metric-card.achievement-green {
+  background: var(--green-soft);
+  border-color: var(--green-line);
+}
+
+.sb-metric-card.achievement-amber {
+  background: var(--amber-soft);
+  border-color: var(--amber, #C97A1D);
+}
+
+.sb-metric-card.achievement-red {
+  background: var(--rose-soft);
+  border-color: var(--rose, #B33A3A);
+}
+
+.sb-metric-card.positive {
+  color: var(--positive);
+}
+
+.sb-metric-card.negative {
+  color: var(--rose, #B33A3A);
+}
+
+.sb-metric-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: var(--space-2);
+}
+
+.sb-metric-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ─── Store KPIs Panel ──────────────────────────────────────── */
+.sb-kpis {
+  grid-column: 1 / -1;
+}
+
+.sb-kpis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-4);
+}
+
+.sb-kpi-item {
+  padding: var(--space-4);
+  background: var(--bg-subtle);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.sb-kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: var(--space-2);
+}
+
+.sb-kpi-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ─── Merchandise Mix Panel ──────────────────────────────────────── */
+.sb-mix-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sb-mix-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-subtle);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.sb-mix-item span:first-child {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sb-mix-item span:last-child {
+  color: var(--text-secondary);
+}
+
+/* ─── Footfall Analytics Panel ──────────────────────────────────────── */
+.sb-footfall-content {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+.sb-footfall-item {
+  padding: var(--space-4);
+  background: var(--bg-subtle);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.sb-footfall-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: var(--space-2);
+}
+
+.sb-footfall-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ─── Responsive ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  .store-board-container {
+    padding: var(--space-4);
+    gap: var(--space-4);
+  }
+
+  .sb-filter-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+
+  .sb-filter-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .sb-panels {
+    grid-template-columns: 1fr;
+  }
+
+  .sb-metrics-grid {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+
+  .sb-kpis-grid {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  }
+}

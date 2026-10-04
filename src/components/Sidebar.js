@@ -19,6 +19,7 @@ import {
   FileUp,
   ChevronLeft,
   ChevronRight,
+  TrendingUp,
 } from 'lucide-react';
 
 // roles omitted -> visible to every logged-in role. Master Dashboard and the
@@ -28,6 +29,7 @@ const navItems = [
   {
     section: 'Analytics',
     items: [
+      { href: '/store-board', label: 'Store Board', icon: TrendingUp, roles: ['admin'] },
       { href: '/master-dashboard', label: 'Master Dashboard', icon: LayoutDashboard, roles: ['admin'] },
       { href: '/merch-dashboard', label: 'Merch Dashboard', icon: Boxes, roles: ['admin'] },
       { href: '/pnl-tracker', label: 'P&L Tracker', icon: IndianRupee, roles: ['admin'] },
