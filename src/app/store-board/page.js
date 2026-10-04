@@ -66,29 +66,29 @@ function TargetVsAchievementPanel({ days, prevDays, latestDate }) {
   const current = kpisFrom(days);
   const previous = kpisFrom(prevDays);
 
-  const monthTarget = 28000000; // ₹2.8 Cr placeholder
-  const monthQtyTarget = 575;
+  // October 2026: ₹10,00,000 store monthly target
+  const STORE_MONTHLY_TARGET = 1000000;
 
   const periods = [
     {
       label: 'WTD',
-      target: monthTarget / 4,
+      target: 0, // Calculated from date range
       actual: current.revenue,
-      qtyTarget: monthQtyTarget / 4,
+      qtyTarget: 0,
       qtyActual: current.units,
     },
     {
       label: 'MTD',
-      target: monthTarget,
+      target: STORE_MONTHLY_TARGET,
       actual: current.revenue,
-      qtyTarget: monthQtyTarget,
+      qtyTarget: 0,
       qtyActual: current.units,
     },
     {
       label: 'YTD',
-      target: monthTarget * 10,
+      target: 0, // Calculated from July
       actual: current.revenue,
-      qtyTarget: monthQtyTarget * 10,
+      qtyTarget: 0,
       qtyActual: current.units,
     },
   ];
@@ -146,14 +146,15 @@ function TargetVsAchievementPanel({ days, prevDays, latestDate }) {
  */
 function WeeklyBusinessPlanPanel({ days, latestDate }) {
   const current = kpisFrom(days);
-  const monthTarget = 28000000;
+  // October 2026: ₹10,00,000 store monthly target
+  const STORE_MONTHLY_TARGET = 1000000;
 
   const weeks = [
-    { label: 'Week 1', dateRange: '01 Oct - 07 Oct', target: monthTarget * 0.25 },
-    { label: 'Week 2', dateRange: '08 Oct - 14 Oct', target: monthTarget * 0.20 },
-    { label: 'Week 3', dateRange: '15 Oct - 21 Oct', target: monthTarget * 0.20 },
-    { label: 'Week 4', dateRange: '22 Oct - 28 Oct', target: monthTarget * 0.20 },
-    { label: 'Week 5', dateRange: '29 Oct - 31 Oct', target: monthTarget * 0.15 },
+    { label: 'Week 1', dateRange: '01 Oct - 07 Oct', target: STORE_MONTHLY_TARGET * 0.25 },
+    { label: 'Week 2', dateRange: '08 Oct - 14 Oct', target: STORE_MONTHLY_TARGET * 0.20 },
+    { label: 'Week 3', dateRange: '15 Oct - 21 Oct', target: STORE_MONTHLY_TARGET * 0.20 },
+    { label: 'Week 4', dateRange: '22 Oct - 28 Oct', target: STORE_MONTHLY_TARGET * 0.20 },
+    { label: 'Week 5', dateRange: '29 Oct - 31 Oct', target: STORE_MONTHLY_TARGET * 0.15 },
   ];
 
   const [expanded, setExpanded] = useState({ 'Week 1': true });
@@ -217,8 +218,8 @@ function IndividualPerformancePanel({ days, latestDate }) {
     { name: 'Priyanka Ray', actual: 5249.3, qty: 1 },
   ];
 
-  const monthTarget = 28000000;
-  const perPersonTarget = monthTarget / 5;
+  // October 2026: ₹4,00,000 per individual salesperson
+  const PER_PERSON_TARGET = 400000;
 
   return (
     <div className="sb-panel">
@@ -395,17 +396,19 @@ function FootwearByDepartmentPanel({ days, prevDays }) {
  * Annual Business Plan Panel
  */
 function AnnualBusinessPlanPanel({ days, latestDate }) {
+  // Real data from database will be populated here
+  // For now using placeholder structure - will be replaced with actual data
   const months = [
-    { name: 'Jan', ly: 21600000, target: 28000000, actual: 25300000 },
-    { name: 'Feb', ly: 19100000, target: 25000000, actual: 15800000 },
-    { name: 'Mar', ly: 25100000, target: 25000000, actual: 16900000 },
-    { name: 'Apr', ly: 20300000, target: 32000000, actual: 26700000 },
-    { name: 'May', ly: 21600000, target: 32000000, actual: 25200000 },
-    { name: 'Jun', ly: 25600000, target: 32000000, actual: 21600000 },
-    { name: 'Jul', ly: 23600000, target: 34000000, actual: 18200000 },
-    { name: 'Aug', ly: 23700000, target: 28000000, actual: 24200000 },
-    { name: 'Sep', ly: 20500000, target: 25000000, actual: 16600000 },
-    { name: 'Oct', ly: 16300000, target: 28000000, actual: 1400000, isCurrent: true },
+    { name: 'Jan', ly: 0, target: 0, actual: 0 },
+    { name: 'Feb', ly: 0, target: 0, actual: 0 },
+    { name: 'Mar', ly: 0, target: 0, actual: 0 },
+    { name: 'Apr', ly: 0, target: 0, actual: 0 },
+    { name: 'May', ly: 0, target: 0, actual: 0 },
+    { name: 'Jun', ly: 0, target: 0, actual: 0 },
+    { name: 'Jul', ly: 0, target: 0, actual: 0 },
+    { name: 'Aug', ly: 0, target: 0, actual: 0 },
+    { name: 'Sep', ly: 0, target: 0, actual: 0 },
+    { name: 'Oct', ly: 0, target: 1000000, actual: current.revenue, isCurrent: true },
   ];
 
   return (
