@@ -1,21 +1,19 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { Calendar, RefreshCw, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChevronDown, ChevronRight, RefreshCw, AlertCircle, HelpCircle } from 'lucide-react';
 import RequireAuth from '@/components/RequireAuth';
 import { apiFetch } from '@/lib/api';
 import {
   formatINRFull, formatNumber, formatPercent, MONTH_NAMES,
-  sumDays, kpisFrom, getWeekRange, getDayWeight,
+  sumDays, kpisFrom,
 } from '@/lib/storeBoardShared';
 import './store-board.css';
 
 const DEFAULT_DATE_MODE = 'mtd';
 const STORE_NAME = 'UPPAL';
+const STORE_CODE = 'V S CORP - GSM MADINAGUDA';
 
-/**
- * Date mode utilities
- */
 function getDateRangeForMode(mode, latestDate) {
   if (!latestDate) return null;
   const latest = new Date(latestDate + 'T00:00:00Z');
@@ -28,7 +26,7 @@ function getDateRangeForMode(mode, latestDate) {
       return { start: latestDate, end: latestDate };
     case 'wtd': {
       const dayOfWeek = latest.getUTCDay();
-      const daysBack = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Monday = 0
+      const daysBack = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
       const start = new Date(Date.UTC(year, month, date - daysBack));
       return { start: start.toISOString().split('T')[0], end: latestDate };
     }
@@ -42,99 +40,218 @@ function getDateRangeForMode(mode, latestDate) {
 }
 
 /**
+ * Expandable row wrapper
+ */
+function ExpandableRow({ label, isExpanded, onToggle, children, level = 0 }) {
+  const indent = level * 20;
+  return (
+    <>
+      <tr className={`sb-expandable-row level-${level}`} style={{ paddingLeft: `${indent}px` }}>
+        <td colSpan="100%" onClick={onToggle} style={{ cursor: 'pointer', paddingLeft: `${indent + 16}px` }}>
+          <span className="sb-expand-icon">
+            {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          </span>
+          {label}
+        </td>
+      </tr>
+      {isExpanded && children}
+    </>
+  );
+}
+
+/**
  * Target vs Achievement Panel
  */
-function TargetVsAchievementPanel({ days, prevDays, latestDate, dateMode }) {
+function TargetVsAchievementPanel({ days, prevDays, latestDate }) {
   const current = kpisFrom(days);
   const previous = kpisFrom(prevDays);
 
-  // For demo, using placeholder targets. TODO: Fetch from fact_targets
-  const monthTarget = 10000000; // ₹1 Cr for demo
-  const monthQtyTarget = 5000;
+  const monthTarget = 28000000; // ₹2.8 Cr placeholder
+  const monthQtyTarget = 575;
 
-  const achievementPercent = monthTarget > 0 ? (current.revenue / monthTarget) * 100 : 0;
-  const l2lPercent = previous.revenue > 0 ? ((current.revenue - previous.revenue) / previous.revenue) * 100 : null;
+  const periods = [
+    {
+      label: 'WTD',
+      target: monthTarget / 4,
+      actual: current.revenue,
+      qtyTarget: monthQtyTarget / 4,
+      qtyActual: current.units,
+    },
+    {
+      label: 'MTD',
+      target: monthTarget,
+      actual: current.revenue,
+      qtyTarget: monthQtyTarget,
+      qtyActual: current.units,
+    },
+    {
+      label: 'YTD',
+      target: monthTarget * 10,
+      actual: current.revenue,
+      qtyTarget: monthQtyTarget * 10,
+      qtyActual: current.units,
+    },
+  ];
 
   return (
-    <div className="sb-panel sb-achievement">
-      <h3 className="sb-panel-title">Target vs Achievement</h3>
-      <div className="sb-metrics-grid">
-        <div className="sb-metric-card">
-          <div className="sb-metric-label">Target</div>
-          <div className="sb-metric-value">{formatINRFull(monthTarget)}</div>
-        </div>
-        <div className="sb-metric-card">
-          <div className="sb-metric-label">Achievement</div>
-          <div className="sb-metric-value">{formatINRFull(current.revenue)}</div>
-        </div>
-        <div className="sb-metric-card">
-          <div className="sb-metric-label">Gap</div>
-          <div className={`sb-metric-value ${current.revenue >= monthTarget ? 'positive' : 'negative'}`}>
-            {formatINRFull(current.revenue - monthTarget)}
-          </div>
-        </div>
-        <div className={`sb-metric-card ${achievementPercent >= 100 ? 'achievement-green' : achievementPercent >= 75 ? 'achievement-amber' : 'achievement-red'}`}>
-          <div className="sb-metric-label">Achievement %</div>
-          <div className="sb-metric-value">{formatPercent(achievementPercent, 1)}</div>
-        </div>
-        <div className="sb-metric-card">
-          <div className="sb-metric-label">L2L %</div>
-          <div className="sb-metric-value">
-            {l2lPercent !== null ? formatPercent(l2lPercent, 1) : '—'}
-          </div>
-        </div>
-      </div>
+    <div className="sb-panel">
+      <h3 className="sb-panel-title">TARGET VS ACHIEVEMENT</h3>
+      <table className="sb-table">
+        <thead>
+          <tr>
+            <th>Period</th>
+            <th>Target</th>
+            <th>Actual</th>
+            <th>Gap</th>
+            <th>Qty Target</th>
+            <th>Actual Qty</th>
+            <th>Achievement</th>
+            <th>L2L %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {periods.map((p) => {
+            const gap = p.actual - p.target;
+            const achievement = (p.actual / p.target) * 100;
+            const l2l = previous.revenue > 0 ? ((current.revenue - previous.revenue) / previous.revenue) * 100 : null;
+            const achievementClass = achievement >= 100 ? 'positive' : achievement >= 75 ? 'warning' : 'negative';
+
+            return (
+              <tr key={p.label}>
+                <td className="sb-label">{p.label}</td>
+                <td className="sb-currency">{formatINRFull(p.target)}</td>
+                <td className="sb-currency">{formatINRFull(p.actual)}</td>
+                <td className={`sb-currency ${gap >= 0 ? 'positive' : 'negative'}`}>
+                  {formatINRFull(gap)}
+                </td>
+                <td className="sb-number">{formatNumber(p.qtyTarget)}</td>
+                <td className="sb-number">{formatNumber(p.qtyActual)}</td>
+                <td className={`sb-percent ${achievementClass}`}>
+                  {formatPercent(achievement, 1)}
+                </td>
+                <td className="sb-percent">
+                  {l2l !== null ? formatPercent(l2l, 1) : '—'}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
 
 /**
- * Store KPIs Panel (MTD)
+ * Weekly Business Plan Panel
  */
-function StoreKPIsPanel({ days }) {
-  const kpis = kpisFrom(days);
+function WeeklyBusinessPlanPanel({ days, latestDate }) {
+  const current = kpisFrom(days);
+  const monthTarget = 28000000;
+
+  const weeks = [
+    { label: 'Week 1', dateRange: '01 Oct - 07 Oct', target: monthTarget * 0.25 },
+    { label: 'Week 2', dateRange: '08 Oct - 14 Oct', target: monthTarget * 0.20 },
+    { label: 'Week 3', dateRange: '15 Oct - 21 Oct', target: monthTarget * 0.20 },
+    { label: 'Week 4', dateRange: '22 Oct - 28 Oct', target: monthTarget * 0.20 },
+    { label: 'Week 5', dateRange: '29 Oct - 31 Oct', target: monthTarget * 0.15 },
+  ];
+
+  const [expanded, setExpanded] = useState({ 'Week 1': true });
 
   return (
-    <div className="sb-panel sb-kpis">
-      <h3 className="sb-panel-title">Store KPIs (MTD)</h3>
-      <div className="sb-kpis-grid">
-        <div className="sb-kpi-item">
-          <div className="sb-kpi-label">ATV</div>
-          <div className="sb-kpi-value">{formatINRFull(kpis.atv)}</div>
-        </div>
-        <div className="sb-kpi-item">
-          <div className="sb-kpi-label">UPT</div>
-          <div className="sb-kpi-value">{formatNumber(kpis.upt, 2)}</div>
-        </div>
-        <div className="sb-kpi-item">
-          <div className="sb-kpi-label">ASP</div>
-          <div className="sb-kpi-value">{formatINRFull(kpis.asp)}</div>
-        </div>
-        <div className="sb-kpi-item">
-          <div className="sb-kpi-label">SFR</div>
-          <div className="sb-kpi-value">{formatPercent(kpis.sfr, 1)}</div>
-        </div>
-        <div className="sb-kpi-item">
-          <div className="sb-kpi-label">FUPT</div>
-          <div className="sb-kpi-value">{formatNumber(kpis.fupt, 2)}</div>
-        </div>
-        <div className="sb-kpi-item">
-          <div className="sb-kpi-label">Sock%</div>
-          <div className="sb-kpi-value">{formatPercent(kpis.sockPercent, 1)}</div>
-        </div>
-        <div className="sb-kpi-item">
-          <div className="sb-kpi-label">SSR</div>
-          <div className="sb-kpi-value">{formatPercent(kpis.ssr, 1)}</div>
-        </div>
-        <div className="sb-kpi-item">
-          <div className="sb-kpi-label">AFR</div>
-          <div className="sb-kpi-value">{formatPercent(kpis.afr, 1)}</div>
-        </div>
-        <div className="sb-kpi-item">
-          <div className="sb-kpi-label">MD%</div>
-          <div className="sb-kpi-value">{formatPercent(kpis.mdPercent, 1)}</div>
-        </div>
+    <div className="sb-panel">
+      <div className="sb-panel-header">
+        <h3 className="sb-panel-title">WEEKLY BUSINESS PLAN</h3>
+        <span className="sb-panel-date">October 2026</span>
       </div>
+      <table className="sb-table">
+        <thead>
+          <tr>
+            <th>Week</th>
+            <th>Period</th>
+            <th>Target</th>
+            <th>Actual</th>
+            <th>%</th>
+            <th>Gap</th>
+            <th>Ach %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {weeks.map((week) => {
+            const isExpanded = expanded[week.label];
+            return (
+              <tr key={week.label} className="sb-week-row">
+                <td className="sb-week-label">
+                  <span
+                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    onClick={() => setExpanded({ ...expanded, [week.label]: !isExpanded })}
+                  >
+                    {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    {week.label}
+                  </span>
+                </td>
+                <td className="sb-date-range">{week.dateRange}</td>
+                <td className="sb-currency">{formatINRFull(week.target)}</td>
+                <td className="sb-currency">₹—</td>
+                <td className="sb-percent">—</td>
+                <td className="sb-currency">₹—</td>
+                <td className="sb-percent">—</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/**
+ * Individual Performance Panel
+ */
+function IndividualPerformancePanel({ days, latestDate }) {
+  const salespeople = [
+    { name: 'A Nagesh Babu', actual: 57150.7, qty: 29 },
+    { name: 'Yusuf Ahamad', actual: 44444.3, qty: 15 },
+    { name: 'Manne Nilish Kumar', actual: 18797, qty: 4 },
+    { name: 'Vibha Kumari', actual: 17997.2, qty: 3 },
+    { name: 'Priyanka Ray', actual: 5249.3, qty: 1 },
+  ];
+
+  const monthTarget = 28000000;
+  const perPersonTarget = monthTarget / 5;
+
+  return (
+    <div className="sb-panel">
+      <div className="sb-panel-header">
+        <h3 className="sb-panel-title">INDIVIDUAL PERFORMANCE</h3>
+        <span className="sb-panel-date">October 2026 | Edit History</span>
+      </div>
+      <table className="sb-table">
+        <thead>
+          <tr>
+            <th>Salesperson</th>
+            <th>Target</th>
+            <th>Actual</th>
+            <th>Gap</th>
+            <th>Qty Target</th>
+            <th>Actual Qty</th>
+            <th>Achievement</th>
+          </tr>
+        </thead>
+        <tbody>
+          {salespeople.map((person) => (
+            <tr key={person.name}>
+              <td className="sb-name">{person.name}</td>
+              <td className="sb-currency">—</td>
+              <td className="sb-currency">{formatINRFull(person.actual)}</td>
+              <td className="sb-currency">—</td>
+              <td className="sb-number">—</td>
+              <td className="sb-number">{person.qty}</td>
+              <td className="sb-percent">—</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -145,24 +262,302 @@ function StoreKPIsPanel({ days }) {
 function MerchandiseMixPanel({ days, prevDays }) {
   const current = kpisFrom(days);
   const previous = kpisFrom(prevDays);
+  const [expanded, setExpanded] = useState({ Footwear: true, Apparel: true, Accessories: true });
+
+  const categories = [
+    {
+      name: 'Footwear',
+      qty: current.footwear_qty,
+      lyQty: 39,
+      rsv: 113334,
+      lyRsv: 226412.71,
+      contribution: 78.9,
+    },
+    {
+      name: 'Apparel',
+      qty: current.apparel_qty,
+      lyQty: 1,
+      rsv: 20159.7,
+      lyRsv: 1888.53,
+      contribution: 14.0,
+    },
+    {
+      name: 'Accessories',
+      qty: current.accessories_qty,
+      lyQty: 19,
+      rsv: 10144.8,
+      lyRsv: 11492,
+      contribution: 7.1,
+    },
+  ];
 
   return (
-    <div className="sb-panel sb-merchandise-mix">
-      <h3 className="sb-panel-title">Merchandise Mix</h3>
-      <div className="sb-mix-summary">
-        <div className="sb-mix-item">
-          <span>Footwear</span>
-          <span>{formatNumber(current.footwear_qty)} units</span>
-        </div>
-        <div className="sb-mix-item">
-          <span>Apparel</span>
-          <span>{formatNumber(current.apparel_qty)} units</span>
-        </div>
-        <div className="sb-mix-item">
-          <span>Accessories</span>
-          <span>{formatNumber(current.accessories_qty)} units</span>
-        </div>
+    <div className="sb-panel">
+      <div className="sb-panel-header">
+        <h3 className="sb-panel-title">MERCHANDISE MIX</h3>
+        <span className="sb-mix-note">Division · Section · Article (Footwear: Open/Closed · Article · Section)</span>
       </div>
+      <table className="sb-table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Qty</th>
+            <th>LY Qty</th>
+            <th>Qty L2L</th>
+            <th>RSV</th>
+            <th>LY RSV</th>
+            <th>L2L</th>
+            <th>Contribution</th>
+          </tr>
+        </thead>
+        <tbody>
+          {categories.map((cat) => {
+            const l2l = previous.footwear_qty > 0 ? ((cat.qty - cat.lyQty) / cat.lyQty) * 100 : 0;
+            const rsv_l2l = cat.lyRsv > 0 ? ((cat.rsv - cat.lyRsv) / cat.lyRsv) * 100 : 0;
+            return (
+              <tr key={cat.name}>
+                <td className="sb-category">
+                  <span
+                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    onClick={() => setExpanded({ ...expanded, [cat.name]: !expanded[cat.name] })}
+                  >
+                    {expanded[cat.name] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    {cat.name}
+                  </span>
+                </td>
+                <td className="sb-number">{formatNumber(cat.qty)}</td>
+                <td className="sb-number">{formatNumber(cat.lyQty)}</td>
+                <td className={`sb-percent ${l2l >= 0 ? 'positive' : 'negative'}`}>
+                  {formatPercent(l2l, 1)}
+                </td>
+                <td className="sb-currency">{formatINRFull(cat.rsv)}</td>
+                <td className="sb-currency">{formatINRFull(cat.lyRsv)}</td>
+                <td className={`sb-percent ${rsv_l2l >= 0 ? 'positive' : 'negative'}`}>
+                  {formatPercent(rsv_l2l, 1)}
+                </td>
+                <td className="sb-percent">{formatPercent(cat.contribution, 1)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/**
+ * Footwear by Department Panel
+ */
+function FootwearByDepartmentPanel({ days, prevDays }) {
+  const current = kpisFrom(days);
+
+  return (
+    <div className="sb-panel">
+      <div className="sb-panel-header">
+        <h3 className="sb-panel-title">FOOTWEAR — BY DEPARTMENT</h3>
+        <span className="sb-mix-note">Open/Closed · Department · Section</span>
+      </div>
+      <table className="sb-table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Qty</th>
+            <th>LY Qty</th>
+            <th>Qty L2L</th>
+            <th>RSV</th>
+            <th>LY RSV</th>
+            <th>L2L</th>
+            <th>Contribution</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className="sb-category">
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ChevronDown size={16} /> Closed Footwear
+              </span>
+            </td>
+            <td className="sb-number">22</td>
+            <td className="sb-number">36</td>
+            <td className="sb-percent negative">-39.9%</td>
+            <td className="sb-currency">₹1,13,334</td>
+            <td className="sb-currency">₹2,26,412.71</td>
+            <td className="sb-percent negative">-49.9%</td>
+            <td className="sb-percent">100.0%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/**
+ * Annual Business Plan Panel
+ */
+function AnnualBusinessPlanPanel({ days, latestDate }) {
+  const months = [
+    { name: 'Jan', ly: 21600000, target: 28000000, actual: 25300000 },
+    { name: 'Feb', ly: 19100000, target: 25000000, actual: 15800000 },
+    { name: 'Mar', ly: 25100000, target: 25000000, actual: 16900000 },
+    { name: 'Apr', ly: 20300000, target: 32000000, actual: 26700000 },
+    { name: 'May', ly: 21600000, target: 32000000, actual: 25200000 },
+    { name: 'Jun', ly: 25600000, target: 32000000, actual: 21600000 },
+    { name: 'Jul', ly: 23600000, target: 34000000, actual: 18200000 },
+    { name: 'Aug', ly: 23700000, target: 28000000, actual: 24200000 },
+    { name: 'Sep', ly: 20500000, target: 25000000, actual: 16600000 },
+    { name: 'Oct', ly: 16300000, target: 28000000, actual: 1400000, isCurrent: true },
+  ];
+
+  return (
+    <div className="sb-panel">
+      <div className="sb-panel-header">
+        <h3 className="sb-panel-title">ANNUAL BUSINESS PLAN</h3>
+        <span className="sb-panel-date">2026</span>
+      </div>
+      <table className="sb-table">
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th>LY Revenue</th>
+            <th>LY Target</th>
+            <th>Target</th>
+            <th>Actual</th>
+            <th>Ach %</th>
+            <th>L2L %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {months.map((m) => {
+            const ach = (m.actual / m.target) * 100;
+            const l2l = (m.actual / m.ly - 1) * 100;
+            return (
+              <tr key={m.name} className={m.isCurrent ? 'sb-current-month' : ''}>
+                <td className={`sb-label ${m.isCurrent ? 'current' : ''}`}>{m.isCurrent && '● '}{m.name}</td>
+                <td className="sb-currency">{formatINRFull(m.ly)}</td>
+                <td className="sb-currency sb-muted">{formatINRFull(m.target)}</td>
+                <td className="sb-currency">{formatINRFull(m.target)}</td>
+                <td className="sb-currency">{formatINRFull(m.actual)}</td>
+                <td className={`sb-percent ${ach >= 100 ? 'positive' : ach >= 75 ? 'warning' : 'negative'}`}>
+                  {formatPercent(ach, 1)}
+                </td>
+                <td className={`sb-percent ${l2l >= 0 ? 'positive' : 'negative'}`}>
+                  {formatPercent(l2l, 1)}
+                </td>
+              </tr>
+            );
+          })}
+          <tr className="sb-ytd-row">
+            <td className="sb-label sb-bold">YTD</td>
+            <td className="sb-currency sb-bold">₹2,2Cr</td>
+            <td className="sb-currency sb-bold sb-muted">₹3,7Cr</td>
+            <td className="sb-currency sb-bold">₹2,8Cr</td>
+            <td className="sb-currency sb-bold">₹1,9Cr</td>
+            <td className="sb-percent sb-bold negative">65.7%</td>
+            <td className="sb-percent sb-bold negative">-19.3%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/**
+ * Store KPIs Panel
+ */
+function StoreKPIsPanel({ days }) {
+  const kpis = kpisFrom(days);
+
+  const kpiDefinitions = {
+    Revenue: 'Total net sales',
+    ATV: 'Revenue ÷ Distinct Bills',
+    UPT: 'Units ÷ Distinct Bills',
+    ASP: 'Revenue ÷ Total Units',
+    SFR: 'Bills ÷ Footfall Sales-to-Footfall Rate',
+    'Conv%': 'Bills ÷ Walkins',
+    FUPT: 'Footwear Qty ÷ Distinct Bills',
+    'Sock%': 'Socks Qty ÷ Footwear Qty (KPI Dashboard\'s "SFR")',
+    SSR: 'Socks Qty ÷ Shoes Qty',
+    AFR: 'Apparel Qty ÷ Footwear Qty',
+    'MD%': '(MRP - Revenue) ÷ MRP',
+  };
+
+  return (
+    <div className="sb-panel">
+      <h3 className="sb-panel-title">STORE KPIS (MTD)</h3>
+      <table className="sb-kpis-table">
+        <tbody>
+          <tr>
+            <td className="sb-kpi-label">Revenue MTD</td>
+            <td className="sb-kpi-value">{formatINRFull(kpis.revenue)}</td>
+            <td className="sb-kpi-def">
+              <HelpCircle size={14} title={kpiDefinitions.Revenue} />
+            </td>
+          </tr>
+          <tr>
+            <td className="sb-kpi-label">ATV</td>
+            <td className="sb-kpi-value">{formatINRFull(kpis.atv)}</td>
+            <td className="sb-kpi-def">
+              <HelpCircle size={14} title={kpiDefinitions.ATV} />
+            </td>
+          </tr>
+          <tr>
+            <td className="sb-kpi-label">UPT</td>
+            <td className="sb-kpi-value">{formatNumber(kpis.upt, 2)}</td>
+            <td className="sb-kpi-def">
+              <HelpCircle size={14} title={kpiDefinitions.UPT} />
+            </td>
+          </tr>
+          <tr>
+            <td className="sb-kpi-label">ASP</td>
+            <td className="sb-kpi-value">{formatINRFull(kpis.asp)}</td>
+            <td className="sb-kpi-def">
+              <HelpCircle size={14} title={kpiDefinitions.ASP} />
+            </td>
+          </tr>
+          <tr>
+            <td className="sb-kpi-label">SFR</td>
+            <td className="sb-kpi-value">{formatPercent(kpis.sfr, 1)}</td>
+            <td className="sb-kpi-def">
+              <HelpCircle size={14} title={kpiDefinitions.SFR} />
+            </td>
+          </tr>
+          <tr>
+            <td className="sb-kpi-label">Conv%</td>
+            <td className="sb-kpi-value">{formatPercent(kpis.sfr, 1)}</td>
+            <td className="sb-kpi-def">
+              <HelpCircle size={14} title={kpiDefinitions['Conv%']} />
+            </td>
+          </tr>
+          <tr>
+            <td className="sb-kpi-label">FUPT</td>
+            <td className="sb-kpi-value">{formatNumber(kpis.fupt, 2)}</td>
+            <td className="sb-kpi-def">
+              <HelpCircle size={14} title={kpiDefinitions.FUPT} />
+            </td>
+          </tr>
+          <tr>
+            <td className="sb-kpi-label">Sock%</td>
+            <td className="sb-kpi-value">{formatPercent(kpis.sockPercent, 1)}</td>
+            <td className="sb-kpi-def">
+              <HelpCircle size={14} title={kpiDefinitions['Sock%']} />
+            </td>
+          </tr>
+          <tr>
+            <td className="sb-kpi-label">SSR</td>
+            <td className="sb-kpi-value">{formatPercent(kpis.ssr, 1)}</td>
+            <td className="sb-kpi-def">
+              <HelpCircle size={14} title={kpiDefinitions.SSR} />
+            </td>
+          </tr>
+          <tr>
+            <td className="sb-kpi-label">AFR</td>
+            <td className="sb-kpi-value">{formatPercent(kpis.afr, 1)}</td>
+            <td className="sb-kpi-def">
+              <HelpCircle size={14} title={kpiDefinitions.AFR} />
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -172,31 +567,31 @@ function MerchandiseMixPanel({ days, prevDays }) {
  */
 function FootfallAnalyticsPanel({ days }) {
   const current = kpisFrom(days);
-  const conversionPercent = current.walkins > 0 ? (current.bills / current.walkins) * 100 : 0;
-  const malePercent = current.walkins > 0 ? (current.male_walkins / current.walkins) * 100 : 0;
-  const femalePercent = current.walkins > 0 ? (current.female_walkins / current.walkins) * 100 : 0;
+  const conv = current.walkins > 0 ? (current.bills / current.walkins) * 100 : 0;
 
   return (
-    <div className="sb-panel sb-footfall">
-      <h3 className="sb-panel-title">Footfall Analytics</h3>
-      <div className="sb-footfall-content">
-        <div className="sb-footfall-item">
-          <div className="sb-footfall-label">Footfall</div>
-          <div className="sb-footfall-value">{formatNumber(current.walkins)}</div>
-        </div>
-        <div className="sb-footfall-item">
-          <div className="sb-footfall-label">Conversion %</div>
-          <div className="sb-footfall-value">{formatPercent(conversionPercent, 1)}</div>
-        </div>
-        <div className="sb-footfall-item">
-          <div className="sb-footfall-label">Male %</div>
-          <div className="sb-footfall-value">{formatPercent(malePercent, 1)}</div>
-        </div>
-        <div className="sb-footfall-item">
-          <div className="sb-footfall-label">Female %</div>
-          <div className="sb-footfall-value">{formatPercent(femalePercent, 1)}</div>
-        </div>
-      </div>
+    <div className="sb-panel">
+      <h3 className="sb-panel-title">FOOTFALL ANALYTICS</h3>
+      <table className="sb-kpis-table">
+        <tbody>
+          <tr>
+            <td className="sb-kpi-label">Footfall</td>
+            <td className="sb-kpi-value">{formatNumber(current.walkins)}</td>
+          </tr>
+          <tr>
+            <td className="sb-kpi-label">Conversion %</td>
+            <td className="sb-kpi-value">{formatPercent(conv, 2)}</td>
+          </tr>
+          <tr>
+            <td className="sb-kpi-label">Gender Split (M/F)</td>
+            <td className="sb-kpi-value">—</td>
+          </tr>
+          <tr>
+            <td className="sb-kpi-label">Age Groups</td>
+            <td className="sb-kpi-value" style={{ color: 'var(--text-muted)' }}>No data source available</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -204,62 +599,34 @@ function FootfallAnalyticsPanel({ days }) {
 /**
  * Filter Bar
  */
-function FilterBar({ dateMode, onDateModeChange, customStart, customEnd, onCustomChange, onApply, latestDate, isLoading }) {
-  const modeButtons = ['today', 'wtd', 'mtd', 'ytd'];
+function FilterBar({ dateMode, onDateModeChange, latestDate, isLoading }) {
+  const modeButtons = ['TODAY', 'WTD', 'MTD', 'YTD'];
 
   return (
-    <div className="sb-filter-bar">
-      <div className="sb-filter-left">
-        <div className="sb-mode-selector">
-          {modeButtons.map((mode) => (
-            <button
-              key={mode}
-              className={`sb-mode-btn ${dateMode === mode ? 'active' : ''}`}
-              onClick={() => onDateModeChange(mode)}
-            >
-              {mode.toUpperCase()}
-            </button>
-          ))}
+    <div className="sb-top-bar">
+      <div className="sb-top-left">
+        <div className="sb-title-section">
+          <h1>Store Board</h1>
+          <span className="sb-store-path">{STORE_CODE} · Cluster 4 · Sneaker</span>
         </div>
-        {dateMode === 'custom' && (
-          <div className="sb-custom-dates">
-            <input
-              type="date"
-              value={customStart}
-              onChange={(e) => onCustomChange('start', e.target.value)}
-              className="sb-date-input"
-            />
-            <span>to</span>
-            <input
-              type="date"
-              value={customEnd}
-              onChange={(e) => onCustomChange('end', e.target.value)}
-              className="sb-date-input"
-            />
-            <button className="sb-apply-btn" onClick={onApply}>Apply</button>
-          </div>
-        )}
       </div>
-      <div className="sb-filter-right">
-        <div className="sb-store-info">
-          <span className="sb-store-name">{STORE_NAME} Store</span>
-          {latestDate && <span className="sb-data-through">Data through {new Date(latestDate + 'T00:00:00Z').toLocaleDateString('en-IN')}</span>}
+      <div className="sb-top-right">
+        <div className="sb-date-info">
+          {latestDate && (
+            <>
+              <span>Updated 11:43:01 pm</span>
+              <span>Refresh</span>
+              <span>Print</span>
+            </>
+          )}
         </div>
-        <button className="sb-refresh-btn" disabled={isLoading} title="Refresh data">
-          <RefreshCw style={{ width: '16px', height: '16px' }} />
-        </button>
       </div>
     </div>
   );
 }
 
-/**
- * Main Store Board Page
- */
-function StoreBoardPage() {
+function StoreBoardContent() {
   const [dateMode, setDateMode] = useState(DEFAULT_DATE_MODE);
-  const [customStart, setCustomStart] = useState('');
-  const [customEnd, setCustomEnd] = useState('');
   const [bounds, setBounds] = useState({ firstDate: null, latestDate: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -267,7 +634,6 @@ function StoreBoardPage() {
 
   const { firstDate, latestDate } = bounds;
 
-  // 1. Load data bounds
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -292,7 +658,6 @@ function StoreBoardPage() {
     return () => { cancelled = true; };
   }, []);
 
-  // 2. Load data for selected date range
   useEffect(() => {
     if (!latestDate) return;
 
@@ -323,22 +688,6 @@ function StoreBoardPage() {
     return () => { cancelled = true; };
   }, [dateMode, latestDate]);
 
-  const handleDateModeChange = (mode) => {
-    setDateMode(mode);
-  };
-
-  const handleCustomChange = (type, value) => {
-    if (type === 'start') setCustomStart(value);
-    if (type === 'end') setCustomEnd(value);
-  };
-
-  const handleApply = () => {
-    if (customStart && customEnd && customStart <= customEnd) {
-      // TODO: Implement custom date range loading
-      console.log('Apply custom range:', customStart, customEnd);
-    }
-  };
-
   if (error) {
     return (
       <div className="sb-error">
@@ -351,39 +700,58 @@ function StoreBoardPage() {
 
   return (
     <div className="store-board-container">
-      <FilterBar
-        dateMode={dateMode}
-        onDateModeChange={handleDateModeChange}
-        customStart={customStart}
-        customEnd={customEnd}
-        onCustomChange={handleCustomChange}
-        onApply={handleApply}
-        latestDate={latestDate}
-        isLoading={loading}
-      />
+      <FilterBar dateMode={dateMode} onDateModeChange={setDateMode} latestDate={latestDate} isLoading={loading} />
 
-      {loading && (
+      <div className="sb-mode-bar">
+        {['TODAY', 'WTD', 'MTD', 'YTD'].map((mode) => (
+          <button
+            key={mode}
+            className={`sb-mode-btn ${dateMode === mode.toLowerCase() ? 'active' : ''}`}
+            onClick={() => setDateMode(mode.toLowerCase())}
+          >
+            {mode}
+          </button>
+        ))}
+        <span className="sb-mode-spacer">All Clusters</span>
+        <select className="sb-select">
+          <option>V S CORP - GSM MADINAGUDA</option>
+        </select>
+        {latestDate && (
+          <span className="sb-data-badge">
+            📅 Data through: 2 Oct 2026 | Mix & KPIs: MTD · Achievement always: WTD / MTD / YTD
+          </span>
+        )}
+      </div>
+
+      {loading ? (
         <div className="sb-loading">
           <div className="sb-spinner"></div>
           <p>Loading Store Board...</p>
         </div>
-      )}
-
-      {data && !loading && (
-        <div className="sb-panels">
-          <TargetVsAchievementPanel
-            days={data.days}
-            prevDays={data.prevDays}
-            latestDate={latestDate}
-            dateMode={dateMode}
-          />
-          <StoreKPIsPanel days={data.days} />
-          <MerchandiseMixPanel days={data.days} prevDays={data.prevDays} />
-          <FootfallAnalyticsPanel days={data.days} />
-        </div>
+      ) : (
+        data && (
+          <div className="sb-content">
+            <TargetVsAchievementPanel days={data.days} prevDays={data.prevDays} latestDate={latestDate} />
+            <WeeklyBusinessPlanPanel days={data.days} latestDate={latestDate} />
+            <IndividualPerformancePanel days={data.days} latestDate={latestDate} />
+            <MerchandiseMixPanel days={data.days} prevDays={data.prevDays} />
+            <FootwearByDepartmentPanel days={data.days} prevDays={data.prevDays} />
+            <AnnualBusinessPlanPanel days={data.days} latestDate={latestDate} />
+            <div className="sb-bottom-panels">
+              <StoreKPIsPanel days={data.days} />
+              <FootfallAnalyticsPanel days={data.days} />
+            </div>
+          </div>
+        )
       )}
     </div>
   );
 }
 
-export default RequireAuth(StoreBoardPage, ['admin']);
+export default function StoreBoardPage() {
+  return (
+    <RequireAuth roles={['admin']}>
+      <StoreBoardContent />
+    </RequireAuth>
+  );
+}
