@@ -12,7 +12,7 @@ import './store-board.css';
 
 const DEFAULT_DATE_MODE = 'mtd';
 const STORE_NAME = 'UPPAL';
-const STORE_CODE = 'V S CORP - GSM MADINAGUDA';
+const STORE_ID = 'R1157';
 
 function getDateRangeForMode(mode, latestDate) {
   if (!latestDate) return null;
@@ -600,25 +600,18 @@ function FootfallAnalyticsPanel({ days }) {
  * Filter Bar
  */
 function FilterBar({ dateMode, onDateModeChange, latestDate, isLoading }) {
-  const modeButtons = ['TODAY', 'WTD', 'MTD', 'YTD'];
-
   return (
     <div className="sb-top-bar">
       <div className="sb-top-left">
         <div className="sb-title-section">
           <h1>Store Board</h1>
-          <span className="sb-store-path">{STORE_CODE} · Cluster 4 · Sneaker</span>
+          <span className="sb-store-path">{STORE_NAME}</span>
         </div>
       </div>
       <div className="sb-top-right">
         <div className="sb-date-info">
-          {latestDate && (
-            <>
-              <span>Updated 11:43:01 pm</span>
-              <span>Refresh</span>
-              <span>Print</span>
-            </>
-          )}
+          <span>Refresh</span>
+          <span>Print</span>
         </div>
       </div>
     </div>
@@ -712,13 +705,9 @@ function StoreBoardContent() {
             {mode}
           </button>
         ))}
-        <span className="sb-mode-spacer">All Clusters</span>
-        <select className="sb-select">
-          <option>V S CORP - GSM MADINAGUDA</option>
-        </select>
         {latestDate && (
           <span className="sb-data-badge">
-            📅 Data through: 2 Oct 2026 | Mix & KPIs: MTD · Achievement always: WTD / MTD / YTD
+            📅 Data through: {new Date(latestDate + 'T00:00:00Z').toLocaleDateString('en-IN')} | Mix & KPIs: MTD · Achievement always: WTD / MTD / YTD
           </span>
         )}
       </div>
