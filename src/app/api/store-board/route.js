@@ -4,12 +4,24 @@ import { requireAuth } from '@/middleware/auth';
 import { loadDataBounds, loadStoreBoard } from '@/lib/storeBoardData';
 
 // GET /api/store-board?meta=1                 -> { firstDate, latestDate } for Uppal store
-// GET /api/store-board?startDate=..&endDate=.. -> day rows for the period and comparison period
-//                                                  Reads the Reebok gold tables for Uppal store only
+// GET /api/store-board?startDate=..&endDate=.. -> day rows, salesperson data, and comparison period
+//                                                  Reads the Reebok gold tables and salesperson RPC
 
 export const dynamic = 'force-dynamic';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const STORE_DATE = '2026-07-01'; // Uppal store started July 2026
+
+async function loadSalespersonData(supabase, reportDate) {
+  try {
+    const { data, error } = await supabase.rpc('rpt_reebok_staffwise', { p_date: reportDate });
+    if (error) throw new Error(`Salesperson RPC error: ${error.message}`);
+    return data || [];
+  } catch (err) {
+    console.warn('Could not load salesperson data:', err.message);
+    return [];
+  }
+}
 
 export async function GET(request) {
   const auth = await requireAuth(request, ['admin']);
@@ -20,7 +32,7 @@ export async function GET(request) {
     const supabase = createServerClient();
 
     if (searchParams.get('meta')) {
-      return NextResponse.json({ success: true, ...(await loadDataBounds(supabase)) });
+      return NextResponse.json({ success: true, storeStartDate: STORE_DATE, ...(await loadDataBounds(supabase)) });
     }
 
     const startDate = searchParams.get('startDate');
@@ -40,7 +52,11 @@ export async function GET(request) {
     }
 
     const data = await loadStoreBoard(supabase, startDate, endDate, compare);
-    return NextResponse.json({ success: true, ...data });
+
+    // Load salesperson data for the end date (latest)
+    const salespersonData = await loadSalespersonData(supabase, endDate);
+
+    return NextResponse.json({ success: true, ...data, salespersonData, storeStartDate: STORE_DATE });
   } catch (err) {
     console.error('Store Board API error:', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

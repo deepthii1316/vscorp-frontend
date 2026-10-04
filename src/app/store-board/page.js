@@ -396,6 +396,7 @@ function FootwearByDepartmentPanel({ days, prevDays }) {
  * Annual Business Plan Panel
  */
 function AnnualBusinessPlanPanel({ days, latestDate }) {
+  const current = kpisFrom(days);
   // Real data from database will be populated here
   // For now using placeholder structure - will be replaced with actual data
   const months = [
