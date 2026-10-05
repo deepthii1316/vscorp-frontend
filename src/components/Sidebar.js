@@ -15,6 +15,7 @@ import {
   Grid3x3,
   PieChart,
   FileSpreadsheet,
+  ClipboardList,
   IndianRupee,
   FileUp,
   ChevronLeft,
@@ -42,6 +43,7 @@ const navItems = [
       { href: '/data-coverage',   label: 'Data Coverage',  icon: FileCheck, roles: ['admin'] },
       { href: '/pnl-import',      label: 'Import P&L',     icon: FileUp, roles: ['admin'] },
       { href: '/reebok-reports',  label: 'Sales Reports',  icon: FileSpreadsheet },
+      { href: '/merch-reports',   label: 'Merch Reports',  icon: ClipboardList, roles: ['admin'] },
     ],
   },
 ];

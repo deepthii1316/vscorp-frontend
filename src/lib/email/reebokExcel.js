@@ -36,7 +36,7 @@ function excelValue(c) {
  * Write one model table starting at `startRow`. Returns the next free row.
  * Column A of the model maps to sheet column 1.
  */
-function writeTable(ws, startRow, t) {
+export function writeTable(ws, startRow, t) {
   // Title
   const titleCell = ws.getCell(startRow, 1);
   titleCell.value = t.title;
