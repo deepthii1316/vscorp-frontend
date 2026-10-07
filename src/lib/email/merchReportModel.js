@@ -100,17 +100,50 @@ function summaryTable({ key, title, firstLabel, groups, footnotes }) {
   };
 }
 
-// ─── MRP value by division and group (men / women / unisex) ───────────────
+// ─── Division > Group (men / women / unisex) ──────────────────────────────
 function divisionGroupTable(rows, divisions) {
-  const groups = ordered([...new Set(rows.filter((r) => r.stock_mrp_value).map((r) => r.group_name.toUpperCase()))], GROUP_ORDER);
-  const value = (div, grp) => rows.reduce((s, r) => s + ((!div || r.division === div) && (!grp || r.group_name.toUpperCase() === grp) ? r.stock_mrp_value : 0), 0);
-  const line = (label, div) => [cell(label), ...groups.map((g) => cell(value(div, g), 'inr')), cell(value(div, null), 'inr')];
+  const groupOf = (r) => r.group_name.toUpperCase();
+  // One block per division, then the same groups summed across all divisions.
+  const block = (label, blockRows, kind) => {
+    const blockAgg = agg(blockRows);
+    const byGroup = groupBy(blockRows, groupOf);
+    const lines = ordered([...byGroup.keys()], GROUP_ORDER).map((g) => ({ g, a: agg(byGroup.get(g)) }))
+      .filter((l) => l.a.qty || l.a.ytd || l.a.mtd);
+    return lines.map(({ g, a }, i) => ({
+      kind,
+      cells: [
+        i === 0 ? cell(label, 'text', { rowspan: lines.length }) : cell(label, 'text', { merged: true }),
+        cell(g),
+        cell(a.qty, 'int'), cell(a.val, 'inr'), cell(pctOf(a.val, blockAgg.val), 'pct'),
+        cell(a.mtd, 'int'), cell(a.ytd, 'int'),
+        cell(sellThrough(a.ytd, a.qty), 'ach'),
+      ],
+    }));
+  };
+  const out = divisions.flatMap((d) => block(d, rows.filter((r) => r.division === d)));
+  applyHeat(out, 7);
+  out.push(...block('ALL DIVISIONS', rows, 'total'));
+  const total = agg(rows);
+  out.push({
+    kind: 'total',
+    cells: [
+      cell('TOTAL'), cell(''),
+      cell(total.qty, 'int'), cell(total.val, 'inr'), cell(null, 'empty'),
+      cell(total.mtd, 'int'), cell(total.ytd, 'int'),
+      cell(sellThrough(total.ytd, total.qty), 'ach'),
+    ],
+  });
   return {
     key: 'division-group',
-    title: 'MRP Value by Division and Group',
-    columns: [col('Division', 'navy', 'l'), ...groups.map((g) => col(g, 'blue')), col('Total', 'navy')],
-    rows: [...divisions.map((d) => ({ cells: line(d, d) })), { kind: 'total', cells: line('TOTAL', null) }],
-    footnotes: [],
+    title: 'Division and Group Stock Report',
+    columns: [
+      col('Division', 'navy', 'l'), col('Group', 'navy', 'l'),
+      col('Quantity', 'blue'), col('MRP Value', 'blue'), col('% of Division MRP Value', 'blue'),
+      col('Sale Qty MTD', 'orange'), col('Sale Qty YTD', 'orange'),
+      col('Sell-through YTD', 'green'),
+    ],
+    rows: out,
+    footnotes: ['A group with no stock left is listed while it has sales in the period.'],
   };
 }
 
