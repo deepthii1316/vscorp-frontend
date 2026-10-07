@@ -405,3 +405,95 @@
   .pnl-progress-step span { display: none; }
   .pnl-import-actions { flex-direction: column; }
 }
+
+/* ─── P&L Import Page - Enhanced Styling ────────────────── */
+.pnl-progress-step {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 8px !important;
+  opacity: 0.4;
+  transition: all 200ms ease;
+}
+
+.pnl-progress-step.active,
+.pnl-progress-step.done {
+  opacity: 1 !important;
+}
+
+.pnl-progress-dot {
+  width: 40px !important;
+  height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+  border: 2px solid #D4D0C2 !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  color: #8A8A82 !important;
+  background: #FFFFFF !important;
+}
+
+.pnl-progress-step.active .pnl-progress-dot {
+  background: #1F6B45 !important;
+  color: #FAFAF7 !important;
+  border-color: #1F6B45 !important;
+}
+
+.pnl-progress-step.done .pnl-progress-dot {
+  background: #E4F0E8 !important;
+  color: #1F6B45 !important;
+  border-color: #1F6B45 !important;
+}
+
+.pnl-progress-step span {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}
+
+.pnl-upload-zone {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 20px !important;
+  text-align: center !important;
+  padding: 40px !important;
+  border: 3px dashed #D4D0C2 !important;
+  border-radius: 8px !important;
+  background: #F4F3EE !important;
+}
+
+.pnl-btn {
+  padding: 10px 20px !important;
+  border: none !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 150ms ease;
+}
+
+.pnl-btn.primary {
+  background: #1F6B45 !important;
+  color: #FAFAF7 !important;
+}
+
+.pnl-btn.primary:hover:not(:disabled) {
+  background: #16523A !important;
+}
+
+.pnl-btn.secondary {
+  background: #F4F3EE !important;
+  color: #1A1A1A !important;
+  border: 1px solid #D4D0C2 !important;
+}
+
+.pnl-btn.secondary:hover:not(:disabled) {
+  background: #F8F7F2 !important;
+}
+
+.pnl-btn:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
