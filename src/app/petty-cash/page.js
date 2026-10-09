@@ -15,7 +15,7 @@
 // filter can never hide reserved cash. Only "Executed" and the cash book follow the period.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Wallet, Scale, Lock, Hourglass, CheckCircle2, Target, Download, Plus, Pencil, Trash2, Check, X, RefreshCw, FileSpreadsheet, ListChecks, Camera, Send, Save, AlertTriangle } from 'lucide-react';
+import { Wallet, Scale, Lock, Hourglass, CheckCircle2, Target, Plus, Pencil, Trash2, Check, X, RefreshCw, FileSpreadsheet, ListChecks, Camera, Send, Save, AlertTriangle } from 'lucide-react';
 import RequireAuth from '@/components/RequireAuth';
 import { apiFetch } from '@/lib/api';
 import { quickRange } from '@/lib/masterDashboardShared';
@@ -36,6 +36,7 @@ const amountCell = (v) => (v ? money(v) : '');
 const dayLabel = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
 const monthLabel = (ym) => new Date(`${ym}-01T00:00:00Z`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 const stamp = (ts) => new Date(ts).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+const monthEnd = (ym) => `${ym}-${String(new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7), 0)).getUTCDate()).padStart(2, '0')}`;
 const neg = (v) => (v < 0 ? 'pc-neg' : '');
 const PLURALS = { entry: 'entries', day: 'days', line: 'lines' };
 const plural = (n, word) => `${n} ${n === 1 ? word : PLURALS[word]}`;
@@ -152,13 +153,26 @@ function PettyCash() {
     return { start, end };
   }, [preset, custom, latestDate, firstDate]);
   const filtered = Boolean(range.start || range.end);
+
+  // Months that have anything in them (cash book lines or entries), newest first, for the month filter.
+  const monthOptions = useMemo(() => [...new Set([...entries.map((e) => e.entry_date), ...expenses.map((x) => x.expense_date)].map((d) => d.slice(0, 7)))].sort().reverse(), [entries, expenses]);
+  const monthValue = preset === 'custom' && custom.from && custom.to && custom.from.slice(0, 7) === custom.to.slice(0, 7)
+    && custom.from.endsWith('-01') && custom.to === monthEnd(custom.from.slice(0, 7)) ? custom.from.slice(0, 7) : '';
+  const pickMonth = (ym) => {
+    if (!ym) { setPreset('ALL'); return; }
+    setCustom({ from: `${ym}-01`, to: monthEnd(ym) });
+    setPreset('custom');
+  };
+  const inRange = (d) => (!range.start || d >= range.start) && (!range.end || d <= range.end);
   const rangeText = latestDate ? `${dayLabel(range.start || firstDate)} to ${dayLabel(range.end || latestDate)}` : '';
 
   const pos = useMemo(() => position(entries, expenses, data?.targetFloat ?? 15000, { ...range, today: todayIso() }), [entries, expenses, data, range]);
   const months = useMemo(() => monthlySummary(pos.ledger), [pos]);
 
-  const counts = useMemo(() => Object.fromEntries(STATUS_FILTERS.map((s) => [s, s === 'all' ? expenses.length : expenses.filter((x) => x.status === s).length])), [expenses]);
-  const shown = statusFilter === 'all' ? expenses : expenses.filter((x) => x.status === statusFilter);
+  // The entries list follows the period (by expense date); the cards and the approval banner never do.
+  const inPeriod = expenses.filter((x) => inRange(x.expense_date));
+  const counts = Object.fromEntries(STATUS_FILTERS.map((s) => [s, s === 'all' ? inPeriod.length : inPeriod.filter((x) => x.status === s).length]));
+  const shown = statusFilter === 'all' ? inPeriod : inPeriod.filter((x) => x.status === statusFilter);
   const pendingShown = shown.filter((x) => x.status === 'submitted');
 
   // ─── Store manager: entry form ────────────────────────────────────────────
@@ -246,26 +260,6 @@ function PettyCash() {
     }
   };
 
-  // ─── Excel download of the cash book on screen ────────────────────────────
-  const downloadExcel = async () => {
-    const XLSX = await import('xlsx');
-    const sheet = [
-      [`Petty Cash - ${STORE_LABEL}`], [rangeText], [],
-      ['Date', 'Voucher No', 'Description', 'Expenses', 'Credit', 'Balance', 'Source'],
-      ...(filtered ? [['', '', 'Opening balance', '', '', pos.period.opening, '']] : []),
-      ...pos.period.lines.map((e) => [e.entry_date.split('-').reverse().join('.'), e.voucher_no || '', e.description, e.expense || '', e.credit || '', e.balance, e.source === 'app' ? 'App entry (approved)' : 'Account DSR']),
-      ['', '', 'Total', pos.period.expense, pos.period.credit, pos.period.closing, ''],
-      [],
-      ['Actual balance', pos.actual], ['Reserved (awaiting approval)', pos.reserved], ['Available balance', pos.available], ['Target float', pos.targetFloat], ['Refill needed', pos.refill],
-    ];
-    const ws = XLSX.utils.aoa_to_sheet(sheet);
-    ws['!cols'] = [{ wch: 26 }, { wch: 11 }, { wch: 60 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 20 }];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Petty Cash');
-    XLSX.writeFile(wb, `Uppal_Reebok_Petty_Cash_${range.end || latestDate || todayIso()}.xlsx`);
-  };
-
-  const hasAnything = entries.length > 0 || expenses.length > 0;
   const editingOne = rows?.length === 1 && rows[0].id;
 
   return (
@@ -278,7 +272,6 @@ function PettyCash() {
         </div>
         <div className="md-header-actions pc-header-actions">
           <button type="button" className="reebok-btn secondary" onClick={load} disabled={loading}><RefreshCw />{loading ? 'Loading…' : 'Refresh'}</button>
-          <button type="button" className="reebok-btn secondary" onClick={downloadExcel} disabled={!hasAnything}><Download />Download .xlsx</button>
           {isManager && <button type="button" className="reebok-btn" onClick={openNew} disabled={Boolean(rows)}><Plus />New entries</button>}
         </div>
       </div>
@@ -365,13 +358,19 @@ function PettyCash() {
 
           <div className="pc-filters">
             <div className="md-seg">
-              <button type="button" className={tab === 'entries' ? 'active' : ''} onClick={() => setTab('entries')}>Entries{counts.submitted ? ` · ${counts.submitted} pending` : ''}</button>
+              <button type="button" className={tab === 'entries' ? 'active' : ''} onClick={() => setTab('entries')}>Entries{pos.pendingCount ? ` · ${pos.pendingCount} pending` : ''}</button>
               <button type="button" className={tab === 'book' ? 'active' : ''} onClick={() => setTab('book')}>Cash book</button>
             </div>
             <span className="pc-range">Period</span>
             <div className="md-seg">
               {PRESETS.map(([key, label]) => <button key={key} type="button" className={preset === key ? 'active' : ''} onClick={() => setPreset(key)} disabled={!latestDate}>{label}</button>)}
             </div>
+            <label className="pc-range">Month
+              <select className="pc-input pc-month" value={monthValue} onChange={(e) => pickMonth(e.target.value)} disabled={monthOptions.length === 0} aria-label="Month">
+                <option value="">All months</option>
+                {monthOptions.map((ym) => <option key={ym} value={ym}>{monthLabel(ym)}</option>)}
+              </select>
+            </label>
             <label className="pc-range">From
               <input type="date" className="md-date" disabled={!latestDate} value={preset === 'custom' ? custom.from : (range.start || firstDate || '')} max={custom.to || undefined}
                 onChange={(e) => { setCustom((c) => ({ from: e.target.value, to: preset === 'custom' ? c.to : (range.end || latestDate || '') })); setPreset('custom'); }} />
@@ -386,7 +385,7 @@ function PettyCash() {
             <div className="card">
               <div className="card-header mx-card-head">
                 <ListChecks className="card-header-icon-svg" />
-                <h3>Entries made here · {shown.length}</h3>
+                <h3>Entries made here · {shown.length}{filtered ? ` · ${rangeText}` : ''}</h3>
                 <div className="mx-card-actions">
                   {isAdmin && selected.size > 0 && (
                     <>
@@ -413,7 +412,7 @@ function PettyCash() {
                 <div className="md-empty">
                   {expenses.length === 0
                     ? (isManager ? 'No entries yet. Use "New entries" to add expenses with their voucher and receipt photos.' : 'The store manager has not added any entries here yet. Lines from the Account DSR are in the Cash book tab.')
-                    : 'No entries with this status.'}
+                    : `No entries with this status${filtered ? ' in this period' : ''}.`}
                 </div>
               ) : (
                 <div className="md-table-wrap">

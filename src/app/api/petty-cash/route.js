@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { requireAuth } from '@/middleware/auth';
+import { syncPettyCashIfStale } from '@/lib/pettyCashSync';
 import { STORE, ENTRY_COLUMNS, toEntry, EXPENSE_COLUMNS, toExpense } from '@/lib/pettyCashShared';
 
 // GET /api/petty-cash — everything the Petty Cash page needs for Uppal Reebok:
@@ -8,7 +9,8 @@ import { STORE, ENTRY_COLUMNS, toEntry, EXPENSE_COLUMNS, toExpense } from '@/lib
 //   expenses  the entries made in the app, every status (public.petty_cash_expenses)
 //   targetFloat, lastUpload (the last Account DSR the cash book came from), role
 // admin and store_manager. Balances are worked out on the page (src/lib/pettyCashShared.js).
-// The Excel lines are only ever written by the Account DSR upload (/api/upload).
+// The Excel lines are only ever written from the Account DSR: at upload (/api/upload), or here
+// when a newer Account DSR is found that the cash book has not been built from yet.
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +32,8 @@ export async function GET(request) {
 
   try {
     const supabase = createServerClient();
+    // Make sure the cash book is from the latest Account DSR before reading it.
+    await syncPettyCashIfStale(supabase);
     const [entries, expenses, uploads, settings] = await Promise.all([
       readAll(() => supabase.from('petty_cash_entries').select(ENTRY_COLUMNS)
         .eq('store_site_short_name', STORE).order('entry_date').order('line_no').order('id')),

@@ -3664,3 +3664,4 @@ body {
 .pc-form th, .pc-form td { text-align: left !important; }
 .pc-reject-box { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); flex-wrap: wrap; }
 .pc-reject-box .pc-input { flex: 1; min-width: 220px; width: auto; }
+.pc-month { width: auto; min-width: 150px; }
