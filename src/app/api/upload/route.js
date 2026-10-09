@@ -3,6 +3,7 @@ import { createHash } from 'crypto';
 import { createServerClient } from '@/lib/supabase';
 import { requireAuth } from '@/middleware/auth';
 import { generateFileName, getStoragePath, BUCKET_NAME } from '@/lib/fileRename';
+import { syncPettyCashFromDsr } from '@/lib/pettyCashSync';
 
 // export const dynamic = 'force-dynamic';
 
@@ -226,12 +227,21 @@ export async function POST(request) {
       throw new Error(`Could not queue upload: ${auditError.message}`);
     }
 
+    // The Account DSR workbook also carries the "Petty cash" tab: refresh the Petty Cash page
+    // from it now, so it is not uploaded a second time. Never fails the upload itself.
+    let pettyCash = null;
+    if (reportType === 'account_dsr') {
+      pettyCash = await syncPettyCashFromDsr(supabase, buffer, { fileName: originalFileName || file.name, user: auth.user });
+      if (!pettyCash.synced) console.warn('Petty cash not refreshed from Account DSR:', pettyCash.reason);
+    }
+
     return NextResponse.json({
       success: true,
       auditId: audit.id,
       status: audit.status,
       renamedFileName,
       storagePath,
+      pettyCash,
       message: 'Upload stored and queued for processing.',
     }, { status: 201 });
   } catch (error) {

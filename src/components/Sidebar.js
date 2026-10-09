@@ -18,6 +18,7 @@ import {
   ClipboardList,
   IndianRupee,
   FileUp,
+  Wallet,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -44,6 +45,7 @@ const navItems = [
       { href: '/pnl-import',      label: 'Import P&L',     icon: FileUp, roles: ['admin'] },
       { href: '/reebok-reports',  label: 'Sales Reports',  icon: FileSpreadsheet },
       { href: '/merch-reports',   label: 'Merch Reports',  icon: ClipboardList, roles: ['admin'] },
+      { href: '/petty-cash',      label: 'Petty Cash',     icon: Wallet },
     ],
   },
 ];
