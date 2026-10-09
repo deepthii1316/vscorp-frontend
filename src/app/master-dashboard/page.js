@@ -139,7 +139,7 @@ function MasterDashboardPage() {
       try {
         const params = new URLSearchParams({ startDate: resolved.start, endDate: resolved.end });
         if (resolved.compare) { params.set('compareStart', resolved.compare.start); params.set('compareEnd', resolved.compare.end); }
-        const res = await fetch(`/api/reports/master-dashboard/category-drilldown?${params.toString()}`);
+        const res = await apiFetch(`/api/reports/master-dashboard/category-drilldown?${params.toString()}`);
         const json = await res.json();
         if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
         if (!cancelled) setCatData(json);
