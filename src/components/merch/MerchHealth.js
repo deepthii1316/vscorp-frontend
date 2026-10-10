@@ -6,6 +6,7 @@
 import { useMemo, useState } from 'react';
 import { HeartPulse, Hourglass, Layers, ChevronDown, ChevronRight } from 'lucide-react';
 import { CardHead, MixBar, MixLegend, ThresholdControl, ExportButton, exportSheets } from './MerchCommon';
+import { SortTh, useSort, sortTree } from '@/components/SortTh';
 import {
   BUCKETS, bucketRange, bucketValueOf, valueOf, categoryTree, ageProfile, formatDays,
 } from '@/lib/merchShared';
@@ -58,6 +59,20 @@ export default function MerchHealth({ rows, summary, rateDays, thresholds, onThr
 
   const total = valueOf(summary);
   const ageMax = Math.max(1, ...ages.map((a) => a.mrp));
+
+  // Sorting. Category table: every level follows the chosen column. Health mix: the four buckets.
+  const cat = useSort({ textKeys: ['label'] });
+  const catValue = (n, k) => {
+    if (k === 'value') return valueOf(n);
+    if (k === 'deadPct') { const v = valueOf(n); return v > 0 ? (bucketValueOf(n.buckets.dead) / v) * 100 : null; }
+    if (n.buckets[k]) return bucketValueOf(n.buckets[k]);
+    return n[k];
+  };
+  const treeView = useMemo(() => sortTree(tree, cat.sort, catValue), [tree, cat.sort]); // eslint-disable-line react-hooks/exhaustive-deps
+  const cth = (k, label) => <SortTh k={k} label={label} sort={cat.sort} onSort={cat.onSort} />;
+  const mix = useSort({ textKeys: ['label'] });
+  const mixRows = BUCKETS.map((b) => ({ ...b, qty: summary.buckets[b.key].qty, value: bucketValueOf(summary.buckets[b.key]) }));
+  const mth = (k, label) => <SortTh k={k} label={label} sort={mix.sort} onSort={mix.onSort} />;
   const valueName = 'MRP';
 
   const doExport = () => {
@@ -105,9 +120,9 @@ export default function MerchHealth({ rows, summary, rateDays, thresholds, onThr
           <MixBar buckets={summary.buckets} total={total} height={18} />
           <MixLegend />
           <table className="md-table md-table-compact mx-mt">
-            <thead><tr><th>Bucket</th><th>Units</th><th>Value ({valueName})</th><th>Share</th></tr></thead>
+            <thead><tr>{mth('label', 'Bucket')}{mth('qty', 'Units')}{mth('value', `Value (${valueName})`)}{mth('value', 'Share')}</tr></thead>
             <tbody>
-              {BUCKETS.map((b) => {
+              {mix.sorted(mixRows).map((b) => {
                 const s = summary.buckets[b.key];
                 const v = bucketValueOf(s);
                 return (
@@ -153,13 +168,13 @@ export default function MerchHealth({ rows, summary, rateDays, thresholds, onThr
             <table className="md-table md-drill">
               <thead>
                 <tr>
-                  <th>Category</th><th>Stock qty</th><th>Value ({valueName})</th><th>Mix</th>
-                  {BUCKETS.map((b) => <th key={b.key}>{b.label}</th>)}
-                  <th>Dead %</th><th>Avg age</th>
+                  {cth('label', 'Category')}{cth('stockQty', 'Stock qty')}{cth('value', `Value (${valueName})`)}<th>Mix</th>
+                  {BUCKETS.map((b) => <SortTh key={b.key} k={b.key} label={b.label} sort={cat.sort} onSort={cat.onSort} />)}
+                  {cth('deadPct', 'Dead %')}{cth('avgAge', 'Avg age')}
                 </tr>
               </thead>
               <tbody>
-                {tree.map((n) => <Row key={n.path} node={n} expanded={expanded} onToggle={onToggle} />)}
+                {treeView.map((n) => <Row key={n.path} node={n} expanded={expanded} onToggle={onToggle} />)}
               </tbody>
             </table>
           </div>

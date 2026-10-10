@@ -8,6 +8,7 @@ import {
   PieChart, Pie, Cell, BarChart, Bar,
 } from 'recharts';
 import { ChartLine, ChartPie, CreditCard, ChartColumn, Table2 } from 'lucide-react';
+import { SortTh, useSort } from '@/components/SortTh';
 import {
   CHART_COLORS, DIVISION_COLORS, TREND_METRICS,
   formatINR, formatINRFull, formatNumber, formatPercent,
@@ -150,6 +151,7 @@ export function DivisionSplitCard({ split, selectedDivision, onSelect }) {
 export function PaymentCard({ payments, grossSales }) {
   const slices = payments.modes.filter((m) => m.amount > 0);
   const gap = payments.total - grossSales;
+  const { sort, onSort, sorted } = useSort({ textKeys: ['label'] });
   return (
     <div className="card">
       <div className="card-header">
@@ -172,9 +174,9 @@ export function PaymentCard({ payments, grossSales }) {
               </div>
             </div>
             <table className="md-table md-table-compact">
-              <thead><tr><th>Mode</th><th>Amount</th><th>Share</th></tr></thead>
+              <thead><tr><SortTh k="label" label="Mode" sort={sort} onSort={onSort} /><SortTh k="amount" label="Amount" sort={sort} onSort={onSort} /><SortTh k="pct" label="Share" sort={sort} onSort={onSort} /></tr></thead>
               <tbody>
-                {slices.map((m) => (
+                {sorted(slices).map((m) => (
                   <tr key={m.key}>
                     <td><i className="md-dot" style={{ background: m.color }} />{m.label}</td>
                     <td>{formatINRFull(m.amount)}</td>
@@ -286,6 +288,8 @@ function DivisionRow({ r, prevLabel, total = false }) {
 export function DivisionTableCard({ table, compareLabel = 'last month' }) {
   // "LM" for the normal month-on-month view, the period's own name in Compare mode (e.g. "Aug 2026").
   const prevLabel = compareLabel === 'last month' ? 'LM' : compareLabel;
+  const { sort, onSort, sorted } = useSort({ textKeys: ['name'] });
+  const th = (k, label) => <SortTh k={k} label={label} sort={sort} onSort={onSort} />;
   return (
     <div className="card">
       <div className="card-header">
@@ -300,11 +304,11 @@ export function DivisionTableCard({ table, compareLabel = 'last month' }) {
         <table className="md-table">
           <thead>
             <tr>
-              <th>Division</th><th>NSV</th><th>Contribution</th><th>Qty</th><th>Bills</th><th>MD %</th>
+              {th('name', 'Division')}{th('nsv', 'NSV')}{th('contribution', 'Contribution')}{th('qty', 'Qty')}{th('bills', 'Bills')}{th('mdPct', 'MD %')}
             </tr>
           </thead>
           <tbody>
-            {table.rows.map((r) => <DivisionRow key={r.name} r={r} prevLabel={prevLabel} />)}
+            {sorted(table.rows).map((r) => <DivisionRow key={r.name} r={r} prevLabel={prevLabel} />)}
             <DivisionRow r={table.total} prevLabel={prevLabel} total />
           </tbody>
         </table>

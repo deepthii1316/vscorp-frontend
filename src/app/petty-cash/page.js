@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Wallet, Scale, Lock, Hourglass, CheckCircle2, Target, Plus, Pencil, Trash2, Check, X, RefreshCw, FileSpreadsheet, ListChecks, Camera, Send, Save, AlertTriangle } from 'lucide-react';
 import RequireAuth from '@/components/RequireAuth';
 import { apiFetch } from '@/lib/api';
+import { SortTh, useSort } from '@/components/SortTh';
 import { quickRange } from '@/lib/masterDashboardShared';
 import { STORE_LABEL, CATEGORIES, STATUS_LABELS, PHOTO_KINDS, position, monthlySummary } from '@/lib/pettyCashShared';
 
@@ -262,6 +263,12 @@ function PettyCash() {
 
   const editingOne = rows?.length === 1 && rows[0].id;
 
+  // Column sorting (re-orders what is on screen; the running balance keeps the value it had in date order)
+  const entrySort = useSort({ textKeys: ['category', 'description', 'status'] });
+  const bookSort = useSort({ textKeys: ['voucher_no', 'description'] });
+  const monthSort = useSort();
+  const sth = (s, k, label) => <SortTh k={k} label={label} sort={s.sort} onSort={s.onSort} />;
+
   return (
     <div className="md-page">
       <div className="page-header" style={{ marginBottom: 0 }}>
@@ -420,11 +427,11 @@ function PettyCash() {
                     <thead>
                       <tr>
                         {isAdmin && <th className="pc-check"><input type="checkbox" checked={allPendingSelected} onChange={toggleAll} disabled={pendingShown.length === 0} aria-label="Select all pending" /></th>}
-                        <th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Photos</th><th>Status</th><th aria-label="Actions" />
+                        {sth(entrySort, 'expense_date', 'Date')}{sth(entrySort, 'category', 'Category')}{sth(entrySort, 'description', 'Description')}{sth(entrySort, 'amount', 'Amount')}<th>Photos</th>{sth(entrySort, 'status', 'Status')}<th aria-label="Actions" />
                       </tr>
                     </thead>
                     <tbody>
-                      {shown.map((x) => (
+                      {entrySort.sorted(shown).map((x) => (
                         <tr key={x.id}>
                           {isAdmin && <td className="pc-check">{x.status === 'submitted' && <input type="checkbox" checked={selected.has(x.id)} onChange={() => toggle(x.id)} aria-label="Select entry" />}</td>}
                           <td>{dayLabel(x.expense_date)}</td>
@@ -480,10 +487,10 @@ function PettyCash() {
                 ) : (
                   <div className="md-table-wrap">
                     <table className="md-table md-table-compact pc-table">
-                      <thead><tr><th>Date</th><th>Voucher</th><th>Description</th><th>Expense</th><th>Credit</th><th>Balance</th><th>Photos</th></tr></thead>
+                      <thead><tr>{sth(bookSort, 'entry_date', 'Date')}{sth(bookSort, 'voucher_no', 'Voucher')}{sth(bookSort, 'description', 'Description')}{sth(bookSort, 'expense', 'Expense')}{sth(bookSort, 'credit', 'Credit')}{sth(bookSort, 'balance', 'Balance')}<th>Photos</th></tr></thead>
                       <tbody>
                         {filtered && <tr className="pc-opening"><td /><td /><td className="pc-desc">Opening balance</td><td /><td /><td className={neg(pos.period.opening)}>{money(pos.period.opening)}</td><td /></tr>}
-                        {pos.period.lines.map((e) => (
+                        {bookSort.sorted(pos.period.lines, (e, k) => ((k === 'expense' || k === 'credit') ? (e[k] || null) : e[k])).map((e) => (
                           <tr key={e.id}>
                             <td>{dayLabel(e.entry_date)}</td>
                             <td>{e.voucher_no || ''}</td>
@@ -518,9 +525,9 @@ function PettyCash() {
                   <div className="card-header mx-card-head"><Scale className="card-header-icon-svg" /><h3>Month by month</h3></div>
                   <div className="md-table-wrap">
                     <table className="md-table md-table-compact">
-                      <thead><tr><th>Month</th><th>Cash from head office</th><th>Sale cash used</th><th>Spent</th><th>Balance at month end</th></tr></thead>
+                      <thead><tr>{sth(monthSort, 'month', 'Month')}{sth(monthSort, 'headOffice', 'Cash from head office')}{sth(monthSort, 'saleCash', 'Sale cash used')}{sth(monthSort, 'expense', 'Spent')}{sth(monthSort, 'closing', 'Balance at month end')}</tr></thead>
                       <tbody>
-                        {months.map((m) => (
+                        {monthSort.sorted(months).map((m) => (
                           <tr key={m.month}>
                             <td>{monthLabel(m.month)}</td><td>{money(m.headOffice)}</td><td>{money(m.saleCash)}</td><td>{money(m.expense)}</td>
                             <td className={neg(m.closing)}>{money(m.closing)}</td>

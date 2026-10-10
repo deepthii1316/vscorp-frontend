@@ -6,10 +6,11 @@
 // contribution shown as a bar not just a number). Data is prepared by
 // src/lib/categoryDrilldownShared.js; nothing is calculated here.
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Layers, Package, ChevronDown, ChevronRight } from 'lucide-react';
 import { formatINRFull, formatNumber, formatPercent } from '@/lib/masterDashboardShared';
 import { pctCls, pctStr } from '@/lib/categoryDrilldownShared';
+import { SortTh, useSort, sortTree } from '@/components/SortTh';
 
 function ContribCell({ value }) {
   const pct = value === null || value === undefined ? 0 : Math.max(0, Math.min(100, value));
@@ -66,6 +67,10 @@ function DrillTable({ title, icon: Icon, note, tree, compareLabel }) {
     return next;
   });
 
+  const { sort, onSort } = useSort({ textKeys: ['label'] });
+  const view = useMemo(() => sortTree(tree, sort), [tree, sort]);
+  const th = (k, label) => <SortTh k={k} label={label} sort={sort} onSort={onSort} />;
+
   const grand = tree.reduce((t, r) => ({
     qty: t.qty + r.qty, prevQty: t.prevQty + (r.prevQty || 0),
     nsv: t.nsv + r.nsv, prevNsv: t.prevNsv + (r.prevNsv || 0),
@@ -89,12 +94,12 @@ function DrillTable({ title, icon: Icon, note, tree, compareLabel }) {
           <table className="md-table md-drill">
             <thead>
               <tr>
-                <th>Category</th><th>Qty</th><th>{compareLabel} Qty</th><th>Qty growth</th>
-                <th>NSV</th><th>{compareLabel} NSV</th><th>NSV growth</th><th>Contribution</th><th>MD %</th>
+                {th('label', 'Category')}{th('qty', 'Qty')}{th('prevQty', `${compareLabel} Qty`)}{th('qtyGrowth', 'Qty growth')}
+                {th('nsv', 'NSV')}{th('prevNsv', `${compareLabel} NSV`)}{th('nsvGrowth', 'NSV growth')}{th('contribution', 'Contribution')}{th('mdPct', 'MD %')}
               </tr>
             </thead>
             <tbody>
-              {tree.map((node) => (
+              {view.map((node) => (
                 <DrillRow key={node.path} node={node} expanded={expanded} onToggle={onToggle} />
               ))}
               <tr className="md-total-row">

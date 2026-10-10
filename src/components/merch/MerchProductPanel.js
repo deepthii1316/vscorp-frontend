@@ -4,6 +4,7 @@
 // every sales line / stock snapshot. Opened from the header search box or any barcode link.
 
 import { useEffect, useState } from 'react';
+import { SortTh, useSort } from '@/components/SortTh';
 import { X } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import {
@@ -18,6 +19,8 @@ function Fact({ label, value, title }) {
 export default function MerchProductPanel({ barcode, row, thresholds, rateDays, onClose }) {
   const [hist, setHist] = useState(null);
   const [error, setError] = useState(null);
+  const salesSort = useSort({ textKeys: ['full_date', 'bill_no', 'salesperson'] });
+  const stockSort = useSort({ textKeys: ['full_date', 'inward_date'] });
 
   useEffect(() => {
     let cancelled = false;
@@ -84,9 +87,9 @@ export default function MerchProductPanel({ barcode, row, thresholds, rateDays, 
             <h3 className="mx-drawer-h3">Sales ({formatNumber(soldTotal)} units, {formatINRFull(nsvTotal)} NSV)</h3>
             <div className="md-table-wrap">
               <table className="md-table md-table-compact">
-                <thead><tr><th>Date</th><th>Bill</th><th>Salesperson</th><th>Qty</th><th>MRP</th><th>NSV</th></tr></thead>
+                <thead><tr>{[['full_date', 'Date'], ['bill_no', 'Bill'], ['salesperson', 'Salesperson'], ['qty', 'Qty'], ['mrp', 'MRP'], ['nsv', 'NSV']].map(([k, label]) => <SortTh key={k} k={k} label={label} sort={salesSort.sort} onSort={salesSort.onSort} />)}</tr></thead>
                 <tbody>
-                  {sales.map((r, i) => (
+                  {salesSort.sorted(sales).map((r, i) => (
                     <tr key={`${r.bill_no}-${i}`} className={r.qty < 0 ? 'md-warn-row' : ''}>
                       <td>{shortDate(r.full_date)}</td><td>{r.bill_no}</td><td>{r.salesperson || '—'}</td>
                       <td>{formatNumber(r.qty)}{r.qty < 0 ? ' (return)' : ''}</td><td>{formatINRFull(r.mrp)}</td><td>{formatINRFull(r.nsv)}</td>
@@ -104,9 +107,9 @@ export default function MerchProductPanel({ barcode, row, thresholds, rateDays, 
             <h3 className="mx-drawer-h3">Stock snapshots</h3>
             <div className="md-table-wrap">
               <table className="md-table md-table-compact">
-                <thead><tr><th>Stock date</th><th>Qty</th><th>Last inward</th></tr></thead>
+                <thead><tr>{[['full_date', 'Stock date'], ['stock_qty', 'Qty'], ['inward_date', 'Last inward']].map(([k, label]) => <SortTh key={k} k={k} label={label} sort={stockSort.sort} onSort={stockSort.onSort} />)}</tr></thead>
                 <tbody>
-                  {hist.stock.map((r) => (
+                  {stockSort.sorted(hist.stock).map((r) => (
                     <tr key={r.full_date}><td>{shortDate(r.full_date)}</td><td>{formatNumber(r.stock_qty)}</td><td>{shortDate(r.inward_date)}</td></tr>
                   ))}
                 </tbody>

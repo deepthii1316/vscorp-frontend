@@ -1,0 +1,556 @@
+/* Store Board — Uppal Store Dashboard */
+
+.store-board-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ─── Top Bar ──────────────────────────────────────── */
+.sb-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-6);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+.sb-top-left {
+  flex: 1;
+}
+
+.sb-title-section h1 {
+  margin: 0 0 var(--space-2) 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.sb-store-path {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sb-top-right {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.sb-date-info {
+  display: flex;
+  gap: var(--space-4);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.sb-date-info span {
+  cursor: pointer;
+  padding: var(--space-2) var(--space-3);
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.sb-date-info span:hover {
+  background: var(--bg-subtle);
+}
+
+/* ─── Mode Bar ──────────────────────────────────────── */
+.sb-mode-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.sb-mode-btn {
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sb-mode-btn:hover {
+  background: var(--bg);
+  border-color: var(--border-strong);
+}
+
+.sb-mode-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.sb-mode-spacer {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-left: var(--space-4);
+}
+
+.sb-select {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.sb-data-badge {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-inset);
+  border-radius: 4px;
+}
+
+/* ─── Content ──────────────────────────────────────── */
+.sb-content {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ─── Panel ──────────────────────────────────────── */
+.sb-panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.sb-panel-title {
+  margin: 0;
+  padding: var(--space-4) var(--space-6);
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  background: #1A1A1A;
+  letter-spacing: 1px;
+}
+
+.sb-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-6);
+  background: #1A1A1A;
+  border-bottom: 1px solid var(--border);
+}
+
+.sb-panel-header .sb-panel-title {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.sb-panel-date {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.sb-mix-note {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ─── Tables ──────────────────────────────────────── */
+.sb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  table-layout: fixed;
+}
+
+.sb-table thead {
+  background: #F5F5F3;
+}
+
+.sb-table th {
+  padding: var(--space-3) var(--space-4);
+  text-align: right;
+  font-weight: 600;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.sb-table th:first-child {
+  text-align: left;
+}
+
+.sb-table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.sb-table tbody tr:hover {
+  background: var(--bg-subtle);
+}
+
+.sb-table .sb-label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sb-table .sb-label.current {
+  color: var(--accent);
+}
+
+.sb-table .sb-currency {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.sb-table .sb-number {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.sb-table .sb-percent {
+  text-align: right;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.sb-table .sb-percent.positive {
+  color: var(--positive);
+}
+
+.sb-table .sb-percent.negative {
+  color: var(--rose, #B33A3A);
+}
+
+.sb-table .sb-percent.warning {
+  color: var(--amber, #C97A1D);
+}
+
+.sb-table .sb-currency.positive {
+  color: var(--positive);
+}
+
+.sb-table .sb-currency.negative {
+  color: var(--rose, #B33A3A);
+}
+
+.sb-table .sb-currency.muted {
+  color: var(--text-muted);
+}
+
+.sb-table .sb-name {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.sb-table .sb-category {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sb-week-label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sb-date-range {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.sb-ytd-row td {
+  font-weight: 700;
+  background: #F5F5F3;
+  border-top: 2px solid var(--border-strong);
+}
+
+.sb-current-month td {
+  background: var(--bg-subtle);
+}
+
+.sb-bold {
+  font-weight: 700;
+}
+
+.sb-muted {
+  color: var(--text-muted);
+}
+
+/* ─── KPI Table ──────────────────────────────────────── */
+.sb-kpis-table {
+  width: 100%;
+  border-collapse: collapse;
+  padding: var(--space-6);
+}
+
+.sb-kpis-table td {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.sb-kpis-table tr:last-child td {
+  border-bottom: none;
+}
+
+.sb-kpi-label {
+  font-weight: 600;
+  width: 40%;
+}
+
+.sb-kpi-value {
+  font-weight: 700;
+  font-size: 16px;
+  text-align: right;
+  font-family: var(--font-mono);
+  width: 50%;
+}
+
+.sb-kpi-def {
+  text-align: center;
+  color: var(--text-muted);
+  cursor: help;
+  width: 10%;
+}
+
+/* ─── Bottom Panels ──────────────────────────────────────── */
+.sb-bottom-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+}
+
+@media (max-width: 1200px) {
+  .sb-bottom-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Expand Icon ──────────────────────────────────────── */
+.sb-expand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.sb-expandable-row {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sb-expandable-row:hover td {
+  background: var(--bg-subtle);
+}
+
+/* ─── Loading State ──────────────────────────────────────── */
+.sb-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-10);
+  color: var(--text-muted);
+}
+
+.sb-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Error State ──────────────────────────────────────── */
+.sb-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-10);
+  color: var(--rose, #B33A3A);
+  text-align: center;
+  min-height: 400px;
+}
+
+.sb-error h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sb-error p {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* ─── Responsive ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sb-mode-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sb-table {
+    font-size: 11px;
+  }
+
+  .sb-table th,
+  .sb-table td {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .sb-content {
+    padding: var(--space-4);
+    gap: var(--space-4);
+  }
+}
+
+@media print {
+  .sb-mode-bar {
+    display: none;
+  }
+
+  .sb-content {
+    gap: var(--space-4);
+  }
+}
+
+/* ─── Alignment: the first column is text (left); every other column is a figure (right),
+       headers included, so a number always sits under its column name. ─── */
+.sb-table td { text-align: right; }
+.sb-table th:first-child, .sb-table td:first-child { text-align: left; }
+.sb-table th.sb-left, .sb-table td.sb-left { text-align: left; }
+.sb-table th:first-child { width: 24%; }
+
+/* Panel header: the title bar spans the panel, with its note on the right */
+.sb-panel-header .sb-panel-date { color: #C9C7BE; text-align: right; }
+
+.sb-sub { display: block; margin-top: 2px; font-size: 11px; font-weight: 400; color: var(--text-muted); }
+.sb-toggle { display: inline-flex; align-items: center; gap: 6px; }
+.sb-week-row { cursor: pointer; user-select: none; }
+.sb-day-row td { background: var(--bg-inset); font-size: 12px; color: var(--text-secondary); }
+.sb-table .sb-day-label { padding-left: 38px; color: var(--text-secondary); }
+.sb-foot-note { margin: 0; padding: var(--space-3) var(--space-6); font-size: 11.5px; line-height: 1.5; color: var(--text-muted); border-top: 1px solid var(--border); }
+.sb-empty { margin: 0; padding: var(--space-6); font-size: 13px; color: var(--text-muted); text-align: center; }
+
+/* Achievement bar in Individual Performance */
+.sb-bar { display: inline-block; vertical-align: middle; width: 54px; height: 6px; margin-right: 8px; border-radius: 3px; background: var(--bg-subtle); overflow: hidden; }
+.sb-bar > span { display: block; height: 100%; border-radius: 3px; background: var(--text-muted); }
+.sb-bar > span.positive { background: var(--positive); }
+.sb-bar > span.warning { background: var(--amber, #C97A1D); }
+.sb-bar > span.negative { background: var(--rose, #B33A3A); }
+
+/* Store KPIs: name, how it is worked out, value */
+.sb-kpis-table td { padding: 10px var(--space-6); }
+.sb-kpi-label { width: 28%; }
+.sb-kpi-how { font-size: 11.5px; color: var(--text-muted); }
+.sb-kpi-value { width: 26%; white-space: nowrap; }
+
+/* Footfall conversion strip */
+.sb-conversion { display: flex; align-items: baseline; gap: var(--space-4); padding: var(--space-4) var(--space-6); border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
+.sb-conversion strong { font-size: 22px; font-family: var(--font-mono); color: var(--text); }
+
+/* Top bar and mode bar */
+.sb-data-through { font-size: 12px; color: var(--text-muted); }
+.sb-action-btn { display: inline-flex; align-items: center; gap: 6px; padding: var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: 4px; background: var(--bg-elevated); color: var(--text); font-size: 12px; font-weight: 600; cursor: pointer; }
+.sb-action-btn:hover:not(:disabled) { background: var(--bg-subtle); border-color: var(--border-strong); }
+.sb-action-btn:disabled { opacity: 0.6; cursor: wait; }
+.sb-custom-dates { display: inline-flex; align-items: center; gap: var(--space-2); font-size: 12px; color: var(--text-muted); }
+.sb-date-input { padding: 5px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-elevated); color: var(--text); font: inherit; font-size: 12px; }
+.sb-mode-note { flex-basis: 100%; font-size: 11.5px; color: var(--text-muted); }
+
+/* An error is a banner above the board, not a full-page takeover */
+.sb-error { flex-direction: row; justify-content: flex-start; align-items: flex-start; gap: var(--space-3); min-height: 0; margin: var(--space-4) var(--space-6) 0; padding: var(--space-4); text-align: left; border: 1px solid var(--rose, #B33A3A); border-radius: 6px; }
+.sb-error p { margin: 2px 0 0; font-size: 13px; }
+
+@media print {
+  .sb-top-right { display: none; }
+  .sb-panel { break-inside: avoid; }
+}
+
+/* ─── Period buttons: visible feedback ─── */
+.sb-progress { height: 3px; background: transparent; overflow: hidden; }
+.sb-progress span { display: block; width: 35%; height: 100%; background: var(--accent); transform: translateX(-110%); }
+.sb-progress.on { background: var(--bg-subtle); }
+.sb-progress.on span { animation: sb-slide 0.9s ease-in-out infinite; }
+@keyframes sb-slide { from { transform: translateX(-110%); } to { transform: translateX(300%); } }
+.sb-panel.sb-busy > :not(.sb-panel-header) { opacity: 0.45; transition: opacity 120ms ease; }
+.sb-follows { margin-left: 10px; padding: 2px 8px; border-radius: 100px; background: var(--accent); color: #fff; font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; vertical-align: middle; }
+.sb-table tr.sb-selected-row td { background: var(--green-soft); }
+.sb-table tr.sb-selected-row td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+
+/* ─── Store KPIs: coloured cards ─── */
+.sb-kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: var(--space-3); padding: var(--space-4) var(--space-6); }
+.sb-kpi-card { --tone: var(--green); --tone-soft: var(--green-soft); padding: 12px 14px; border: 1px solid var(--border); border-left: 4px solid var(--tone); border-radius: 6px; background: linear-gradient(135deg, var(--tone-soft) 0%, var(--bg-elevated) 70%); }
+.sb-tone-sales  { --tone: var(--green); --tone-soft: var(--green-soft); }
+.sb-tone-basket { --tone: var(--blue, #2F6FB0); --tone-soft: var(--blue-soft, #E6EFF8); }
+.sb-tone-cross  { --tone: var(--amber, #C97A1D); --tone-soft: var(--amber-soft, #F8EDD9); }
+.sb-tone-margin { --tone: var(--rose, #B33A3A); --tone-soft: var(--rose-soft, #F7E4E4); }
+.sb-kpi-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sb-kpi-card-label { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tone); }
+.sb-kpi-card-value { margin-top: 6px; font-size: 22px; font-weight: 700; font-family: var(--font-mono); color: var(--text); }
+.sb-kpi-card-how { margin-top: 2px; font-size: 11px; color: var(--text-muted); }
+.sb-kpi-chip { padding: 2px 7px; border-radius: 100px; font-size: 10.5px; font-weight: 700; white-space: nowrap; background: var(--bg-subtle); color: var(--text-muted); }
+.sb-kpi-chip.good { background: var(--positive-soft, #E4F0E8); color: var(--positive); }
+.sb-kpi-chip.bad { background: var(--negative-soft, #F7E4E4); color: var(--rose, #B33A3A); }
+.sb-kpi-legend { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); padding: var(--space-3) var(--space-6); border-top: 1px solid var(--border); font-size: 11px; color: var(--text-muted); }
+.sb-kpi-legend > span[class^="sb-tone-"] { display: inline-flex; align-items: center; gap: 6px; }
+.sb-kpi-legend > span[class^="sb-tone-"]::before { content: ''; width: 10px; height: 10px; border-radius: 2px; background: var(--tone); }
+.sb-kpi-legend-note { margin-left: auto; }
+/* the KPI cards need the full width; footfall sits below them */
+.sb-bottom-panels { grid-template-columns: 1fr; }
+
+/* ─── Changes: triangle + percent, green = good news, red = bad ─── */
+.sb-delta { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-family: var(--font-mono); white-space: nowrap; }
+.sb-delta .sb-tri { font-size: 0.8em; line-height: 1; }
+.sb-delta.good { color: var(--positive); }
+.sb-delta.bad { color: var(--rose, #B33A3A); }
+.sb-delta.flat, .sb-delta.none { color: var(--text-muted); font-weight: 600; }
+.sb-kpi-chip .sb-delta { font-size: inherit; color: inherit; }
+/* a figure with its change beside it and the earlier figure on a small line below */
+.sb-table td.sb-currency .sb-delta, .sb-table td.sb-percent .sb-delta { margin-left: 8px; }
+.sb-table td.sb-currency .sb-sub, .sb-table td.sb-percent .sb-sub { font-family: var(--font-sans, inherit); white-space: nowrap; }
+
+/* Weekly Business Plan: the week and the day the store is in today */
+.sb-now { margin-left: 8px; padding: 2px 8px; border-radius: 100px; background: var(--accent); color: #fff; font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; vertical-align: middle; }
+.sb-table tr.sb-now-row td:first-child { box-shadow: inset 3px 0 0 var(--accent); color: var(--text); font-weight: 600; }
+
+/* ─── Sortable column headers (components/SortTh.js) ─── */
+.sort-th { white-space: nowrap; }
+.sort-th-btn { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: inherit; cursor: pointer; }
+.sort-th-label { white-space: normal; }
+.sort-th-arrows { display: inline-flex; flex-direction: column; flex: none; line-height: 0.8; font-size: 7px; }
+.sort-th-arrows i { font-style: normal; opacity: 0.3; }
+.sort-th-arrows i.on { opacity: 1; color: var(--green); }
+.sort-th-btn:hover .sort-th-arrows i { opacity: 0.6; }
+.sort-th-btn:hover .sort-th-arrows i.on { opacity: 1; }
+.sort-th-btn:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; border-radius: 2px; }
+.sort-th.active .sort-th-label { color: var(--green); }
+@media print { .sort-th-arrows { display: none; } }

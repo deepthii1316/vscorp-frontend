@@ -5,6 +5,7 @@
 import { useMemo, useState } from 'react';
 import { Package, IndianRupee, ShoppingBag, Receipt, Percent, CalendarClock, Layers, ChevronDown, ChevronRight } from 'lucide-react';
 import { Kpi, CardHead, ExportButton, exportSheets } from './MerchCommon';
+import { SortTh, useSort, sortTree } from '@/components/SortTh';
 import { categoryTree, valueOf, COVER_TIP, formatDays } from '@/lib/merchShared';
 import { formatINRFull, formatNumber, formatPercent } from '@/lib/masterDashboardShared';
 
@@ -61,6 +62,10 @@ export default function MerchOverview({ rows, summary, rateDays, asOfLabel }) {
   });
   const total = valueOf(summary);
   const valueName = 'Stock value (MRP)';
+  // Sorting: every level of the tree follows the chosen column.
+  const { sort, onSort } = useSort({ textKeys: ['label'] });
+  const treeView = useMemo(() => sortTree(tree, sort, (n, k) => (k === 'value' ? valueOf(n) : n[k])), [tree, sort]);
+  const th = (k, label, title) => <SortTh k={k} label={label} sort={sort} onSort={onSort} title={title} />;
 
   const doExport = () => {
     const flat = [];
@@ -109,13 +114,13 @@ export default function MerchOverview({ rows, summary, rateDays, asOfLabel }) {
             <table className="md-table md-drill">
               <thead>
                 <tr>
-                  <th>Category</th><th>Stock qty</th><th>{valueName}</th><th>Share</th>
-                  <th>Sales qty MTD</th><th>NSV MTD</th><th>Sales qty 30d</th><th>Sell-thru 30d</th>
-                  <th title={COVER_TIP}>Cover</th>
+                  {th('label', 'Category')}{th('stockQty', 'Stock qty')}{th('value', valueName)}{th('value', 'Share')}
+                  {th('qtyMtd', 'Sales qty MTD')}{th('nsvMtd', 'NSV MTD')}{th('qty30', 'Sales qty 30d')}{th('sellThrough', 'Sell-thru 30d')}
+                  {th('cover', 'Cover', COVER_TIP)}
                 </tr>
               </thead>
               <tbody>
-                {tree.map((n) => <Row key={n.path} node={n} expanded={expanded} onToggle={onToggle} total={total} />)}
+                {treeView.map((n) => <Row key={n.path} node={n} expanded={expanded} onToggle={onToggle} total={total} />)}
                 <tr className="md-total-row">
                   <td>Total</td>
                   <td>{formatNumber(summary.stockQty)}</td>

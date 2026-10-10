@@ -1,8 +1,15 @@
 'use client';
 
 import { Clock, ClipboardList } from 'lucide-react';
+import { SortTh, useSort } from '@/components/SortTh';
 
 export default function UploadHistory({ uploads, loading, showHeader = true }) {
+  const { sort, onSort, sorted } = useSort({ textKeys: ['report_type', 'file', 'uploaded_by', 'status', 'path'] });
+  const cellOf = (u, k) => {
+    if (k === 'file') return u.original_file_name || u.renamed_file_name || '';
+    if (k === 'path') return u.storage_path || '';
+    return u[k];
+  };
   const formatReportTypeLabel = (type) => {
     switch (type) {
       case 'sales':         return 'Sales';
@@ -58,16 +65,12 @@ export default function UploadHistory({ uploads, loading, showHeader = true }) {
             <table className="history-table">
               <thead>
                 <tr>
-                  <th>Report Type</th>
-                  <th>Filename</th>
-                  <th>Uploaded By</th>
-                  <th>Date & Time</th>
-                  <th>Status</th>
-                  <th>Storage Path</th>
+                  {[['report_type', 'Report Type'], ['file', 'Filename'], ['uploaded_by', 'Uploaded By'], ['uploaded_at', 'Date & Time'], ['status', 'Status'], ['path', 'Storage Path']]
+                    .map(([k, label]) => <SortTh key={k} k={k} label={label} sort={sort} onSort={onSort} />)}
                 </tr>
               </thead>
               <tbody>
-                {uploads.map((u) => {
+                {sorted(uploads, cellOf).map((u) => {
                   const isSuccess = u.status === 'success' || u.status === 'completed' || u.status === 'processed';
                   const isFailed  = u.status === 'failed' || u.status === 'error';
                   const storagePath = u.storage_path || `${u.report_type || 'raw'}/${u.renamed_file_name || u.original_file_name || ''}`;

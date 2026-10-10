@@ -113,16 +113,8 @@ export function Pager({ page, pages, total, onPage }) {
   );
 }
 
-/** Sortable table header cell. sort = { key, dir }. */
-export function SortTh({ k, label, sort, onSort, title }) {
-  const active = sort.key === k;
-  return (
-    <th className={`mx-sort${active ? ' active' : ''}`} onClick={() => onSort(k)} title={title}
-      aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-      {label}{active ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : ''}
-    </th>
-  );
-}
+// Sortable table header cell: the app-wide control (components/SortTh.js).
+export { SortTh } from '@/components/SortTh';
 
 export function nextSort(sort, key, defaultDir = 'desc') {
   return sort.key === key ? { key, dir: sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: defaultDir };
