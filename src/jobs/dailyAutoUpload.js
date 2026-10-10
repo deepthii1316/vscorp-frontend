@@ -189,12 +189,21 @@ export async function healthCheck(gmailAuth) {
 
   try {
     // Check Gmail connection
-    const { data, error } = await gmailAuth.users.messages.list({
-      userId: 'me',
-      maxResults: 1,
-    });
-    checks.gmailConnected = !error;
-    if (error) checks.errors.push(`Gmail: ${error.message}`);
+    if (!gmailAuth) {
+      checks.errors.push('Gmail: Client not initialized. Check GMAIL_* environment variables');
+      checks.gmailConnected = false;
+    } else {
+      try {
+        const { data, error } = await gmailAuth.users.messages.list({
+          userId: 'me',
+          maxResults: 1,
+        });
+        checks.gmailConnected = !error;
+        if (error) checks.errors.push(`Gmail: ${error.message}`);
+      } catch (gmailErr) {
+        checks.errors.push(`Gmail: ${gmailErr.message}`);
+      }
+    }
 
     // Check database connection
     try {
