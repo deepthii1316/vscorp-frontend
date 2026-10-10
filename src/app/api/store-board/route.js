@@ -56,6 +56,7 @@ export async function GET(request) {
     // Load salesperson data for the end date (latest)
     const salespersonData = await loadSalespersonData(supabase, endDate);
 
+    console.log('🔍 Store Board data footfall count:', data.footfall?.length || 0);
     return NextResponse.json({ success: true, ...data, salespersonData, storeStartDate: STORE_DATE });
   } catch (err) {
     console.error('Store Board API error:', err);

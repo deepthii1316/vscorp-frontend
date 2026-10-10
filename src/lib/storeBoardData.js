@@ -5,6 +5,7 @@ import { comparisonRange, daysBetween } from './masterDashboardShared';
 
 const SALES_TABLE = 'reebok_master_dashboard';
 const RETAIL_METRICS_TABLE = 'reebok_daily_metrics';
+const FOOTFALL_TABLE = 'reebok_footfall';
 
 // Uppal store code in the system
 const UPPAL_STORE_CODE = 'R1157';
@@ -38,6 +39,23 @@ async function fetchRetailMetrics(supabase, start, end) {
   return data || [];
 }
 
+async function fetchFootfall(supabase, start, end) {
+  const { data, error } = await supabase
+    .schema('gold')
+    .from(FOOTFALL_TABLE)
+    .select('*')
+    .eq('site_short_name', UPPAL_STORE_CODE)
+    .gte('full_date', start)
+    .lte('full_date', end)
+    .order('full_date', { ascending: true })
+    .limit(1000);
+  if (error) {
+    console.warn(`Could not load footfall data: ${error.message}`);
+    return [];
+  }
+  return data || [];
+}
+
 /** First and latest date that have sales data for Uppal store. */
 export async function loadDataBounds(supabase) {
   const edge = async (ascending) => {
@@ -61,11 +79,12 @@ export async function loadDataBounds(supabase) {
  */
 export async function loadStoreBoard(supabase, start, end, compare = null) {
   const cmp = compare && compare.start && compare.end ? { start: compare.start, end: compare.end } : comparisonRange(start, end);
-  const [days, prevDays, metrics, prevMetrics] = await Promise.all([
+  const [days, prevDays, metrics, prevMetrics, footfall] = await Promise.all([
     fetchRange(supabase, SALES_TABLE, start, end),
     cmp ? fetchRange(supabase, SALES_TABLE, cmp.start, cmp.end) : Promise.resolve([]),
     fetchRetailMetrics(supabase, start, end),
     cmp ? fetchRetailMetrics(supabase, cmp.start, cmp.end) : Promise.resolve([]),
+    fetchFootfall(supabase, start, end),
   ]);
   return {
     range: { start, end, days: daysBetween(start, end) },
@@ -74,5 +93,6 @@ export async function loadStoreBoard(supabase, start, end, compare = null) {
     prevDays,
     metrics,
     prevMetrics,
+    footfall,
   };
 }

@@ -11,7 +11,7 @@ import {
 import { monthlyTarget, monthlyStaffTarget, MTD_TARGET, YTD_TARGET } from '@/lib/email/reebokHelpers';
 import './store-board.css';
 
-const DEFAULT_DATE_MODE = 'mtd';
+const DEFAULT_DATE_MODE = 'ytd';
 const STORE_NAME = 'UPPAL';
 const STORE_ID = 'R1157';
 
@@ -24,7 +24,7 @@ function getDateRangeForMode(mode, latestDate, customStart, customEnd) {
 
   const latest = new Date(latestDate + 'T00:00:00Z');
   const year = latest.getUTCFullYear();
-  const month = latest.getUTCMonth();
+  const month = latest.getUTCMonth(); // 0-11
   const date = latest.getUTCDate();
 
   switch (mode) {
@@ -38,8 +38,13 @@ function getDateRangeForMode(mode, latestDate, customStart, customEnd) {
     }
     case 'mtd':
       return { start: `${year}-${String(month + 1).padStart(2, '0')}-01`, end: latestDate };
-    case 'ytd':
-      return { start: `${year}-01-01`, end: latestDate };
+    case 'ytd': {
+      // Fiscal year starts July 1 (month 6)
+      // If current month >= July (6), YTD start is July of current year
+      // If current month < July, YTD start is July of previous year
+      const ytdYear = month >= 6 ? year : year - 1;
+      return { start: `${ytdYear}-07-01`, end: latestDate };
+    }
     default:
       return null;
   }
@@ -117,23 +122,29 @@ function TargetVsAchievementPanel({ days, prevDays, latestDate }) {
         </thead>
         <tbody>
           {periods.map((p) => {
-            const gap = p.actual - p.target;
-            const achievement = (p.actual / p.target) * 100;
-            const l2l = previous.revenue > 0 ? ((current.revenue - previous.revenue) / previous.revenue) * 100 : null;
-            const achievementClass = achievement >= 100 ? 'positive' : achievement >= 75 ? 'warning' : 'negative';
+            // Handle zero/missing target safely
+            const hasTarget = p.target && p.target > 0;
+            const hasActual = p.actual && p.actual > 0;
+
+            const gap = hasTarget ? p.actual - p.target : 0;
+            const achievement = hasTarget && hasActual ? (p.actual / p.target) * 100 : 0;
+            const hasPrevious = previous.revenue && previous.revenue > 0;
+            const l2l = hasPrevious && hasActual ? ((current.revenue - previous.revenue) / previous.revenue) * 100 : null;
+
+            const achievementClass = !hasTarget ? 'neutral' : achievement >= 100 ? 'positive' : achievement >= 75 ? 'warning' : 'negative';
 
             return (
               <tr key={p.label}>
                 <td className="sb-label">{p.label}</td>
-                <td className="sb-currency">{formatINRFull(p.target)}</td>
-                <td className="sb-currency">{formatINRFull(p.actual)}</td>
+                <td className="sb-currency">{hasTarget ? formatINRFull(p.target) : '—'}</td>
+                <td className="sb-currency">{hasActual ? formatINRFull(p.actual) : '—'}</td>
                 <td className={`sb-currency ${gap >= 0 ? 'positive' : 'negative'}`}>
-                  {formatINRFull(gap)}
+                  {hasTarget && hasActual ? formatINRFull(gap) : '—'}
                 </td>
-                <td className="sb-number">{formatNumber(p.qtyTarget)}</td>
-                <td className="sb-number">{formatNumber(p.qtyActual)}</td>
+                <td className="sb-number">{p.qtyTarget ? formatNumber(p.qtyTarget) : '—'}</td>
+                <td className="sb-number">{p.qtyActual ? formatNumber(p.qtyActual) : '—'}</td>
                 <td className={`sb-percent ${achievementClass}`}>
-                  {formatPercent(achievement, 1)}
+                  {hasTarget && hasActual ? formatPercent(achievement, 1) : '—'}
                 </td>
                 <td className="sb-percent">
                   {l2l !== null ? formatPercent(l2l, 1) : '—'}
@@ -186,24 +197,50 @@ function WeeklyBusinessPlanPanel({ days, latestDate }) {
         <tbody>
           {weeks.map((week) => {
             const isExpanded = expanded[week.label];
+            const dayCount = week.dateRange.includes('-') ? 7 : 3; // Approx days in week
+            const dayTarget = week.target / dayCount;
+
             return (
-              <tr key={week.label} className="sb-week-row">
-                <td className="sb-week-label">
-                  <span
-                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-                    onClick={() => setExpanded({ ...expanded, [week.label]: !isExpanded })}
-                  >
-                    {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                    {week.label}
-                  </span>
-                </td>
-                <td className="sb-date-range">{week.dateRange}</td>
-                <td className="sb-currency">{formatINRFull(week.target)}</td>
-                <td className="sb-currency">₹—</td>
-                <td className="sb-percent">—</td>
-                <td className="sb-currency">₹—</td>
-                <td className="sb-percent">—</td>
-              </tr>
+              <>
+                <tr key={week.label} className="sb-week-row">
+                  <td className="sb-week-label">
+                    <span
+                      style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                      onClick={() => setExpanded({ ...expanded, [week.label]: !isExpanded })}
+                    >
+                      {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                      {week.label}
+                    </span>
+                  </td>
+                  <td className="sb-date-range">{week.dateRange}</td>
+                  <td className="sb-currency">{formatINRFull(week.target)}</td>
+                  <td className="sb-currency">₹—</td>
+                  <td className="sb-percent">—</td>
+                  <td className="sb-currency">₹—</td>
+                  <td className="sb-percent">—</td>
+                </tr>
+                {isExpanded && (
+                  <tr style={{ backgroundColor: '#f9f9f9' }}>
+                    <td colSpan="7" style={{ padding: '0' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <tbody>
+                          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].slice(0, dayCount).map((day, idx) => (
+                            <tr key={`${week.label}-${day}`} style={{ borderTop: '1px solid #e5e7eb' }}>
+                              <td style={{ padding: '8px 12px', paddingLeft: '40px', fontSize: '12px', color: '#666' }}>{day}</td>
+                              <td style={{ padding: '8px 12px' }}></td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '13px' }}>{formatINRFull(dayTarget)}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '13px' }}>₹—</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '12px' }}>—</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '13px' }}>₹—</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '12px' }}>—</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                )}
+              </>
             );
           })}
         </tbody>
@@ -251,17 +288,25 @@ function IndividualPerformancePanel({ days, latestDate, salespersonData }) {
           </tr>
         </thead>
         <tbody>
-          {salespeople.map((person) => (
-            <tr key={person.name}>
-              <td className="sb-name">{person.name}</td>
-              <td className="sb-currency">—</td>
-              <td className="sb-currency">{formatINRFull(person.actual)}</td>
-              <td className="sb-currency">—</td>
-              <td className="sb-number">—</td>
-              <td className="sb-number">{person.qty}</td>
-              <td className="sb-percent">—</td>
-            </tr>
-          ))}
+          {salespeople.map((person) => {
+            const hasActual = person.actual && person.actual > 0;
+            const hasQty = person.qty && person.qty > 0;
+            const achievement = PER_PERSON_TARGET && hasActual ? (person.actual / PER_PERSON_TARGET) * 100 : 0;
+
+            return (
+              <tr key={person.name}>
+                <td className="sb-name">{person.name}</td>
+                <td className="sb-currency">{formatINRFull(PER_PERSON_TARGET)}</td>
+                <td className="sb-currency">{hasActual ? formatINRFull(person.actual) : '—'}</td>
+                <td className="sb-currency">{hasActual ? formatINRFull(person.actual - PER_PERSON_TARGET) : '—'}</td>
+                <td className="sb-number">—</td>
+                <td className="sb-number">{hasQty ? formatNumber(person.qty) : '—'}</td>
+                <td className={`sb-percent ${achievement >= 100 ? 'positive' : achievement >= 75 ? 'warning' : 'negative'}`}>
+                  {hasActual ? formatPercent(achievement, 1) : '—'}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -314,18 +359,18 @@ function MerchandiseMixPanel({ days, prevDays }) {
           <tr>
             <th>Category</th>
             <th>Qty</th>
-            <th>LY Qty</th>
-            <th>Qty L2L</th>
+            <th>Prev Qty</th>
+            <th>Qty M2M</th>
             <th>RSV</th>
-            <th>LY RSV</th>
-            <th>L2L</th>
+            <th>Prev RSV</th>
+            <th>M2M</th>
             <th>Contribution</th>
           </tr>
         </thead>
         <tbody>
           {categories.map((cat) => {
-            const l2l = previous.footwear_qty > 0 ? ((cat.qty - cat.lyQty) / cat.lyQty) * 100 : 0;
-            const rsv_l2l = cat.lyRsv > 0 ? ((cat.rsv - cat.lyRsv) / cat.lyRsv) * 100 : 0;
+            const m2m = previous.footwear_qty > 0 ? ((cat.qty - cat.lyQty) / cat.lyQty) * 100 : 0;
+            const rsv_m2m = cat.lyRsv > 0 ? ((cat.rsv - cat.lyRsv) / cat.lyRsv) * 100 : 0;
             return (
               <tr key={cat.name}>
                 <td className="sb-category">
@@ -339,13 +384,13 @@ function MerchandiseMixPanel({ days, prevDays }) {
                 </td>
                 <td className="sb-number">{formatNumber(cat.qty)}</td>
                 <td className="sb-number">{formatNumber(cat.lyQty)}</td>
-                <td className={`sb-percent ${l2l >= 0 ? 'positive' : 'negative'}`}>
-                  {formatPercent(l2l, 1)}
+                <td className={`sb-percent ${m2m >= 0 ? 'positive' : 'negative'}`}>
+                  {formatPercent(m2m, 1)}
                 </td>
                 <td className="sb-currency">{formatINRFull(cat.rsv)}</td>
                 <td className="sb-currency">{formatINRFull(cat.lyRsv)}</td>
-                <td className={`sb-percent ${rsv_l2l >= 0 ? 'positive' : 'negative'}`}>
-                  {formatPercent(rsv_l2l, 1)}
+                <td className={`sb-percent ${rsv_m2m >= 0 ? 'positive' : 'negative'}`}>
+                  {formatPercent(rsv_m2m, 1)}
                 </td>
                 <td className="sb-percent">{formatPercent(cat.contribution, 1)}</td>
               </tr>
@@ -374,11 +419,11 @@ function FootwearByDepartmentPanel({ days, prevDays }) {
           <tr>
             <th>Category</th>
             <th>Qty</th>
-            <th>LY Qty</th>
-            <th>Qty L2L</th>
+            <th>Prev Qty</th>
+            <th>Qty M2M</th>
             <th>RSV</th>
-            <th>LY RSV</th>
-            <th>L2L</th>
+            <th>Prev RSV</th>
+            <th>M2M</th>
             <th>Contribution</th>
           </tr>
         </thead>
@@ -409,13 +454,22 @@ function FootwearByDepartmentPanel({ days, prevDays }) {
 function AnnualBusinessPlanPanel({ days, latestDate }) {
   const current = kpisFrom(days);
 
+  // Group days by month and sum revenue
+  const monthlyRevenue = {};
+  days.forEach(day => {
+    if (day.full_date) {
+      const monthKey = day.full_date.slice(0, 7); // 'YYYY-MM'
+      monthlyRevenue[monthKey] = (monthlyRevenue[monthKey] || 0) + (day.nsv || 0);
+    }
+  });
+
   // Store started July 2026, so only show Jul-Oct 2026
-  // Targets: Before Oct = need to fetch; Oct = ₹10L
+  // Use reebokHelpers to get actual targets for each month
   const months = [
-    { name: 'Jul', ly: 0, target: 0, actual: 0 },
-    { name: 'Aug', ly: 0, target: 0, actual: 0 },
-    { name: 'Sep', ly: 0, target: 0, actual: 0 },
-    { name: 'Oct', ly: 0, target: 1000000, actual: current.revenue, isCurrent: true },
+    { name: 'Jul', date: '2026-07-01', target: monthlyTarget('2026-07-01'), actual: monthlyRevenue['2026-07'] || 0 },
+    { name: 'Aug', date: '2026-08-01', target: monthlyTarget('2026-08-01'), actual: monthlyRevenue['2026-08'] || 0 },
+    { name: 'Sep', date: '2026-09-01', target: monthlyTarget('2026-09-01'), actual: monthlyRevenue['2026-09'] || 0 },
+    { name: 'Oct', date: '2026-10-01', target: monthlyTarget('2026-10-01'), actual: monthlyRevenue['2026-10'] || 0, isCurrent: true },
   ];
 
   return (
@@ -428,42 +482,44 @@ function AnnualBusinessPlanPanel({ days, latestDate }) {
         <thead>
           <tr>
             <th>Month</th>
-            <th>LY Revenue</th>
-            <th>LY Target</th>
             <th>Target</th>
             <th>Actual</th>
             <th>Ach %</th>
-            <th>L2L %</th>
+            <th>M2M %</th>
           </tr>
         </thead>
         <tbody>
-          {months.map((m) => {
-            const ach = (m.actual / m.target) * 100;
-            const l2l = (m.actual / m.ly - 1) * 100;
+          {months.map((m, idx) => {
+            const ach = m.target > 0 ? (m.actual / m.target) * 100 : 0;
+            const prevMonth = idx > 0 ? months[idx - 1] : null;
+            const m2m = prevMonth && prevMonth.actual > 0 ? ((m.actual / prevMonth.actual) - 1) * 100 : 0;
             return (
               <tr key={m.name} className={m.isCurrent ? 'sb-current-month' : ''}>
                 <td className={`sb-label ${m.isCurrent ? 'current' : ''}`}>{m.isCurrent && '● '}{m.name}</td>
-                <td className="sb-currency">{formatINRFull(m.ly)}</td>
-                <td className="sb-currency sb-muted">{formatINRFull(m.target)}</td>
                 <td className="sb-currency">{formatINRFull(m.target)}</td>
                 <td className="sb-currency">{formatINRFull(m.actual)}</td>
-                <td className={`sb-percent ${ach >= 100 ? 'positive' : ach >= 75 ? 'warning' : 'negative'}`}>
-                  {formatPercent(ach, 1)}
+                <td className={`sb-percent ${m.target === 0 ? '' : ach >= 100 ? 'positive' : ach >= 75 ? 'warning' : 'negative'}`}>
+                  {m.target === 0 ? '—' : formatPercent(ach, 1)}
                 </td>
-                <td className={`sb-percent ${l2l >= 0 ? 'positive' : 'negative'}`}>
-                  {formatPercent(l2l, 1)}
+                <td className={`sb-percent ${prevMonth === null ? '' : m2m >= 0 ? 'positive' : 'negative'}`}>
+                  {prevMonth === null ? '—' : formatPercent(m2m, 1)}
                 </td>
               </tr>
             );
           })}
           <tr className="sb-ytd-row">
             <td className="sb-label sb-bold">YTD</td>
-            <td className="sb-currency sb-bold">₹2,2Cr</td>
-            <td className="sb-currency sb-bold sb-muted">₹3,7Cr</td>
-            <td className="sb-currency sb-bold">₹2,8Cr</td>
-            <td className="sb-currency sb-bold">₹1,9Cr</td>
-            <td className="sb-percent sb-bold negative">65.7%</td>
-            <td className="sb-percent sb-bold negative">-19.3%</td>
+            <td className="sb-currency sb-bold">{formatINRFull(months.reduce((sum, m) => sum + m.target, 0))}</td>
+            <td className="sb-currency sb-bold">{formatINRFull(months.reduce((sum, m) => sum + m.actual, 0))}</td>
+            <td className="sb-percent sb-bold">
+              {(() => {
+                const ytdTarget = months.reduce((sum, m) => sum + m.target, 0);
+                const ytdActual = months.reduce((sum, m) => sum + m.actual, 0);
+                const ytdAch = ytdTarget > 0 ? (ytdActual / ytdTarget) * 100 : 0;
+                return ytdTarget === 0 ? '—' : formatPercent(ytdAch, 1);
+              })()}
+            </td>
+            <td className="sb-percent sb-bold">—</td>
           </tr>
         </tbody>
       </table>
@@ -566,6 +622,13 @@ function StoreKPIsPanel({ days }) {
               <HelpCircle size={14} title={kpiDefinitions.AFR} />
             </td>
           </tr>
+          <tr>
+            <td className="sb-kpi-label">MD%</td>
+            <td className="sb-kpi-value">{kpis.mdPercent !== null && kpis.mdPercent !== undefined ? formatPercent(kpis.mdPercent, 1) : '—'}</td>
+            <td className="sb-kpi-def">
+              <HelpCircle size={14} title={kpiDefinitions['MD%']} />
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -575,33 +638,70 @@ function StoreKPIsPanel({ days }) {
 /**
  * Footfall Analytics Panel
  */
-function FootfallAnalyticsPanel({ days }) {
+function FootfallAnalyticsPanel({ days, footfall, latestDate, salespersonData }) {
+  const SALESPERSON_NAMES = ['BALRAJ GADDAM', 'RAMBABU DHARAVATH', 'ERRI SRIJA'];
+
+  // Calculate total footfall for the period
+  const totalFootfall = footfall && footfall.length > 0
+    ? footfall.reduce((sum, row) => sum + (row.footfall || 0), 0)
+    : 0;
+
+  // Group footfall by salesperson
+  const footfallBySalesperson = {};
+  SALESPERSON_NAMES.forEach(name => {
+    footfallBySalesperson[name] = footfall && footfall.length > 0
+      ? footfall
+          .filter(row => row.salesperson_name === name)
+          .reduce((sum, row) => sum + (row.footfall || 0), 0)
+      : 0;
+  });
+
+  // Calculate conversion rate if we have both footfall and sales data
   const current = kpisFrom(days);
-  const conv = current.walkins > 0 ? (current.bills / current.walkins) * 100 : 0;
+  const conv = totalFootfall > 0 ? (current.bills / totalFootfall) * 100 : 0;
 
   return (
     <div className="sb-panel">
-      <h3 className="sb-panel-title">FOOTFALL ANALYTICS</h3>
-      <table className="sb-kpis-table">
+      <div className="sb-panel-header">
+        <h3 className="sb-panel-title">FOOTFALL ANALYTICS</h3>
+        <span className="sb-panel-date">{latestDate ? new Date(latestDate + 'T00:00:00Z').toLocaleDateString('en-IN') : 'N/A'}</span>
+      </div>
+      <table className="sb-table">
+        <thead>
+          <tr>
+            <th>Salesperson</th>
+            <th>Footfall</th>
+            <th>% of Total</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr>
-            <td className="sb-kpi-label">Footfall</td>
-            <td className="sb-kpi-value">{formatNumber(current.walkins)}</td>
-          </tr>
-          <tr>
-            <td className="sb-kpi-label">Conversion %</td>
-            <td className="sb-kpi-value">{formatPercent(conv, 2)}</td>
-          </tr>
-          <tr>
-            <td className="sb-kpi-label">Gender Split (M/F)</td>
-            <td className="sb-kpi-value">—</td>
-          </tr>
-          <tr>
-            <td className="sb-kpi-label">Age Groups</td>
-            <td className="sb-kpi-value" style={{ color: 'var(--text-muted)' }}>No data source available</td>
+          {SALESPERSON_NAMES.map((name) => {
+            const count = footfallBySalesperson[name] || 0;
+            const pct = totalFootfall > 0 ? (count / totalFootfall) * 100 : 0;
+            return (
+              <tr key={name}>
+                <td style={{ paddingLeft: '12px' }}>{name}</td>
+                <td style={{ textAlign: 'right', paddingRight: '24px' }}>{formatNumber(count)}</td>
+                <td style={{ textAlign: 'right', paddingRight: '24px' }}>{formatPercent(pct, 1)}</td>
+              </tr>
+            );
+          })}
+          <tr style={{ borderTop: '2px solid var(--border-color)', fontWeight: 'bold', backgroundColor: 'var(--bg-muted)' }}>
+            <td style={{ paddingLeft: '12px' }}>STORE TOTAL</td>
+            <td style={{ textAlign: 'right', paddingRight: '24px' }}>{formatNumber(totalFootfall)}</td>
+            <td style={{ textAlign: 'right', paddingRight: '24px' }}>100.0%</td>
           </tr>
         </tbody>
       </table>
+      <div style={{ marginTop: '16px', padding: '12px', backgroundColor: 'var(--bg-muted)', borderRadius: '4px' }}>
+        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Conversion Rate</div>
+        <div style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--primary-color)' }}>
+          {totalFootfall > 0 ? formatPercent(conv, 2) : '—'}
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+          {totalFootfall > 0 ? `${current.bills || 0} transactions / ${totalFootfall} visitors` : 'No footfall data'}
+        </div>
+      </div>
     </div>
   );
 }
@@ -709,7 +809,7 @@ function StoreBoardContent() {
       <FilterBar dateMode={dateMode} onDateModeChange={setDateMode} latestDate={latestDate} isLoading={loading} />
 
       <div className="sb-mode-bar">
-        {['TODAY', 'WTD', 'MTD', 'YTD'].map((mode) => (
+        {['TODAY', 'WTD', 'MTD', 'YTD', 'CUSTOM'].map((mode) => (
           <button
             key={mode}
             className={`sb-mode-btn ${dateMode === mode.toLowerCase() ? 'active' : ''}`}
@@ -718,11 +818,40 @@ function StoreBoardContent() {
             {mode}
           </button>
         ))}
-        {latestDate && (
-          <span className="sb-data-badge">
-            📅 Data through: {new Date(latestDate + 'T00:00:00Z').toLocaleDateString('en-IN')} | Mix & KPIs: MTD · Achievement always: WTD / MTD / YTD
-          </span>
+
+        {dateMode === 'custom' && (
+          <div className="sb-custom-dates">
+            <input
+              type="date"
+              value={customStart}
+              onChange={(e) => setCustomStart(e.target.value)}
+              placeholder="Start date"
+              className="sb-date-input"
+            />
+            <span>to</span>
+            <input
+              type="date"
+              value={customEnd}
+              onChange={(e) => setCustomEnd(e.target.value)}
+              placeholder="End date"
+              className="sb-date-input"
+            />
+          </div>
         )}
+
+        {latestDate && (() => {
+          const range = getDateRangeForMode(dateMode, latestDate, customStart, customEnd);
+          const formatDateRange = (date) => {
+            const d = new Date(date + 'T00:00:00Z');
+            const opts = { year: 'numeric', month: 'short', day: 'numeric' };
+            return d.toLocaleDateString('en-IN', opts);
+          };
+          return (
+            <span className="sb-data-badge">
+              {range ? `📊 ${dateMode.toUpperCase()}: ${formatDateRange(range.start)} to ${formatDateRange(range.end)}` : '📅 Select date range'}
+            </span>
+          );
+        })()}
       </div>
 
       {loading ? (
@@ -741,7 +870,7 @@ function StoreBoardContent() {
             <AnnualBusinessPlanPanel days={data.days} latestDate={latestDate} />
             <div className="sb-bottom-panels">
               <StoreKPIsPanel days={data.days} />
-              <FootfallAnalyticsPanel days={data.days} />
+              <FootfallAnalyticsPanel days={data.days} footfall={data.footfall} latestDate={latestDate} salespersonData={data.salespersonData} />
             </div>
           </div>
         )
