@@ -12,7 +12,7 @@ import {
   checkDuplicateUpload,
   getTodayUploadStats,
 } from '@/lib/deduplicationService';
-import { automationServiceGmail } from '@/lib/gmail/gmailServiceFactory';
+import { getGmailClient } from '@/lib/gmail/gmailServiceFactory';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +28,7 @@ export async function POST(request) {
     if (auth.response) return auth.response;
 
     // Initialize Gmail client
-    const gmailAuth = await automationServiceGmail.getAuthenticatedClient();
+    const gmailAuth = await getGmailClient();
     if (!gmailAuth) {
       return NextResponse.json(
         {
@@ -82,7 +82,7 @@ export async function GET(request) {
     // Health check endpoint (no auth required)
     if (action === 'health') {
       try {
-        const gmailAuth = await automationServiceGmail.getAuthenticatedClient();
+        const gmailAuth = await getGmailClient();
         const health = await healthCheck(gmailAuth);
         return NextResponse.json(health, { status: health.healthy ? 200 : 503 });
       } catch (error) {

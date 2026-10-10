@@ -15,7 +15,7 @@
  */
 
 import { google } from 'googleapis';
-import { open } from 'open';
+import open from 'open';
 import * as fs from 'fs';
 import * as path from 'path';
 import readline from 'readline';
