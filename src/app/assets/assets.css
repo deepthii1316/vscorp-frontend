@@ -14,6 +14,8 @@
 .as-table td.as-wrap { white-space: normal; min-width: 140px; max-width: 320px; }
 .as-table td.as-wrap em { color: var(--text-faint); }
 .as-table td.as-item { font-weight: 600; }
+.as-table td.as-actions { white-space: nowrap; text-align: right; }
+.as-table tr.as-row-editing td { background: var(--amber-soft) !important; }
 .as-table tr.as-row-error td { background: var(--negative-soft) !important; }
 .as-table tr.as-row-skip td { color: var(--text-muted); }
 .as-table .pc-sub { display: block; }

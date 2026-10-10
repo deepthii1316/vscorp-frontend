@@ -2,7 +2,7 @@
 
 // Asset Tracker: what each store physically has, by category and item. Admin only.
 //   * pick a store (or add one); the cards, the register and the category summary are that store's
-//   * add an asset (the register itself is read-only: quantities are corrected by importing again)
+//   * add an asset, change its brand / specification / quantity / remark, or remove it
 //   * import the store's asset Excel: every row is shown first with what will happen to it
 //     (added, updated, skipped, or why it cannot be read); nothing is saved until Import is pressed
 // Data: /api/assets (+ /<id>, /stores, /import). The admin role is enforced in those routes.
@@ -10,7 +10,7 @@
 // Nothing here is sample data: an empty store shows an empty register.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Boxes, Hash, AlertTriangle, Layers, Plus, X, RefreshCw, Upload, FileSpreadsheet, Download, Search, Save, CheckCircle2, Store } from 'lucide-react';
+import { Box, Boxes, Hash, AlertTriangle, Layers, Plus, Pencil, Trash2, Check, X, RefreshCw, Upload, FileSpreadsheet, Download, Search, Save, CheckCircle2, Store } from 'lucide-react';
 import RequireAuth from '@/components/RequireAuth';
 import { apiFetch } from '@/lib/api';
 import { SortTh, useSort } from '@/components/SortTh';
@@ -89,7 +89,7 @@ function Assets() {
 
   const switchStore = (id) => {
     if (id === NEW_STORE) { setNewStore({ name: '', code: '' }); return; }
-    setForm(null); setNotice(null); setCategory(''); setSearch(''); setZeroOnly(false);
+    setForm(null); setConfirmDelete(null); setNotice(null); setCategory(''); setSearch(''); setZeroOnly(false);
     load(id);
   };
 
@@ -108,11 +108,16 @@ function Assets() {
     }
   };
 
-  // ─── Add one asset ────────────────────────────────────────────────────────
-  const openAdd = () => { setForm({ ...blankForm(), category }); setNotice(null); };
+  // ─── Add / change / remove one asset ──────────────────────────────────────
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const openAdd = () => { setForm({ ...blankForm(), category }); setNotice(null); setConfirmDelete(null); };
+  const openEdit = (a) => {
+    setForm({ id: a.id, category: a.category, item: a.item, brand: a.brand || '', specification: a.specification || '', quantity: String(a.quantity), remark: a.remark || '', error: null });
+    setNotice(null); setConfirmDelete(null);
+  };
   const setField = (patch) => setForm((f) => ({ ...f, ...patch, error: null }));
   const itemSuggestions = useMemo(() => {
-    if (!form) return [];
+    if (!form || form.id) return [];
     const cat = (data?.categories || []).find((c) => nameKey(c.name) === nameKey(form.category));
     const held = new Set(assets.filter((a) => nameKey(a.category) === nameKey(form.category)).map((a) => nameKey(a.item)));
     return (data?.items || []).filter((i) => cat && i.category_id === cat.id && !held.has(nameKey(i.name))).map((i) => i.name);
@@ -121,12 +126,28 @@ function Assets() {
   const saveForm = async () => {
     setSaving(true);
     try {
-      await send('/api/assets', 'POST', { store_id: store.id, category: form.category, item: form.item, brand: form.brand, specification: form.specification, quantity: form.quantity, remark: form.remark });
-      setNotice({ ok: true, text: `${form.item.trim()} added to ${store.name}.` });
+      const fields = { brand: form.brand, specification: form.specification, quantity: form.quantity, remark: form.remark };
+      if (form.id) await send(`/api/assets/${form.id}`, 'PATCH', fields);
+      else await send('/api/assets', 'POST', { store_id: store.id, category: form.category, item: form.item, ...fields });
+      setNotice({ ok: true, text: form.id ? `${form.item} updated.` : `${form.item.trim()} added to ${store.name}.` });
       setForm(null);
       await load(store.id);
     } catch (err) {
       setForm((f) => ({ ...f, error: err.message }));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteAsset = async (a) => {
+    setSaving(true); setNotice(null);
+    try {
+      await send(`/api/assets/${a.id}`, 'DELETE');
+      setConfirmDelete(null);
+      setNotice({ ok: true, text: `${a.item} removed from ${store.name}.` });
+      await load(store.id);
+    } catch (err) {
+      setNotice({ ok: false, text: err.message });
     } finally {
       setSaving(false);
     }
@@ -352,17 +373,20 @@ function Assets() {
           {form && (
             <div className="card">
               <div className="card-header mx-card-head">
-                <Plus className="card-header-icon-svg" />
-                <h3>Add an asset to {store?.name}</h3>
+                {form.id ? <Pencil className="card-header-icon-svg" /> : <Plus className="card-header-icon-svg" />}
+                <h3>{form.id ? `Change ${form.item}` : `Add an asset to ${store?.name}`}</h3>
                 <div className="mx-card-actions">
                   <button type="button" className="reebok-btn secondary" onClick={() => setForm(null)} disabled={saving}><X />Close</button>
-                  <button type="button" className="reebok-btn" onClick={saveForm} disabled={saving}><Save />{saving ? 'Saving…' : 'Add asset'}</button>
+                  <button type="button" className="reebok-btn" onClick={saveForm} disabled={saving}><Save />{saving ? 'Saving…' : form.id ? 'Save changes' : 'Add asset'}</button>
                 </div>
               </div>
-              <p className="md-note">Pick a category and item from the suggestions, or type a new one and it is added to the lists. A store holds each item once.</p>
+              <p className="md-note">
+                {form.id ? 'The category and item cannot be changed here. If this is the wrong item, remove the row and add the right one.'
+                  : 'Pick a category and item from the suggestions, or type a new one and it is added to the lists. A store holds each item once.'}
+              </p>
               <div className="as-form">
-                <label>Category<input type="text" className="pc-input" list="as-categories" value={form.category} maxLength={LIMITS.category} placeholder="e.g. Electronics" onChange={(e) => setField({ category: e.target.value })} disabled={saving} /></label>
-                <label>Item<input type="text" className="pc-input" list="as-items" value={form.item} maxLength={LIMITS.item} placeholder="e.g. Billing computer" onChange={(e) => setField({ item: e.target.value })} disabled={saving} /></label>
+                <label>Category<input type="text" className="pc-input" list="as-categories" value={form.category} maxLength={LIMITS.category} placeholder="e.g. Electronics" onChange={(e) => setField({ category: e.target.value })} disabled={saving || Boolean(form.id)} /></label>
+                <label>Item<input type="text" className="pc-input" list="as-items" value={form.item} maxLength={LIMITS.item} placeholder="e.g. Billing computer" onChange={(e) => setField({ item: e.target.value })} disabled={saving || Boolean(form.id)} /></label>
                 <label>Brand<input type="text" className="pc-input" value={form.brand} maxLength={LIMITS.brand} placeholder="Make" onChange={(e) => setField({ brand: e.target.value })} disabled={saving} /></label>
                 <label className="as-form-wide">Specification<input type="text" className="pc-input" value={form.specification} maxLength={LIMITS.specification} placeholder="Model, size, capacity" onChange={(e) => setField({ specification: e.target.value })} disabled={saving} /></label>
                 <label>Quantity<input type="number" className="pc-input" value={form.quantity} min="0" max={MAX_QUANTITY} step="1" placeholder="0" onChange={(e) => setField({ quantity: e.target.value })} disabled={saving} /></label>
@@ -412,23 +436,38 @@ function Assets() {
                     <thead>
                       <tr>
                         {sth(regSort, 'category', 'Category')}{sth(regSort, 'item', 'Item')}{sth(regSort, 'brand', 'Brand')}{sth(regSort, 'specification', 'Specification')}
-                        <SortTh k="quantity" label="Qty" className="as-num" sort={regSort.sort} onSort={regSort.onSort} />{sth(regSort, 'remark', 'Remark')}
+                        <SortTh k="quantity" label="Qty" className="as-num" sort={regSort.sort} onSort={regSort.onSort} />{sth(regSort, 'remark', 'Remark')}{sth(regSort, 'updated_at', 'Last updated')}<th aria-label="Actions" />
                       </tr>
                     </thead>
                     <tbody>
                       {regSort.sorted(shown).map((a) => (
-                        <tr key={a.id}>
+                        <tr key={a.id} className={form?.id === a.id ? 'as-row-editing' : ''}>
                           <td>{a.category}</td>
                           <td className="as-wrap as-item">{a.item}</td>
                           <td>{a.brand || <span className="pc-dash">—</span>}</td>
                           <td className="as-wrap">{a.specification || <span className="pc-dash">—</span>}</td>
                           <td className={`as-num ${a.quantity === 0 ? 'pc-neg' : ''}`}>{count(a.quantity)}</td>
                           <td className="as-wrap">{a.remark || <span className="pc-dash">—</span>}</td>
+                          <td title={a.updated_by_email ? `by ${a.updated_by_email}` : undefined}>{stamp(a.updated_at)}</td>
+                          <td className="as-actions">
+                            {confirmDelete === a.id ? (
+                              <>
+                                <span className="pc-confirm">Remove?</span>
+                                <button type="button" className="pc-icon-btn pc-danger" onClick={() => deleteAsset(a)} disabled={saving} title="Yes, remove"><Check /></button>
+                                <button type="button" className="pc-icon-btn" onClick={() => setConfirmDelete(null)} disabled={saving} title="Keep"><X /></button>
+                              </>
+                            ) : (
+                              <>
+                                <button type="button" className="pc-icon-btn" onClick={() => openEdit(a)} disabled={saving} title="Change brand, specification, quantity or remark"><Pencil /></button>
+                                <button type="button" className="pc-icon-btn" onClick={() => setConfirmDelete(a.id)} disabled={saving} title="Remove from this store"><Trash2 /></button>
+                              </>
+                            )}
+                          </td>
                         </tr>
                       ))}
                       <tr className="md-total-row">
                         <td>{filtered ? 'Total shown' : 'Total'}</td><td>{plural(shown.length, 'item')}</td><td /><td />
-                        <td className="as-num">{count(shown.reduce((s, a) => s + a.quantity, 0))}</td><td />
+                        <td className="as-num">{count(shown.reduce((s, a) => s + a.quantity, 0))}</td><td /><td /><td />
                       </tr>
                     </tbody>
                   </table>
