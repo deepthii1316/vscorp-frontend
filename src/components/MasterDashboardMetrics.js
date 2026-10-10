@@ -9,10 +9,10 @@ const METRICS = [
   { key: 'upt', label: 'UPT', format: (value) => value == null ? '-' : Number(value).toFixed(2), icon: Gauge, kind: 'number' },
   { key: 'atv', label: 'ATV', format: formatINRFull, icon: IndianRupee, kind: 'number' },
   { key: 'asp', label: 'ASP', format: formatINRFull, icon: IndianRupee, kind: 'number' },
-  { key: 'ssr', label: 'SSR', format: (value) => value == null ? '—' : `${Number(value).toFixed(1)}%`, icon: Percent, kind: 'points' },
+  { key: 'ssr', label: 'SSR', format: (value) => value == null ? '—' : `${Number(value).toFixed(1)}%`, icon: Percent, kind: 'percent' },
   { key: 'fupt', label: 'FUPT', format: (value) => value == null ? '-' : Number(value).toFixed(2), icon: Gauge, kind: 'number' },
-  { key: 'sfr', label: 'SFR', format: formatPercent, icon: Percent, kind: 'points' },
-  { key: 'afr', label: 'AFR', format: formatPercent, icon: Percent, kind: 'points' },
+  { key: 'sfr', label: 'SFR', format: formatPercent, icon: Percent, kind: 'percent' },
+  { key: 'afr', label: 'AFR', format: formatPercent, icon: Percent, kind: 'percent' },
 ];
 
 const num = (value) => Number(value || 0);
@@ -70,10 +70,8 @@ function relativeColor(value, dataset) {
   const min = Math.min(...values);
   const max = Math.max(...values);
   const ratio = max === min ? 0.5 : (value - min) / (max - min);
-  const lightGreen = [218, 242, 227];
-  const green = [31, 107, 69];
-  const rgb = lightGreen.map((channel, index) => Math.round(channel + (green[index] - channel) * ratio));
-  return `rgb(${rgb.join(', ')})`;
+  // Soft green -> brand green, from the theme tokens so it reads in light and dark mode.
+  return `color-mix(in srgb, var(--green) ${Math.round(ratio * 100)}%, var(--green-soft))`;
 }
 
 function Delta({ value, unavailableText, compareLabel = 'M2M' }) {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireAuth } from '@/middleware/auth';
 import { comparisonRange } from '@/lib/masterDashboardShared';
 
 // GET /api/reports/master-dashboard/category-drilldown?startDate=..&endDate=..
@@ -8,7 +9,7 @@ import { comparisonRange } from '@/lib/masterDashboardShared';
 // Reads gold.reebok_category_drilldown (built by
 // backend/worker/pipeline/scripts/refresh_category_drilldown.py). Returns raw
 // rows for both periods; the browser aggregates them — see
-// src/lib/categoryDrilldownShared.js.
+// src/lib/categoryDrilldownShared.js. Admin only, like the rest of the Master Dashboard.
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +29,9 @@ async function fetchRange(supabase, start, end) {
 }
 
 export async function GET(request) {
+  const auth = await requireAuth(request, ['admin']);
+  if (auth.response) return auth.response;
+
   const { searchParams } = new URL(request.url);
   try {
     const supabase = createServerClient();

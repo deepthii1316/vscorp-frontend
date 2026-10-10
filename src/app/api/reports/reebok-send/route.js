@@ -6,7 +6,9 @@
 //   → this route builds the Excel (same builder as the download) → sends one email.
 //
 // POST multipart/form-data: images[] (png), date (YYYY-MM-DD), mode ('test' | 'all'),
-//   recipients (JSON array, mode 'all' only - the addresses picked in the confirm dialog)
+//   recipients (JSON array, mode 'all' only - the addresses picked in the confirm dialog),
+//   report ('merch' = the Merchandiser Stock Report instead of the sales report; admin only.
+//   It uses the same test list and the same distribution list as the sales report.)
 // GET → { test: <count>, all: <count>, allRecipients: [<address>, ...] }
 //   allRecipients feeds the Send to All picker; the test list is never sent to the client.
 //
@@ -21,6 +23,7 @@ import { requireAuth } from '@/middleware/auth';
 import { EMAIL_FROM, recipientsFor, ALL_RECIPIENTS } from '@/lib/email/config';
 import { ordinalDate } from '@/lib/email/reebokHelpers';
 import { buildReebokWorkbook } from '@/lib/email/reebokExcel';
+import { buildMerchWorkbook } from '@/lib/email/merchReportExcel';
 
 export const runtime = 'nodejs';
 // Building the Excel + sending 8 images can exceed the default serverless timeout.
@@ -69,6 +72,8 @@ export async function POST(req) {
     const files = form.getAll('images').filter((f) => typeof f !== 'string');
     if (files.length === 0) return NextResponse.json({ error: 'Missing report image(s).' }, { status: 400 });
     const mode = form.get('mode') === 'all' ? 'all' : 'test';
+    const isMerch = form.get('report') === 'merch';
+    if (isMerch && auth.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     const dateParam = /^\d{4}-\d{2}-\d{2}$/.test(String(form.get('date') || '')) ? String(form.get('date')) : null;
 
     // mode 'all': the client picks a subset of ALL_RECIPIENTS in the confirm dialog. Whatever
@@ -103,7 +108,10 @@ export async function POST(req) {
     }
 
     // Excel workbook (same builder as the Download .xlsx button).
-    const { buffer: xlsx, reportDate, filename } = await buildReebokWorkbook(createServerClient(), dateParam);
+    const { buffer: xlsx, reportDate, filename } = isMerch
+      ? await buildMerchWorkbook(createServerClient())
+      : await buildReebokWorkbook(createServerClient(), dateParam);
+    if (!reportDate) return NextResponse.json({ error: 'No stock report loaded yet.' }, { status: 404 });
     totalBytes += xlsx.byteLength;
 
     if (totalBytes > MAX_BYTES) {
@@ -122,7 +130,7 @@ export async function POST(req) {
     // not the date it's being sent - e.g. sending Sunday sends Saturday's report, subject
     // still reads Saturday's date. Client decision, 23-Sep-2026.
     const displayDate = ordinalDate(reportDate);
-    const subject = `${mode === 'test' ? '[TEST] ' : ''}Daily Reports ${displayDate}`;
+    const subject = `${mode === 'test' ? '[TEST] ' : ''}${isMerch ? 'Merchandiser Stock Report' : 'Daily Reports'} ${displayDate}`;
     const imgTags = attachments
       .filter((a) => a.cid)
       .map((a) => `<img src="cid:${a.cid}" alt="Uppal Reebok report" style="display:block;max-width:100%;height:auto;margin-bottom:16px;" />`)
@@ -130,7 +138,7 @@ export async function POST(req) {
     const html = `
       <div style="font-family:Arial,Helvetica,sans-serif;color:#222;">
         <p style="font-size:13px;color:#555;margin:0 0 12px;">
-          Uppal Reebok sales report for <b>${displayDate}</b>. The Excel workbook is attached.
+          Uppal Reebok ${isMerch ? 'merchandiser stock report, stock as of' : 'sales report for'} <b>${displayDate}</b>. The Excel workbook is attached.
         </p>
         ${imgTags}
       </div>`;

@@ -30,3 +30,9 @@ yarn-error.log*
 # Local Pipeline Data / Temporary Excel Dumps
 pipeline/data/*.xlsx
 pipeline/data/*.csv
+
+# Reference docs and generated walkthroughs are local-only (keep them in E:\1drive\vs-corp\docs\)
+public/docs/
+*walkthrough*.md
+*REFERENCE*.md
+*.docx

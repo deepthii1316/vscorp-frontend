@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+	// Renamed 02-Oct-2026: keep old bookmarks working.
+	async redirects() {
+		return [{ source: '/merchandiser-dashboard', destination: '/merch-dashboard', permanent: true }];
+	},
 	async headers() {
 		return [
 			{

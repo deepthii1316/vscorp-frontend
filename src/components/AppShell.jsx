@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import Sidebar from '@/components/Sidebar';
 import LogoutButton from '@/components/LogoutButton';
+import ThemeToggle from '@/components/ThemeToggle';
 import { Bell } from 'lucide-react';
 
 const SIDEBAR_COLLAPSED_KEY = 'sidebar-collapsed';
@@ -22,6 +23,7 @@ function TopBar() {
         <p>Retail Operations</p>
       </div>
       <div className="top-bar-right">
+        <ThemeToggle />
         <button type="button" className="top-bar-icon-btn" title="Notifications" aria-label="Notifications">
           <Bell style={{ width: '15px', height: '15px' }} />
         </button>

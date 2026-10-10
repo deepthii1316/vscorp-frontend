@@ -100,7 +100,24 @@ export function genderLabel(rawSection) {
 export const DEFAULT_MONTHLY_TARGET = 1400000;   // ₹14,00,000
 export const MONTHLY_TARGET_OVERRIDES = {
   '2026-09': 800000,                             // September 2026: ₹8,00,000
+  '2026-10': 1000000,                            // October 2026: ₹10,00,000 (Aditya, 01-Oct-2026)
 };
+
+/**
+ * Monthly target for ONE sales associate (Staffwise KPI tables). A month with an entry in
+ * MONTHLY_STAFF_TARGET_OVERRIDES uses it; any other month falls back to the store's monthly
+ * target ÷ number of associates (the rule before Oct 2026).
+ */
+export const MONTHLY_STAFF_TARGET_OVERRIDES = {
+  '2026-10': 400000,                             // October 2026: ₹4,00,000 per associate (Aditya, 01-Oct-2026)
+};
+
+export function monthlyStaffTarget(dateStr, staffCount) {
+  const key = String(dateStr || '').slice(0, 7);
+  return Object.prototype.hasOwnProperty.call(MONTHLY_STAFF_TARGET_OVERRIDES, key)
+    ? MONTHLY_STAFF_TARGET_OVERRIDES[key]
+    : monthlyTarget(dateStr) / staffCount;
+}
 
 /** The monthly target that applies to the month of the given date ('YYYY-MM-DD'). */
 export function monthlyTarget(dateStr) {
@@ -177,19 +194,35 @@ export function MTD_TARGET(dateStr) {
  * 'ytd' row in gold.reebok_daily_metrics, computed by the pipeline.
  * Returns null if the date is missing/invalid.
  */
-export function YTD_TARGET(dateStr) {
+export function YTD_TARGET(dateStr, monthFn = monthlyTarget) {
   const p = parseYMD(dateStr);
-  const mtd = MTD_TARGET(dateStr);
-  if (!p || mtd == null) return null;
+  const days = daysInMonth(dateStr);
+  if (!p || !days) return null;
+  const mtd = (monthFn(dateStr) / days) * p.day;
   // YTD starts on the most recent 1 July: this year's if the date is Jul-Dec, else last year's.
   let y = p.month >= 7 ? p.year : p.year - 1;
   let m = 7;
   let completed = 0;
   while (y < p.year || m < p.month) {
-    completed += monthlyTarget(`${y}-${String(m).padStart(2, '0')}-01`);
+    completed += monthFn(`${y}-${String(m).padStart(2, '0')}-01`);
     if (++m > 12) { m = 1; y += 1; }
   }
   return completed + mtd;
+}
+
+/**
+ * One associate's target for the period: same daywise / MTD / YTD rules as the store target,
+ * applied to monthlyStaffTarget() instead of monthlyTarget().
+ */
+export function staffTarget(period, dateStr, staffCount) {
+  const p = parseYMD(dateStr);
+  const days = daysInMonth(dateStr);
+  if (!p || !days) return null;
+  const monthFn = (d) => monthlyStaffTarget(d, staffCount);
+  const daily = monthFn(dateStr) / days;
+  if (period === 'today') return daily;
+  if (period === 'mtd') return daily * p.day;
+  return YTD_TARGET(dateStr, monthFn);
 }
 
 /**

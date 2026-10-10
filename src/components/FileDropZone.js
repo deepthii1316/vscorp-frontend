@@ -65,7 +65,7 @@ export default function FileDropZone({
             <Folder className="empty-icon-svg" />
           </div>
           <p className="no-report-title">No report selected</p>
-          <p style={{ fontSize: '12px', color: '#94A3B8' }}>Choose a report type above, then add a file.</p>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Choose a report type above, then add a file.</p>
         </div>
       </div>
     );

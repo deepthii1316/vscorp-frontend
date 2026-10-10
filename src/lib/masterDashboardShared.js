@@ -90,9 +90,10 @@ const DIVISION_COLUMNS = {
  */
 export function sumDays(rows, division = 'ALL') {
   const c = DIVISION_COLUMNS[division] || DIVISION_COLUMNS.ALL;
-  const t = { nsv: 0, mrp: 0, qty: 0, bills: 0, socks: 0, shoes: 0, days: 0 };
+  const t = { nsv: 0, gsv: 0, mrp: 0, qty: 0, bills: 0, socks: 0, shoes: 0, days: 0 };
   for (const r of rows || []) {
     t.nsv += num(r[c.nsv]);
+    t.gsv += num(r.gross_value);   // store level only (see kpisFrom)
     t.mrp += num(r[c.mrp]);
     t.qty += num(r[c.qty]);
     t.bills += num(r[c.bills]);
@@ -114,6 +115,9 @@ export function kpisFrom(t, rangeDays, division = 'ALL') {
   const ssrApplies = division === 'ALL' || division === 'Footwear';
   return {
     nsv: t.nsv,
+    // GSV = gross sale value incl. GST (gold.reebok_master_dashboard.gross_value). Recorded for the
+    // whole store only, so it is null when a single division is selected.
+    gsv: division === 'ALL' ? t.gsv : null,
     avgPerDay: rangeDays > 0 ? t.nsv / rangeDays : null,
     mdPct: t.mrp > 0 ? ((t.mrp - t.nsv) / t.mrp) * 100 : null,
     qty: t.qty,
@@ -127,7 +131,8 @@ export function kpisFrom(t, rangeDays, division = 'ALL') {
 /**
  * Change versus the comparison period.
  *   kind 'pct'    -> growth in percent (cur/prev - 1) x 100
- *   kind 'points' -> difference in percentage points (for ratios such as MD % and SSR)
+ *   kind 'points' -> difference in percentage points (not used on the dashboard since 02-Oct-2026:
+ *                    MD % and SSR changes are shown as relative %, like every other figure)
  * Returns null when there is nothing to compare against (shown as a dash, never as 0).
  */
 export function change(cur, prev, kind = 'pct') {
@@ -139,12 +144,12 @@ export function change(cur, prev, kind = 'pct') {
 // ─── Payments ──────────────────────────────────────────────────────────────
 
 export const PAYMENT_MODES = [
-  { key: 'upi_amount',    label: 'UPI / QR',     color: '#1F6B45' },
-  { key: 'card_amount',   label: 'Card',         color: '#2563EB' },
-  { key: 'cash_amount',   label: 'Cash',         color: '#0D9488' },
-  { key: 'amex_amount',   label: 'AMEX',         color: '#C97A1D' },
-  { key: 'zomato_amount', label: 'Zomato',       color: '#B33A3A' },
-  { key: 'gv_amount',     label: 'Gift voucher', color: '#8A8A82' },
+  { key: 'upi_amount',    label: 'UPI / QR',     color: 'var(--chart-green)' },
+  { key: 'card_amount',   label: 'Card',         color: 'var(--chart-blue)' },
+  { key: 'cash_amount',   label: 'Cash',         color: 'var(--chart-teal)' },
+  { key: 'amex_amount',   label: 'AMEX',         color: 'var(--chart-amber)' },
+  { key: 'zomato_amount', label: 'Zomato',       color: 'var(--chart-rose)' },
+  { key: 'gv_amount',     label: 'Gift voucher', color: 'var(--chart-neutral)' },
 ];
 
 /** Sum the daily payment rows. total = sum of the six modes; shares are of that total. */
@@ -168,14 +173,16 @@ export function sumPayments(rows) {
 
 /** Fixed chart colours (same hues as the app tokens; literal hex so charts also render in screenshots). */
 export const CHART_COLORS = {
-  green: '#1F6B45', blue: '#2563EB', teal: '#0D9488', amber: '#C97A1D', rose: '#B33A3A',
-  grid: '#E8E5DC', axis: '#8A8A82', previous: '#8A8A82',
+  // CSS variables so charts follow the light / dark theme (values in globals.css).
+  green: 'var(--chart-green)', blue: 'var(--chart-blue)', teal: 'var(--chart-teal)', amber: 'var(--chart-amber)', rose: 'var(--chart-rose)',
+  grid: 'var(--border)', axis: 'var(--text-muted)', previous: 'var(--chart-neutral)',
 };
 export const DIVISION_LIST = ['Footwear', 'Apparel', 'Accessories'];
-export const DIVISION_COLORS = { Footwear: '#1F6B45', Apparel: '#2563EB', Accessories: '#C97A1D' };
+export const DIVISION_COLORS = { Footwear: 'var(--chart-green)', Apparel: 'var(--chart-blue)', Accessories: 'var(--chart-amber)' };
 
 export const TREND_METRICS = [
   { key: 'nsv',    label: 'NSV',      kind: 'inr' },
+  { key: 'gsv',    label: 'GSV (incl. GST)', kind: 'inr', storeOnly: true },
   { key: 'qty',    label: 'Qty sold', kind: 'num' },
   { key: 'bills',  label: 'Bills',    kind: 'num' },
   { key: 'atv',    label: 'ATV',      kind: 'inr' },
@@ -260,18 +267,19 @@ export function divisionTable(days, prevDays, hasPrev) {
       qty: t.qty,
       bills: t.bills,
       mdPct,
+      prev: tp ? { nsv: tp.nsv, qty: tp.qty, bills: tp.bills, mdPct: tpMdPct } : null,
       nsvChange: tp ? change(t.nsv, tp.nsv, 'pct') : null,
       qtyChange: tp ? change(t.qty, tp.qty, 'pct') : null,
       billsChange: tp ? change(t.bills, tp.bills, 'pct') : null,
-      // MD% is already a percentage, so its own change is expressed in percentage points
-      // (e.g. 32% -> 35% is "+3 pts"), never as a percent-of-a-percent.
-      mdPctChange: tp ? change(mdPct, tpMdPct, 'points') : null,
+      // MD % change is shown as a relative % like every other figure (e.g. 32% -> 35% is +9.4%),
+      // not percentage points (decided 02-Oct-2026).
+      mdPctChange: tp ? change(mdPct, tpMdPct, 'pct') : null,
     };
   };
   const rows = DIVISION_LIST.map((d) => line(d, d, sumDays(days, d), hasPrev ? sumDays(prevDays, d) : null));
   const un = unclassifiedOf(days);
   if (un) {
-    rows.push({ name: 'Unclassified', nsv: un.nsv, contribution: total.nsv > 0 ? (un.nsv / total.nsv) * 100 : null, qty: un.qty, bills: null, mdPct: null, nsvChange: null, qtyChange: null, billsChange: null, mdPctChange: null, warning: true });
+    rows.push({ name: 'Unclassified', prev: null, nsv: un.nsv, contribution: total.nsv > 0 ? (un.nsv / total.nsv) * 100 : null, qty: un.qty, bills: null, mdPct: null, nsvChange: null, qtyChange: null, billsChange: null, mdPctChange: null, warning: true });
   }
   return { rows, total: line('Total', 'ALL', total, totalPrev) };
 }

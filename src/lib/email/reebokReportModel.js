@@ -8,7 +8,7 @@
 // Cell types: text | inr | int | dec | pct | ach | empty
 //   pct / ach values are in PERCENT units (25.6 means 25.6%).
 
-import { n, calcTarget, MTD_TARGET, YTD_TARGET, monthlyTarget, calcAchievement } from './reebokHelpers';
+import { n, calcTarget, MTD_TARGET, YTD_TARGET, monthlyTarget, monthlyStaffTarget, staffTarget, calcAchievement } from './reebokHelpers';
 
 // ─── Palette (hex without #) ──────────────────────────────────────────────
 export const TONE = {
@@ -129,7 +129,7 @@ const PERIOD_TARGET_FN = { today: calcTarget, mtd: MTD_TARGET, ytd: YTD_TARGET }
 
 function staffKpiTable(period, staffRows, daywiseRows, reportDate) {
   const storeTarget = PERIOD_TARGET_FN[period](reportDate);
-  const perStaffTarget = storeTarget == null ? null : storeTarget / STAFF_COUNT;
+  const perStaffTarget = staffTarget(period, reportDate, STAFF_COUNT);
   const store = daywiseRows.find((r) => r.period_type === period) || {};
 
   const people = ASSOCS.map((name) => {
@@ -172,7 +172,7 @@ function staffKpiTable(period, staffRows, daywiseRows, reportDate) {
       col('SFR', 'amber'), col('AFR', 'amber'),
     ],
     rows,
-    footnotes: [`Per-staff target = ${PERIOD_LABEL[period]} target ÷ 3. Store total ratios are recalculated from totals.`],
+    footnotes: [`Per-staff target = ₹${Math.round(monthlyStaffTarget(reportDate, STAFF_COUNT)).toLocaleString('en-IN')}/month per associate, ${PERIOD_LABEL[period]} share (daywise = ÷ days in month; MTD = daywise × day; YTD = each month's per-staff target since 1 July + MTD). STORE TOTAL target is the store target. Store total ratios are recalculated from totals.`],
   };
 }
 

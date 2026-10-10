@@ -240,7 +240,7 @@ export default function DataCoverageMatrix({ initialReportType = 'sales' }) {
                       if (d.status === 'has_data') {
                         iconNode = (
                           <div className="status-badge-circle has-data">
-                            <Check style={{ width: 8, height: 8, strokeWidth: 3, color: '#fff' }} />
+                            <Check style={{ width: 8, height: 8, strokeWidth: 3, color: 'var(--on-accent)' }} />
                           </div>
                         );
                       } else if (d.status === 'missing') {
@@ -285,7 +285,7 @@ export default function DataCoverageMatrix({ initialReportType = 'sales' }) {
         <div className="matrix-legend">
           <div className="legend-item">
             <div className="status-badge-circle has-data">
-              <Check style={{ width: 8, height: 8, strokeWidth: 3, color: '#fff' }} />
+              <Check style={{ width: 8, height: 8, strokeWidth: 3, color: 'var(--on-accent)' }} />
             </div>
             <span>Has data</span>
           </div>
