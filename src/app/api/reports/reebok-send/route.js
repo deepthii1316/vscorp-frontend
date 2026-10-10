@@ -7,8 +7,8 @@
 //
 // POST multipart/form-data: images[] (png), date (YYYY-MM-DD), mode ('test' | 'all'),
 //   recipients (JSON array, mode 'all' only - the addresses picked in the confirm dialog),
-//   report ('merch' = the Merchandiser Stock Report instead of the sales report; admin only,
-//   test mode only for now - its distribution list is not decided yet)
+//   report ('merch' = the Merchandiser Stock Report instead of the sales report; admin only.
+//   It uses the same test list and the same distribution list as the sales report.)
 // GET → { test: <count>, all: <count>, allRecipients: [<address>, ...] }
 //   allRecipients feeds the Send to All picker; the test list is never sent to the client.
 //
@@ -74,7 +74,6 @@ export async function POST(req) {
     const mode = form.get('mode') === 'all' ? 'all' : 'test';
     const isMerch = form.get('report') === 'merch';
     if (isMerch && auth.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    if (isMerch && mode !== 'test') return NextResponse.json({ error: 'The merchandiser report can only be sent as a test for now.' }, { status: 400 });
     const dateParam = /^\d{4}-\d{2}-\d{2}$/.test(String(form.get('date') || '')) ? String(form.get('date')) : null;
 
     // mode 'all': the client picks a subset of ALL_RECIPIENTS in the confirm dialog. Whatever

@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useLayoutEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { Download, RefreshCw, Image as ImageIcon, Layers, Footprints, Shirt, LayoutList, FlaskConical } from 'lucide-react';
+import { Download, RefreshCw, Image as ImageIcon, Layers, Footprints, Shirt, LayoutList, FlaskConical, Send } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import RequireAuth from '@/components/RequireAuth';
 import { apiFetch } from '@/lib/api';
@@ -98,6 +98,10 @@ function MerchReportsInner() {
   const [capturing, setCapturing] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [sendState, setSendState] = useState({ status: 'idle', message: '' });
+  // Send to All: the same distribution list as the Sales Reports page, picked in a confirm dialog
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [allRecipients, setAllRecipients] = useState([]);
+  const [selectedRecipients, setSelectedRecipients] = useState([]);
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
@@ -121,6 +125,18 @@ function MerchReportsInner() {
   }, []);
 
   useEffect(() => { fetchReport(); }, [fetchReport]);
+
+  // Recipient list for the Send to All picker (Send Test has no picker).
+  useEffect(() => {
+    apiFetch('/api/reports/reebok-send').then((r) => r.json()).then((json) => {
+      setAllRecipients(json.allRecipients || []);
+      setSelectedRecipients(json.allRecipients || []); // everyone checked by default
+    }).catch(() => {});
+  }, []);
+
+  const toggleRecipient = (addr) => {
+    setSelectedRecipients((prev) => (prev.includes(addr) ? prev.filter((r) => r !== addr) : [...prev, addr]));
+  };
 
   // Capture every tab as a PNG in the background so a click only has to save.
   useEffect(() => {
@@ -183,18 +199,21 @@ function MerchReportsInner() {
     }
   };
 
-  // Test recipients only (config.js TEST_RECIPIENTS): tab images inline + the Excel attached.
-  const sendTest = async () => {
-    setSendState({ status: 'sending', message: 'Sending test email…' });
+  // Tab images inline + the Excel attached. 'test' goes to config.js TEST_RECIPIENTS; 'all' goes
+  // to whichever of ALL_RECIPIENTS are checked in the confirm dialog (validated server-side).
+  const sendReport = async (mode) => {
+    setConfirmOpen(false);
+    setSendState({ status: 'sending', message: mode === 'all' ? 'Sending to all recipients…' : 'Sending test email…' });
     try {
       const fd = new FormData();
       images.forEach((img, i) => fd.append('images', img.blob, 'report-' + (i + 1) + '.png'));
-      fd.append('mode', 'test');
+      fd.append('mode', mode);
       fd.append('report', 'merch');
+      if (mode === 'all') fd.append('recipients', JSON.stringify(selectedRecipients));
       const res = await apiFetch('/api/reports/reebok-send', { method: 'POST', body: fd });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'HTTP ' + res.status);
-      setSendState({ status: 'success', message: 'Test report emailed to ' + json.recipients + ' recipient' + (json.recipients === 1 ? '' : 's') + '.' });
+      setSendState({ status: 'success', message: (mode === 'all' ? 'Report' : 'Test report') + ' emailed to ' + json.recipients + ' recipient' + (json.recipients === 1 ? '' : 's') + '.' });
     } catch (e) {
       setSendState({ status: 'error', message: e.message });
     }
@@ -244,10 +263,15 @@ function MerchReportsInner() {
                 <ImageIcon style={{ width: 13, height: 13 }} />
                 {capturing ? 'Preparing…' : 'Download images'}
               </button>
-              <button className="reebok-btn secondary" onClick={sendTest} disabled={!imagesReady || sendState.status === 'sending'} type="button"
+              <button className="reebok-btn secondary" onClick={() => sendReport('test')} disabled={!imagesReady || sendState.status === 'sending'} type="button"
                       title="Email this report to the test recipients only">
                 <FlaskConical style={{ width: 13, height: 13 }} />
                 {sendState.status === 'sending' ? 'Sending…' : 'Send Test'}
+              </button>
+              <button className="reebok-btn secondary" onClick={() => setConfirmOpen(true)} disabled={!imagesReady || sendState.status === 'sending' || allRecipients.length === 0} type="button"
+                      title="Email this report to the full distribution list">
+                <Send style={{ width: 13, height: 13 }} />
+                Send to All
               </button>
               <button className="reebok-btn" onClick={downloadExcel} disabled={loading || exporting || !reportDate} type="button">
                 <Download style={{ width: 13, height: 13 }} />
@@ -281,6 +305,31 @@ function MerchReportsInner() {
         )}
       </div>
       </div>
+      {confirmOpen && (
+        <div className="reebok-modal-backdrop" onClick={() => setConfirmOpen(false)}>
+          <div className="reebok-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <h3>Send report to whom?</h3>
+            <p>
+              This will email the Uppal Reebok merchandiser stock report, stock as of <strong>{reportDate}</strong> ({images.length} tabs as images + the Excel file),
+              to whichever recipients are checked below.
+            </p>
+            <div className="reebok-recipient-list">
+              {allRecipients.map((addr) => (
+                <label key={addr} className="reebok-recipient-item">
+                  <input type="checkbox" checked={selectedRecipients.includes(addr)} onChange={() => toggleRecipient(addr)} />
+                  <span>{addr}</span>
+                </label>
+              ))}
+            </div>
+            <div className="reebok-modal-actions">
+              <button type="button" className="reebok-send-btn secondary" onClick={() => setConfirmOpen(false)}>Cancel</button>
+              <button type="button" className="reebok-send-btn" disabled={selectedRecipients.length === 0} onClick={() => sendReport('all')}>
+                <Send /> Send to {selectedRecipients.length} recipient{selectedRecipients.length === 1 ? '' : 's'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Off-screen staging: every tab rendered once, captured to PNG */}
       <div ref={stageRef} aria-hidden="true" style={{ position: 'fixed', left: -30000, top: 0, width: 1400, pointerEvents: 'none' }}>
         {parts.map((p) => (
