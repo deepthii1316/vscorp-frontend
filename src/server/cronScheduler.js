@@ -8,8 +8,8 @@
  */
 
 import cron from 'node-cron';
-import { runDailyAutoUpload, healthCheck } from '@/jobs/dailyAutoUpload.js';
-import { getGmailClient } from '@/lib/gmail/gmailServiceFactory.js';
+import { runDailyAutoUpload, healthCheck } from '../jobs/dailyAutoUpload.js';
+import { getGmailClient } from '../lib/gmail/gmailServiceFactory.js';
 
 let cronJob = null;
 
