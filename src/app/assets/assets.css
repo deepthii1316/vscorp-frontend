@@ -1,0 +1,36 @@
+/* Asset Tracker (as-*): the few things the shared md-* / pc-* / pn-* rules do not cover. */
+
+.as-store { width: auto; min-width: 190px; }
+.as-store-icon { width: 14px; height: 14px; color: var(--green); }
+.as-code { width: 130px !important; flex: none !important; min-width: 0 !important; }
+.as-new-store { width: 220px; }
+.as-check { cursor: pointer; }
+.as-check input { margin: 0; }
+
+/* Register and import preview: text columns read left, the quantity right */
+.as-table th, .as-table td { text-align: left; }
+.as-table th.as-num, .as-table td.as-num { text-align: right; }
+.as-table th.as-num .sort-th-btn { justify-content: flex-end; }
+.as-table td.as-wrap { white-space: normal; min-width: 140px; max-width: 320px; }
+.as-table td.as-wrap em { color: var(--text-faint); }
+.as-table td.as-item { font-weight: 600; }
+.as-table tr.as-row-error td { background: var(--negative-soft) !important; }
+.as-table tr.as-row-skip td { color: var(--text-muted); }
+.as-table .pc-sub { display: block; }
+.as-more { margin: var(--space-3) 0 0; }
+
+/* Add / change form */
+.as-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3) var(--space-4); }
+.as-form label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.as-form .pc-input { font-weight: 400; letter-spacing: 0; text-transform: none; padding: 7px 10px; font-size: 13px; }
+.as-form .pc-input:disabled { background: var(--bg-inset); color: var(--text-secondary); }
+.as-form-wide { grid-column: span 2; }
+@media (max-width: 900px) { .as-form { grid-template-columns: 1fr; } .as-form-wide { grid-column: auto; } }
+
+/* Import panel */
+.as-drop { margin-bottom: var(--space-4); padding: var(--space-4); border: 2px dashed var(--border-strong); border-radius: var(--r-md); }
+.as-import-bar { margin-bottom: var(--space-3); }
+.as-chip { display: inline-block; padding: 2px 9px; border-radius: var(--r-pill); font-size: 11px; font-weight: 700; white-space: nowrap; border: 1px solid var(--border); background: var(--bg-subtle); color: var(--text-secondary); }
+.as-chip.as-insert { background: var(--positive-soft); border-color: var(--positive-soft); color: var(--positive); }
+.as-chip.as-update { background: var(--amber-soft); border-color: var(--notice-line); color: var(--notice-text); }
+.as-chip.as-error { background: var(--negative-soft); border-color: var(--negative-soft); color: var(--negative); }

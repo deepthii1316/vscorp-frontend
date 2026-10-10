@@ -35,7 +35,7 @@ const navItems = [
       { href: '/store-board', label: 'Store Board', icon: TrendingUp, roles: ['admin'] },
       { href: '/merch-dashboard', label: 'Merch Dashboard', icon: Boxes, roles: ['admin'] },
       { href: '/pnl-tracker', label: 'P&L Tracker', icon: IndianRupee, roles: ['admin'] },
-      { href: '/assets', label: 'Assets', icon: Box, disabled: true, roles: ['admin'] },
+      { href: '/assets', label: 'Assets', icon: Box, roles: ['admin'] },
     ],
   },
   {
