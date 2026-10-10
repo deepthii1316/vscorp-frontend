@@ -1,0 +1,443 @@
+/* Store Board — Uppal Store Dashboard */
+
+.store-board-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ─── Top Bar ──────────────────────────────────────── */
+.sb-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-6);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+.sb-top-left {
+  flex: 1;
+}
+
+.sb-title-section h1 {
+  margin: 0 0 var(--space-2) 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.sb-store-path {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sb-top-right {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.sb-date-info {
+  display: flex;
+  gap: var(--space-4);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.sb-date-info span {
+  cursor: pointer;
+  padding: var(--space-2) var(--space-3);
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.sb-date-info span:hover {
+  background: var(--bg-subtle);
+}
+
+/* ─── Mode Bar ──────────────────────────────────────── */
+.sb-mode-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.sb-mode-btn {
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sb-mode-btn:hover {
+  background: var(--bg);
+  border-color: var(--border-strong);
+}
+
+.sb-mode-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.sb-mode-spacer {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-left: var(--space-4);
+}
+
+.sb-select {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.sb-data-badge {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-inset);
+  border-radius: 4px;
+}
+
+/* ─── Content ──────────────────────────────────────── */
+.sb-content {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ─── Panel ──────────────────────────────────────── */
+.sb-panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.sb-panel-title {
+  margin: 0;
+  padding: var(--space-4) var(--space-6);
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  background: #1A1A1A;
+  letter-spacing: 1px;
+}
+
+.sb-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-6);
+  background: #1A1A1A;
+  border-bottom: 1px solid var(--border);
+}
+
+.sb-panel-header .sb-panel-title {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.sb-panel-date {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.sb-mix-note {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ─── Tables ──────────────────────────────────────── */
+.sb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  table-layout: fixed;
+}
+
+.sb-table thead {
+  background: #F5F5F3;
+}
+
+.sb-table th {
+  padding: var(--space-3) var(--space-4);
+  text-align: right;
+  font-weight: 600;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.sb-table th:first-child {
+  text-align: left;
+}
+
+.sb-table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.sb-table tbody tr:hover {
+  background: var(--bg-subtle);
+}
+
+.sb-table .sb-label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sb-table .sb-label.current {
+  color: var(--accent);
+}
+
+.sb-table .sb-currency {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.sb-table .sb-number {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.sb-table .sb-percent {
+  text-align: right;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.sb-table .sb-percent.positive {
+  color: var(--positive);
+}
+
+.sb-table .sb-percent.negative {
+  color: var(--rose, #B33A3A);
+}
+
+.sb-table .sb-percent.warning {
+  color: var(--amber, #C97A1D);
+}
+
+.sb-table .sb-currency.positive {
+  color: var(--positive);
+}
+
+.sb-table .sb-currency.negative {
+  color: var(--rose, #B33A3A);
+}
+
+.sb-table .sb-currency.muted {
+  color: var(--text-muted);
+}
+
+.sb-table .sb-name {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.sb-table .sb-category {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sb-week-label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sb-date-range {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.sb-ytd-row td {
+  font-weight: 700;
+  background: #F5F5F3;
+  border-top: 2px solid var(--border-strong);
+}
+
+.sb-current-month td {
+  background: var(--bg-subtle);
+}
+
+.sb-bold {
+  font-weight: 700;
+}
+
+.sb-muted {
+  color: var(--text-muted);
+}
+
+/* ─── KPI Table ──────────────────────────────────────── */
+.sb-kpis-table {
+  width: 100%;
+  border-collapse: collapse;
+  padding: var(--space-6);
+}
+
+.sb-kpis-table td {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.sb-kpis-table tr:last-child td {
+  border-bottom: none;
+}
+
+.sb-kpi-label {
+  font-weight: 600;
+  width: 40%;
+}
+
+.sb-kpi-value {
+  font-weight: 700;
+  font-size: 16px;
+  text-align: right;
+  font-family: var(--font-mono);
+  width: 50%;
+}
+
+.sb-kpi-def {
+  text-align: center;
+  color: var(--text-muted);
+  cursor: help;
+  width: 10%;
+}
+
+/* ─── Bottom Panels ──────────────────────────────────────── */
+.sb-bottom-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+}
+
+@media (max-width: 1200px) {
+  .sb-bottom-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Expand Icon ──────────────────────────────────────── */
+.sb-expand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.sb-expandable-row {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sb-expandable-row:hover td {
+  background: var(--bg-subtle);
+}
+
+/* ─── Loading State ──────────────────────────────────────── */
+.sb-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-10);
+  color: var(--text-muted);
+}
+
+.sb-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Error State ──────────────────────────────────────── */
+.sb-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-10);
+  color: var(--rose, #B33A3A);
+  text-align: center;
+  min-height: 400px;
+}
+
+.sb-error h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sb-error p {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* ─── Responsive ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sb-mode-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sb-table {
+    font-size: 11px;
+  }
+
+  .sb-table th,
+  .sb-table td {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .sb-content {
+    padding: var(--space-4);
+    gap: var(--space-4);
+  }
+}
+
+@media print {
+  .sb-mode-bar {
+    display: none;
+  }
+
+  .sb-content {
+    gap: var(--space-4);
+  }
+}
